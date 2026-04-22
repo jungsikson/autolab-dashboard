@@ -279,34 +279,54 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
 <div class="modal-bg" id="detail-modal-bg">
   <div class="modal" style="max-width:560px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-      <div style="min-width:0;flex:1;margin-right:10px">
-        <div class="modal-title" id="detail-modal-title">일감 상세</div>
-        <div class="modal-sub" id="detail-modal-sub"></div>
+      <div style="min-width:0;flex:1;margin-right:12px">
+        <div id="dm-view-header">
+          <div class="modal-title" id="detail-modal-title">일감 상세</div>
+          <div class="modal-sub" id="detail-modal-sub"></div>
+        </div>
+        <div id="dm-edit-header" style="display:none">
+          <input type="text" id="dm-task-input" style="width:100%;font-size:15px;font-weight:700;letter-spacing:-0.02em;border:none;border-bottom:2px solid var(--accent);outline:none;padding:4px 0;margin-bottom:10px;background:transparent;color:var(--text-primary);box-sizing:border-box">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <select id="dm-person-select" style="font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:5px 8px;background:var(--bg-surface);color:var(--text-primary)">
+              <option value="강희준">강희준</option>
+              <option value="송민호">송민호</option>
+              <option value="윤건희">윤건희</option>
+            </select>
+            <select id="dm-priority-select" style="font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:5px 8px;background:var(--bg-surface);color:var(--text-primary)">
+              <option value="">미분류</option>
+              <option value="DO">🔴 긴급+중요</option>
+              <option value="DELEGATE">🟡 긴급+안중요</option>
+              <option value="SCHEDULE">🔵 중요+안긴급</option>
+              <option value="ELIMINATE">⚪ 둘다아님</option>
+            </select>
+            <input type="date" id="dm-due-input" style="font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:5px 8px;background:var(--bg-surface);color:var(--text-primary)">
+            <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);cursor:pointer">
+              <input type="checkbox" id="dm-done-check" style="cursor:pointer">완료
+            </label>
+          </div>
+        </div>
       </div>
-      <button class="btn-save" style="flex-shrink:0;padding:6px 14px" onclick="editFromDetail()">✏️ 수정</button>
+      <button id="dm-edit-btn" class="btn-ghost" onclick="enterDetailEdit()" style="flex-shrink:0;padding:6px 14px">수정</button>
     </div>
-    <div id="detail-modal-info" style="margin-bottom:12px"></div>
-    <div style="margin-bottom:14px">
-      <textarea id="detail-modal-desc" rows="4" style="width:100%;font-size:13px;border:1px solid #CBD5E1;border-radius:8px;padding:10px 12px;resize:vertical;font-family:var(--font-sans);line-height:1.6;box-sizing:border-box" placeholder="자세한 내용을 적어주세요..."></textarea>
-      <div style="text-align:right;margin-top:4px">
-        <button id="detail-desc-btn" onclick="saveDetailDesc()" style="font-size:12px;padding:5px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-default);cursor:pointer;background:var(--bg-subtle)">저장</button>
-      </div>
+    <div id="detail-modal-info" style="margin-bottom:10px"></div>
+    <div id="dm-desc-view" style="min-height:36px;font-size:13px;color:var(--text-primary);line-height:1.7;margin-bottom:16px;white-space:pre-wrap"></div>
+    <div id="dm-desc-edit" style="display:none;margin-bottom:16px">
+      <textarea id="detail-modal-desc" rows="4" style="width:100%;font-size:13px;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:10px 12px;resize:vertical;font-family:var(--font-sans);line-height:1.6;box-sizing:border-box;color:var(--text-primary)" placeholder="자세한 내용을 적어주세요..."></textarea>
     </div>
-    <div>
-      <div id="detail-modal-comments" style="margin-bottom:10px;max-height:200px;overflow-y:auto"></div>
-      <div style="display:flex;gap:6px;align-items:center">
-        <select id="detail-comment-author" style="font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:7px 8px;background:var(--bg-surface);flex-shrink:0">
-          <option value="황두현">황두현</option>
-          <option value="강희준">강희준</option>
-          <option value="송민호">송민호</option>
-          <option value="윤건희">윤건희</option>
-        </select>
-        <input type="text" id="detail-comment-input" placeholder="댓글 입력..." style="flex:1;font-size:13px;border:1px solid #CBD5E1;border-radius:7px;padding:7px 10px" onkeydown="if(event.key==='Enter'&&!event.isComposing)submitDetailComment()">
-        <button onclick="submitDetailComment()" style="font-size:12px;padding:7px 14px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#fff;cursor:pointer;flex-shrink:0">등록</button>
-      </div>
+    <div id="detail-modal-comments" style="margin-bottom:10px;max-height:180px;overflow-y:auto"></div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <select id="detail-comment-author" style="font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:7px 8px;background:var(--bg-surface);flex-shrink:0;color:var(--text-primary)">
+        <option value="황두현">황두현</option>
+        <option value="강희준">강희준</option>
+        <option value="송민호">송민호</option>
+        <option value="윤건희">윤건희</option>
+      </select>
+      <input type="text" id="detail-comment-input" placeholder="댓글 입력..." style="flex:1;font-size:13px;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:7px 10px;color:var(--text-primary)" onkeydown="if(event.key===\'Enter\'&&!event.isComposing)submitDetailComment()">
+      <button onclick="submitDetailComment()" style="font-size:12px;padding:7px 14px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#fff;cursor:pointer;flex-shrink:0">등록</button>
     </div>
     <div class="modal-btns" style="margin-top:14px">
-      <button class="btn-cancel" onclick="closeDetailModal()">닫기</button>
+      <button id="dm-cancel-btn" class="btn-cancel" onclick="closeDetailModal()">닫기</button>
+      <button id="dm-save-btn" class="btn-save" onclick="saveDetailEdit()" style="display:none">저장</button>
     </div>
   </div>
 </div>
@@ -1147,15 +1167,29 @@ function openAutolabDetailModal(id){
   detailModalId=id;
   var info=autolabChecks[alKey(item)]||{};
   var done=!!info.checked;
+  // ensure view mode
+  exitDetailEdit(true);
   document.getElementById('detail-modal-title').textContent=item.task;
-  document.getElementById('detail-modal-sub').textContent='담당자: '+item.person+'  ·  등록: '+item.dateKey;
+  var sub='담당자: '+item.person+'  ·  등록: '+item.dateKey;
+  if(item.dueDate){
+    var diff=getDueDiff(item.dueDate);
+    var dLabel,dColor;
+    if(diff<0){dLabel=(Math.abs(diff))+'일 지연';dColor='#991B1B';}
+    else if(diff===0){dLabel='오늘 마감';dColor='#92400E';}
+    else if(diff<=3){dLabel='D-'+diff;dColor='#92400E';}
+    else{dLabel='D-'+diff;dColor='var(--text-tertiary)';}
+    sub+='  ·  <span style="color:'+dColor+';font-weight:600">'+dLabel+'</span>';
+  }
+  if(done) sub+='  ·  <span style="color:#16A34A;font-weight:500">완료</span>';
+  document.getElementById('detail-modal-sub').innerHTML=sub;
   var badges='<div style="display:flex;gap:6px;flex-wrap:wrap">'+priorityBadgeHtml(item.priority);
   if(item.dueDate) badges+=dueBadgeHtml(item.dueDate);
   if(done) badges+='<span class="done-badge">완료</span>';
   badges+='</div>';
   document.getElementById('detail-modal-info').innerHTML=badges;
+  var descEl=document.getElementById('dm-desc-view');
+  if(descEl) descEl.textContent=item.description||'';
   document.getElementById('detail-modal-desc').value=item.description||'';
-  var btn=document.getElementById('detail-desc-btn');if(btn){btn.textContent='저장';btn.disabled=false;}
   document.getElementById('detail-modal-bg').classList.add('open');
   var cachedComments=(allData._autolabComments||{})[String(id)]||[];
   renderDetailComments(cachedComments);
@@ -1178,23 +1212,6 @@ function renderDetailComments(comments){
   if(!el) return;
   if(!comments||!comments.length){el.innerHTML='<div style="font-size:12px;color:var(--text-tertiary);text-align:center;padding:10px">아직 댓글이 없어요</div>';return;}
   var h='';comments.forEach(function(c){h+=_renderOneComment(c);});el.innerHTML=h;
-}
-
-async function saveDetailDesc(){
-  var desc=document.getElementById('detail-modal-desc').value;
-  var item=(allData._autolab||[]).find(function(i){return String(i.id)===String(detailModalId);});
-  if(!item) return;
-  item.description=desc;
-  var btn=document.getElementById('detail-desc-btn');if(btn){btn.textContent='저장 중...';btn.disabled=true;}
-  try {
-    var res=await _sb.from('autolab_task').update({description:desc}).eq('id',parseInt(detailModalId));
-    if(res.error) throw res.error;
-    if(btn){btn.textContent='저장';btn.disabled=false;}
-    showToast('세부 내용 저장됐어요!');
-  } catch(err){
-    if(btn){btn.textContent='저장';btn.disabled=false;}
-    showToast('저장 실패');
-  }
 }
 
 async function submitDetailComment(){
@@ -1268,9 +1285,101 @@ async function deleteDetailComment(commentId,itemId){
   showToast('댓글 삭제됐어요!');
 }
 
-function closeDetailModal(){document.getElementById('detail-modal-bg').classList.remove('open');}
+function closeDetailModal(){
+  exitDetailEdit(true);
+  document.getElementById('detail-modal-bg').classList.remove('open');
+}
 document.getElementById('detail-modal-bg').onclick=function(e){if(e.target===this)closeDetailModal();};
-function editFromDetail(){closeDetailModal();if(detailModalId)openAutolabEditModal(detailModalId);}
+function editFromDetail(){if(detailModalId)enterDetailEdit();}
+
+function enterDetailEdit(){
+  var item=(allData._autolab||[]).find(function(i){return String(i.id)===String(detailModalId);});
+  if(!item) return;
+  var info=autolabChecks[alKey(item)]||{};
+  document.getElementById('dm-task-input').value=item.task||'';
+  document.getElementById('dm-person-select').value=item.person||'';
+  document.getElementById('dm-priority-select').value=item.priority||'';
+  document.getElementById('dm-due-input').value=item.dueDate||'';
+  document.getElementById('dm-done-check').checked=!!info.checked;
+  document.getElementById('detail-modal-desc').value=item.description||'';
+  document.getElementById('dm-view-header').style.display='none';
+  document.getElementById('dm-edit-header').style.display='';
+  document.getElementById('dm-desc-view').style.display='none';
+  document.getElementById('dm-desc-edit').style.display='';
+  document.getElementById('detail-modal-info').style.display='none';
+  document.getElementById('dm-edit-btn').style.display='none';
+  document.getElementById('dm-cancel-btn').textContent='취소';
+  document.getElementById('dm-cancel-btn').setAttribute('onclick','exitDetailEdit()');
+  document.getElementById('dm-save-btn').style.display='';
+  setTimeout(function(){document.getElementById('dm-task-input').focus();},80);
+}
+
+function exitDetailEdit(silent){
+  document.getElementById('dm-view-header').style.display='';
+  document.getElementById('dm-edit-header').style.display='none';
+  document.getElementById('dm-desc-view').style.display='';
+  document.getElementById('dm-desc-edit').style.display='none';
+  document.getElementById('detail-modal-info').style.display='';
+  document.getElementById('dm-edit-btn').style.display='';
+  document.getElementById('dm-cancel-btn').textContent='닫기';
+  document.getElementById('dm-cancel-btn').setAttribute('onclick','closeDetailModal()');
+  document.getElementById('dm-save-btn').style.display='none';
+}
+
+async function saveDetailEdit(){
+  var task=document.getElementById('dm-task-input').value.trim();
+  var person=document.getElementById('dm-person-select').value;
+  var priority=document.getElementById('dm-priority-select').value;
+  var dueDate=document.getElementById('dm-due-input').value;
+  var isDone=document.getElementById('dm-done-check').checked;
+  var desc=document.getElementById('detail-modal-desc').value;
+  if(!task){showToast('내용을 입력하세요');return;}
+  var btn=document.getElementById('dm-save-btn');
+  btn.textContent='저장 중...'; btn.disabled=true;
+  var item=(allData._autolab||[]).find(function(i){return String(i.id)===String(detailModalId);});
+  var prevDone=item?!!(autolabChecks[alKey(item)]||{}).checked:false;
+  try {
+    var updateData={task:task,priority:priority,due_date:dueDate||null,description:desc};
+    if(person) updateData.person=person;
+    var res=await _sb.from('autolab_task').update(updateData).eq('id',parseInt(detailModalId));
+    if(res.error) throw res.error;
+    if(item){item.task=task;if(person)item.person=person;item.priority=priority;item.dueDate=dueDate||'';item.description=desc;}
+    if(isDone!==prevDone){
+      var cd=isDone?dk(new Date()):'';
+      autolabChecks['autolab_'+String(detailModalId)]={checked:isDone,completedDate:cd};
+      await upsertCheck('autolab',String(detailModalId),isDone,cd);
+    }
+    exitDetailEdit();
+    // refresh view mode display
+    document.getElementById('detail-modal-title').textContent=task;
+    var sub='담당자: '+person+'  ·  등록: '+(item?item.dateKey:'');
+    if(dueDate){
+      var diff=getDueDiff(dueDate);
+      var dLabel,dColor;
+      if(diff<0){dLabel=(Math.abs(diff))+'일 지연';dColor='#991B1B';}
+      else if(diff===0){dLabel='오늘 마감';dColor='#92400E';}
+      else if(diff<=3){dLabel='D-'+diff;dColor='#92400E';}
+      else{dLabel='D-'+diff;dColor='var(--text-tertiary)';}
+      sub+='  ·  <span style="color:'+dColor+';font-weight:600">'+dLabel+'</span>';
+    }
+    if(isDone) sub+='  ·  <span style="color:#16A34A;font-weight:500">완료</span>';
+    document.getElementById('detail-modal-sub').innerHTML=sub;
+    var badges='<div style="display:flex;gap:6px;flex-wrap:wrap">'+priorityBadgeHtml(priority);
+    if(dueDate) badges+=dueBadgeHtml(dueDate);
+    if(isDone) badges+='<span class="done-badge">완료</span>';
+    badges+='</div>';
+    document.getElementById('detail-modal-info').innerHTML=badges;
+    var descEl=document.getElementById('dm-desc-view');
+    if(descEl) descEl.textContent=desc;
+    render();
+    if(currentTab.startsWith('matrix-')) renderMatrix(currentTab.replace('matrix-',''));
+    if(currentTab==='history') renderHistory();
+    showToast('저장됐어요!');
+  } catch(err){
+    showToast('오류: '+(err.message||err));
+  }
+  btn.textContent='저장'; btn.disabled=false;
+}
 
 document.getElementById('detail-modal-desc').addEventListener('keydown',function(e){
   if(e.isComposing) return;
