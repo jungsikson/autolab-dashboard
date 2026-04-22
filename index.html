@@ -66,34 +66,34 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
 .person-autolab-body{padding:12px 16px}
 .autolab-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);margin-bottom:4px;border:1px solid var(--border-subtle);background:var(--bg-surface)}
 .autolab-item.done{background:var(--bg-canvas)}
-.autolab-item.done .autolab-task-text{text-decoration:line-through;color:#94A3B8}
+.autolab-item.done .autolab-task-text{text-decoration:line-through;color:var(--text-tertiary)}
 .autolab-item.overdue{border-left:3px solid #EF4444;background:var(--status-overdue-bg)}
 .autolab-item.overdue.done{border-left:3px solid #CBD5E1;background:#F8FAFC}
 .autolab-item.due-soon{border-left:3px solid #F59E0B;background:var(--status-soon-bg)}
 .autolab-check-area{cursor:pointer;display:flex;align-items:flex-start;gap:6px;flex:1;min-width:0}
 .autolab-task-text{font-size:var(--text-sm);color:var(--text-primary);line-height:1.5;flex:1}
 .autolab-action-btn{font-size:var(--text-xs);padding:2px 6px;border-radius:var(--radius-sm);border:1px solid var(--border-default);background:var(--bg-subtle);cursor:pointer;color:var(--text-secondary);flex-shrink:0}
-.autolab-action-btn.del{border-color:#FEE2E2;background:#FFF5F5;color:#EF4444}
+.autolab-action-btn.del{border-color:var(--status-overdue-bg);background:var(--status-overdue-bg);color:var(--status-overdue-fg)}
 .priority-badge{font-size:var(--text-xs);padding:1px 7px;border-radius:20px;font-weight:600;white-space:nowrap}
-.p-DO{background:#FEE2E2;color:#B91C1C}
-.p-DELEGATE{background:#FEF3C7;color:#92400E}
-.p-SCHEDULE{background:#DBEAFE;color:#1E3A8A}
-.p-ELIMINATE{background:#F3F4F6;color:#6B7280}
-.p-none{background:#F3F4F6;color:#9CA3AF}
+.p-DO{background:var(--p-do-bg);color:var(--p-do-fg)}
+.p-DELEGATE{background:var(--p-delegate-bg);color:var(--p-delegate-fg)}
+.p-SCHEDULE{background:var(--p-schedule-bg);color:var(--p-schedule-fg)}
+.p-ELIMINATE{background:var(--p-eliminate-bg);color:var(--p-eliminate-fg)}
+.p-none{background:var(--p-eliminate-bg);color:var(--text-tertiary)}
 .due-badge{font-size:var(--text-xs);padding:1px 7px;border-radius:20px;font-weight:500;white-space:nowrap}
-.due-overdue{background:#FEE2E2;color:#B91C1C}
-.due-soon{background:#FEF3C7;color:#92400E}
-.due-normal{background:#F3F4F6;color:#6B7280}
-.overdue-badge{font-size:10px;padding:1px 6px;border-radius:4px;background:#FEE2E2;color:#B91C1C;font-weight:600;flex-shrink:0}
-.done-badge{font-size:10px;padding:1px 6px;border-radius:4px;background:#DCFCE7;color:#166534;font-weight:600;flex-shrink:0}
+.due-overdue{background:var(--status-overdue-bg);color:var(--status-overdue-fg)}
+.due-soon{background:var(--status-soon-bg);color:var(--status-soon-fg)}
+.due-normal{background:var(--p-eliminate-bg);color:var(--text-secondary)}
+.overdue-badge{font-size:var(--text-xs);padding:1px 6px;border-radius:4px;background:var(--status-overdue-bg);color:var(--status-overdue-fg);font-weight:600;flex-shrink:0}
+.done-badge{font-size:var(--text-xs);padding:1px 6px;border-radius:4px;background:var(--status-done-bg);color:var(--status-done-fg);font-weight:600;flex-shrink:0}
 .checkbox{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border-strong);flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;transition:all 0.15s}
 .checkbox.checked{background:#16A34A;border-color:#16A34A}
 .cohort-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:20px}
 .cohort-card{background:var(--bg-surface);border-radius:var(--radius-lg);border:1px solid var(--border-default);overflow:hidden}
 .cohort-card-header{padding:10px 16px;font-size:var(--text-sm);font-weight:600;display:flex;align-items:center;justify-content:space-between;letter-spacing:-0.01em}
-.edit-day-btn{font-size:11px;padding:2px 8px;border-radius:5px;border:1px solid rgba(0,0,0,0.15);background:rgba(255,255,255,0.5);cursor:pointer;font-weight:500}
-.edit-day-btn:hover{background:rgba(255,255,255,0.8)}
-.progress-bar-wrap{height:3px;background:#E2E8F0}
+.edit-day-btn{font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid var(--border-default);background:var(--bg-surface);cursor:pointer;font-weight:500;color:var(--text-secondary)}
+.edit-day-btn:hover{background:var(--bg-subtle)}
+.progress-bar-wrap{height:3px;background:var(--border-default)}
 .progress-bar{height:3px;transition:width 0.3s}
 .cohort-card-body{padding:12px 16px}
 .assignee-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
@@ -102,41 +102,41 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
 .task-list{flex:1}
 .task-item{display:flex;align-items:flex-start;gap:7px;padding:4px 0;cursor:pointer;border-radius:5px}
 .task-item:hover{background:var(--bg-canvas)}
-.task-item.done .task-text{text-decoration:line-through;color:#94A3B8}
+.task-item.done .task-text{text-decoration:line-through;color:var(--text-tertiary)}
 .task-item.overdue-item{border-left:3px solid #EF4444;padding-left:6px;background:var(--status-overdue-bg);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
 .task-item.overdue-item.done{border-left:3px solid var(--border-default);background:var(--bg-canvas)}
 .task-text{font-size:var(--text-sm);color:var(--text-primary);line-height:1.5}
 .progress-text{font-size:var(--text-xs);font-weight:500;color:var(--text-secondary)}
-.overdue-section-label{font-size:11px;color:#EF4444;font-weight:700;padding:4px 0 2px;border-bottom:1px solid #FEE2E2;margin-bottom:4px}
+.overdue-section-label{font-size:var(--text-xs);color:var(--status-overdue-fg);font-weight:600;padding:4px 0 2px;border-bottom:1px solid var(--status-overdue-bg);margin-bottom:4px}
 .matrix-wrap{margin-bottom:16px}
 .matrix-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
 .matrix-cell{background:var(--bg-surface);border-radius:var(--radius-lg);border:1px solid var(--border-default);overflow:hidden;min-height:120px;transition:border-color 0.2s,background 0.2s}
 .matrix-cell.drag-over{border-color:var(--accent);background:var(--accent-subtle)}
 .matrix-cell-header{padding:8px 14px;font-size:var(--text-xs);font-weight:600;display:flex;align-items:center;justify-content:space-between;letter-spacing:0.02em;text-transform:uppercase}
 .matrix-cell-body{padding:10px 14px;min-height:80px}
-.m-DO .matrix-cell-header{background:#FEE2E2;color:#B91C1C}
-.m-SCHEDULE .matrix-cell-header{background:#DBEAFE;color:#1E3A8A}
-.m-DELEGATE .matrix-cell-header{background:#FEF3C7;color:#92400E}
-.m-ELIMINATE .matrix-cell-header{background:#F3F4F6;color:#6B7280}
+.m-DO .matrix-cell-header{background:var(--p-do-bg);color:var(--p-do-fg)}
+.m-SCHEDULE .matrix-cell-header{background:var(--p-schedule-bg);color:var(--p-schedule-fg)}
+.m-DELEGATE .matrix-cell-header{background:var(--p-delegate-bg);color:var(--p-delegate-fg)}
+.m-ELIMINATE .matrix-cell-header{background:var(--p-eliminate-bg);color:var(--p-eliminate-fg)}
 .matrix-item{display:flex;align-items:flex-start;gap:7px;padding:6px 8px;border-radius:var(--radius-sm);margin-bottom:4px;background:var(--bg-canvas);border:1px solid var(--border-subtle);cursor:pointer}
 .matrix-item:hover{background:var(--bg-subtle)}
-.matrix-item.done .matrix-task-text{text-decoration:line-through;color:#94A3B8}
+.matrix-item.done .matrix-task-text{text-decoration:line-through;color:var(--text-tertiary)}
 .matrix-task-text{font-size:var(--text-sm);color:var(--text-primary);flex:1;line-height:1.5}
 .matrix-overdue{border-left:3px solid #EF4444}
-.matrix-empty{font-size:12px;color:#CBD5E1;text-align:center;padding:20px 0}
-.matrix-add-btn{font-size:11px;padding:2px 8px;border-radius:5px;border:1px solid currentColor;background:transparent;cursor:pointer;opacity:0.7}
+.matrix-empty{font-size:var(--text-xs);color:var(--text-tertiary);text-align:center;padding:20px 0}
+.matrix-add-btn{font-size:var(--text-xs);padding:2px 8px;border-radius:var(--radius-sm);border:1px solid currentColor;background:transparent;cursor:pointer;opacity:0.7}
 .matrix-add-btn:hover{opacity:1}
 .matrix-add-form{margin-top:8px;display:flex;flex-direction:column;gap:5px}
 .matrix-add-form input{font-size:var(--text-xs);padding:6px 8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-surface);font-family:var(--font-sans);color:var(--text-primary)}
 .matrix-add-form-btns{display:flex;flex-direction:column;gap:4px}
-.matrix-add-form-btns button:not(.matrix-confirm-btn){font-size:11px;color:#94A3B8;background:none;border:none;cursor:pointer;padding:4px;text-align:center}
+.matrix-add-form-btns button:not(.matrix-confirm-btn){font-size:var(--text-xs);color:var(--text-tertiary);background:none;border:none;cursor:pointer;padding:4px;text-align:center}
 .matrix-confirm-btn{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:var(--text-sm);padding:8px;width:100%;cursor:pointer;font-family:var(--font-sans)}
 .matrix-confirm-btn:disabled{background:var(--accent-subtle);color:var(--accent);cursor:not-allowed}
 .unclassified-section{background:var(--bg-surface);border-radius:var(--radius-lg);border:1px solid var(--border-default);padding:16px;margin-top:8px}
 .unclassified-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);margin-bottom:4px;border:1px solid var(--border-subtle);background:var(--bg-canvas);cursor:grab;user-select:none;transition:opacity 0.2s}
 .unclassified-item:active{cursor:grabbing}
 .unclassified-item.dragging{opacity:0.4}
-.drag-hint{font-size:11px;color:#94A3B8;margin-bottom:8px}
+.drag-hint{font-size:var(--text-xs);color:var(--text-tertiary);margin-bottom:8px}
 .history-wrap{background:var(--bg-surface);border-radius:var(--radius-lg);border:1px solid var(--border-default);overflow:hidden}
 .history-toolbar{padding:12px 16px;background:var(--bg-subtle);color:var(--text-primary);display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border-default)}
 .history-toolbar select{font-size:var(--text-xs);padding:4px 8px;border-radius:var(--radius-sm);border:1px solid var(--border-default);background:var(--bg-surface);color:var(--text-primary);cursor:pointer}
@@ -146,7 +146,7 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
 .history-date-label{font-size:var(--text-xs);font-weight:600;color:var(--text-secondary);padding:4px 0;border-bottom:1px solid var(--border-default);margin-bottom:8px;letter-spacing:0.02em;text-transform:uppercase}
 .history-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);margin-bottom:4px;border:1px solid var(--border-subtle);background:var(--bg-canvas)}
 .history-item.done{background:var(--status-done-bg);border-color:var(--status-done-border)}
-.history-item.done .history-task-text{text-decoration:line-through;color:#94A3B8}
+.history-item.done .history-task-text{text-decoration:line-through;color:var(--text-tertiary)}
 .history-task-text{font-size:var(--text-sm);color:var(--text-primary);flex:1;line-height:1.5}
 .history-done-toggle{font-size:var(--text-xs);font-weight:500;color:var(--text-secondary);cursor:pointer;padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border-default);background:var(--bg-canvas);margin-bottom:8px;display:flex;align-items:center;gap:6px;width:fit-content}
 .history-done-toggle:hover{background:var(--bg-subtle)}
@@ -163,8 +163,8 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
 .modal-sub{font-size:var(--text-xs);color:var(--text-tertiary);margin-bottom:14px}
 .modal textarea{width:100%;font-size:var(--text-sm);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:10px 12px;line-height:1.6;resize:vertical;min-height:120px;font-family:var(--font-sans);color:var(--text-primary)}
 .modal textarea:focus{outline:none;border-color:var(--accent)}
-.modal-guide{font-size:11px;color:#94A3B8;margin-top:8px;line-height:1.6}
-.modal-guide b{color:#64748B}
+.modal-guide{font-size:var(--text-xs);color:var(--text-tertiary);margin-top:8px;line-height:1.6}
+.modal-guide b{color:var(--text-secondary)}
 .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 .modal-btns button{font-size:var(--text-sm);padding:7px 18px;border-radius:var(--radius-sm);border:1px solid var(--border-default);cursor:pointer;font-family:var(--font-sans)}
 .btn-cancel{background:var(--bg-subtle);color:var(--text-secondary)}.btn-cancel:hover{background:var(--bg-canvas)}
