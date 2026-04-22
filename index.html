@@ -337,19 +337,21 @@ function priorityBadgeHtml(priority){
 }
 
 function shouldShowAutolab(item,curKey){
+  if(item.dateKey>curKey) return false;
+  if(showDone) return true;
   var info=autolabChecks[alKey(item)]||{};
   var done=!!info.checked,cd=info.completedDate||'';
-  if(item.dateKey>curKey) return false;
   if(item.dateKey===curKey) return true;
   if(!done) return true;
   return cd!==''&&curKey<=cd;
 }
 function shouldShowAutolabMatrix(item){return true;}
 function shouldShowCohortTask(dateKey,cohort,taskIndex,curKey){
+  if(dateKey>curKey) return false;
+  if(showDone) return true;
   var info=checks[cohortCheckKey(dateKey,cohort,taskIndex)]||{};
   var done=!!info.checked,cd=info.completedDate||'';
   if(dateKey===curKey) return true;
-  if(dateKey>curKey) return false;
   if(!done) return true;
   return cd!==''&&curKey<=cd;
 }
