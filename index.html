@@ -597,6 +597,7 @@ function render(){
       else html+='<span style="font-size:12px;color:var(--text-tertiary);font-weight:500">휴무</span>';
     }
     
+    if(todayData&&todayData.label) html+='<span style="font-size:12px;color:var(--text-secondary)">'+todayData.label+'</span>';
     if(undoneOverdue>0) html+='<span style="font-size:12px;color:var(--status-overdue-fg);font-weight:600">이월 '+undoneOverdue+'건</span>';
     
     
