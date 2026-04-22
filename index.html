@@ -596,10 +596,10 @@ function render(){
       if(todayData.isWorkDay) html+='<span style="font-size:12px;color:#15803D;font-weight:600">근무 ✓</span>';
       else html+='<span style="font-size:12px;color:var(--text-tertiary);font-weight:500">휴무</span>';
     }
-    if(todayData&&todayData.label){var lbl=todayData.label;var lStyle=lbl.indexOf('현장')>=0?'background:#FFF7ED;color:#C2410C;':'background:#EFF6FF;color:#1D4ED8;';html+='<span style="font-size:10px;'+lStyle+'padding:1px 7px;border-radius:4px;font-weight:600;">'+lbl+'</span>';}
+    
     if(undoneOverdue>0) html+='<span style="font-size:12px;color:var(--status-overdue-fg);font-weight:600">이월 '+undoneOverdue+'건</span>';
     if(total>0) html+='<span class="progress-text">'+done+'/'+total+' ('+pct+'%)</span>';
-    if((hasTodayTasks||hasSchedule)&&todayData&&todayData.dbId) html+='<button class="edit-day-btn" style="color:'+cc.text+'" onclick="openEditModal(\''+c+'\','+todayData.dbId+',`'+escapeBacktick(todayData.rawText)+'`)">✏️ 수정</button>';
+    
     html+='</div></div><div class="progress-bar-wrap"><div class="progress-bar" style="width:'+pct+'%;background:'+cc.bar+'"></div></div>';
     html+='<div class="cohort-card-body">';
 
