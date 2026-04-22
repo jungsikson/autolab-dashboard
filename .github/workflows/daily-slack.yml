@@ -1,0 +1,23 @@
+name: 데일리 슬랙 알림
+
+on:
+  schedule:
+    - cron: '0 0 * * 1-5'  # 매주 월-금 오전 9시 KST (= UTC 00:00)
+  workflow_dispatch:        # 수동 실행 (테스트용)
+
+jobs:
+  send-daily-slack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 데일리 슬랙 발송
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: node .github/scripts/daily-slack.js
