@@ -483,8 +483,8 @@ function _buildPersonCardHtml(person,key){
       var isDueSoon=dueDiff!==null&&dueDiff>=0&&dueDiff<=3&&!done;
       h+='<div class="autolab-item'+(isOverdue&&!done?' overdue':isDueSoon?' due-soon':'')+(done?' done':'')+'">';
       h+='<div class="autolab-check-area">';
-      h+='<div class="checkbox'+(done?' checked':'')+'" onclick="toggleAutolabCheck(''+item.id+'')">'+(done?'✓':'')+'</div>';
-      h+='<div style="flex:1;min-width:0;cursor:pointer" onclick="openAutolabDetailModal(''+item.id+'')">';
+      h+='<div class="checkbox'+(done?' checked':'')+'" onclick="toggleAutolabCheck(\''+item.id+'\')">'+(done?'✓':'')+'</div>';
+      h+='<div style="flex:1;min-width:0;cursor:pointer" onclick="openAutolabDetailModal(\''+item.id+'\')">';
       h+='<div class="autolab-task-text">'+item.task+'</div>';
       h+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">';
       if(isOverdue&&!done&&!item.dueDate) h+='<span class="overdue-badge">이월</span>';
@@ -493,7 +493,7 @@ function _buildPersonCardHtml(person,key){
       h+=itemDateHtml(item);
       if(item.dueDate) h+=dueBadgeHtml(item.dueDate);
       h+='</div></div></div>';
-      h+='<button class="autolab-action-btn del" onclick="deleteDashboardAutolab(''+item.id+'')">✕</button>';
+      h+='<button class="autolab-action-btn del" onclick="deleteDashboardAutolab(\''+item.id+'\')">✕</button>';
       h+='</div>';
     });
   }
