@@ -450,6 +450,56 @@ async function upsertCheck(type,itemKey,checked,completedDate){
 // =============================================
 // 대시보드
 // =============================================
+function _buildPersonCardHtml(person,key){
+  var autolab=allData._autolab||[];
+  var personItems=autolab.filter(function(item){return item.person===person&&shouldShowAutolab(item,key);});
+  var displayItems=showDone?personItems:personItems.filter(function(i){return !(autolabChecks[alKey(i)]||{}).checked;});
+  displayItems.sort(function(a,b){
+    var pa=PRIORITY_ORDER[a.priority]||4,pb=PRIORITY_ORDER[b.priority]||4;
+    if(pa!==pb) return pa-pb;
+    var aOverdue=a.dateKey<key?1:0,bOverdue=b.dateKey<key?1:0;
+    if(aOverdue!==bOverdue) return aOverdue-bOverdue;
+    var da=getDueDiff(a.dueDate),db=getDueDiff(b.dueDate);
+    if(da===null&&db===null) return 0;
+    if(da===null) return 1; if(db===null) return -1;
+    return da-db;
+  });
+  var totalCount=personItems.length;
+  var doneCount=personItems.filter(function(i){return !!(autolabChecks[alKey(i)]||{}).checked;}).length;
+  var overdueCount=personItems.filter(function(i){return i.dateKey<key&&!(autolabChecks[alKey(i)]||{}).checked;}).length;
+  var h='<div class="person-autolab-card" data-person="'+person+'"><div class="person-autolab-header">';
+  h+='<span class="person-autolab-name">'+person+'</span>';
+  h+='<div style="display:flex;gap:6px;align-items:center">';
+  if(overdueCount>0) h+='<span style="font-size:10px;background:#EF4444;color:#fff;padding:1px 7px;border-radius:4px;">이월 '+overdueCount+'</span>';
+  if(totalCount>0) h+='<span style="font-size:11px;color:rgba(255,255,255,0.7);">'+doneCount+'/'+totalCount+'</span>';
+  h+='</div></div><div class="person-autolab-body">';
+  if(displayItems.length===0){
+    h+='<div style="font-size:12px;color:#CBD5E1;padding:8px 0;text-align:center">'+(showDone?'오늘 공통업무 없음':'미완료 업무 없음 🎉')+'</div>';
+  } else {
+    displayItems.forEach(function(item){
+      var info=autolabChecks[alKey(item)]||{};
+      var done=!!info.checked,isOverdue=item.dueDate?(item.dueDate<key):(item.dateKey<key);
+      var dueDiff=getDueDiff(item.dueDate);
+      var isDueSoon=dueDiff!==null&&dueDiff>=0&&dueDiff<=3&&!done;
+      h+='<div class="autolab-item'+(isOverdue&&!done?' overdue':isDueSoon?' due-soon':'')+(done?' done':'')+'">';
+      h+='<div class="autolab-check-area">';
+      h+='<div class="checkbox'+(done?' checked':'')+'" onclick="toggleAutolabCheck(''+item.id+'')">'+(done?'✓':'')+'</div>';
+      h+='<div style="flex:1;min-width:0;cursor:pointer" onclick="openAutolabDetailModal(''+item.id+'')">';
+      h+='<div class="autolab-task-text">'+item.task+'</div>';
+      h+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">';
+      if(isOverdue&&!done&&!item.dueDate) h+='<span class="overdue-badge">이월</span>';
+      if(done) h+='<span class="done-badge">완료</span>';
+      h+=priorityBadgeHtml(item.priority);
+      h+=itemDateHtml(item);
+      if(item.dueDate) h+=dueBadgeHtml(item.dueDate);
+      h+='</div></div></div>';
+      h+='<button class="autolab-action-btn del" onclick="deleteDashboardAutolab(''+item.id+'')">✕</button>';
+      h+='</div>';
+    });
+  }
+  h+='</div></div>';
+  return h;
+}
 function render(){
   var key=dk(curDate);
   document.getElementById('date-label').textContent=dDisp(curDate);
@@ -458,56 +508,7 @@ function render(){
   var html='';
 
   html+='<div class="person-autolab-grid">';
-  PERSONS.forEach(function(person){
-    var personItems=autolab.filter(function(item){return item.person===person&&shouldShowAutolab(item,key);});
-    var displayItems=showDone?personItems:personItems.filter(function(i){return !(autolabChecks[alKey(i)]||{}).checked;});
-    displayItems.sort(function(a,b){
-      var pa=PRIORITY_ORDER[a.priority]||4,pb=PRIORITY_ORDER[b.priority]||4;
-      if(pa!==pb) return pa-pb;
-      var aOverdue=a.dateKey<key?1:0,bOverdue=b.dateKey<key?1:0;
-      if(aOverdue!==bOverdue) return aOverdue-bOverdue;
-      var da=getDueDiff(a.dueDate),db=getDueDiff(b.dueDate);
-      if(da===null&&db===null) return 0;
-      if(da===null) return 1; if(db===null) return -1;
-      return da-db;
-    });
-    var totalCount=personItems.length;
-    var doneCount=personItems.filter(function(i){return !!(autolabChecks[alKey(i)]||{}).checked;}).length;
-    var overdueCount=personItems.filter(function(i){return i.dateKey<key&&!(autolabChecks[alKey(i)]||{}).checked;}).length;
-
-    html+='<div class="person-autolab-card"><div class="person-autolab-header">';
-    html+='<span class="person-autolab-name">'+person+'</span>';
-    html+='<div style="display:flex;gap:6px;align-items:center">';
-    if(overdueCount>0) html+='<span style="font-size:10px;background:#EF4444;color:#fff;padding:1px 7px;border-radius:4px;">이월 '+overdueCount+'</span>';
-    if(totalCount>0) html+='<span style="font-size:11px;color:rgba(255,255,255,0.7);">'+doneCount+'/'+totalCount+'</span>';
-    html+='</div></div><div class="person-autolab-body">';
-
-    if(displayItems.length===0){
-      html+='<div style="font-size:12px;color:#CBD5E1;padding:8px 0;text-align:center">'+(showDone?'오늘 공통업무 없음':'미완료 업무 없음 🎉')+'</div>';
-    } else {
-      displayItems.forEach(function(item){
-        var info=autolabChecks[alKey(item)]||{};
-        var done=!!info.checked,isOverdue=item.dueDate?(item.dueDate<key):(item.dateKey<key);
-        var dueDiff=getDueDiff(item.dueDate);
-        var isDueSoon=dueDiff!==null&&dueDiff>=0&&dueDiff<=3&&!done;
-        html+='<div class="autolab-item'+(isOverdue&&!done?' overdue':isDueSoon?' due-soon':'')+(done?' done':'')+'">';
-        html+='<div class="autolab-check-area">';
-        html+='<div class="checkbox'+(done?' checked':'')+'" onclick="toggleAutolabCheck(\''+item.id+'\')">'+(done?'✓':'')+'</div>';
-        html+='<div style="flex:1;min-width:0;cursor:pointer" onclick="openAutolabDetailModal(\''+item.id+'\')">';
-        html+='<div class="autolab-task-text">'+item.task+'</div>';
-        html+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">';
-        if(isOverdue&&!done&&!item.dueDate) html+='<span class="overdue-badge">이월</span>';
-        if(done) html+='<span class="done-badge">완료</span>';
-        html+=priorityBadgeHtml(item.priority);
-        html+=itemDateHtml(item);
-        if(item.dueDate) html+=dueBadgeHtml(item.dueDate);
-        html+='</div></div></div>';
-        html+='<button class="autolab-action-btn del" onclick="deleteDashboardAutolab(\''+item.id+'\')">✕</button>';
-        html+='</div>';
-      });
-    }
-    html+='</div></div>';
-  });
+  PERSONS.forEach(function(person){ html+=_buildPersonCardHtml(person,key); });
   html+='</div>';
 
   html+='<div class="cohort-grid">';
@@ -683,7 +684,6 @@ function toggleAutolabCheckHistory(id,dateKey){
   var newChecked=!current;
   autolabChecks[key]={checked:newChecked,completedDate:newChecked?dateKey:''};
   renderHistory();
-  if(currentTab==='dashboard') render();
   upsertCheck('autolab',String(id),newChecked,newChecked?dateKey:'');
 }
 
@@ -864,7 +864,10 @@ function toggleAutolabCheck(id){
   var current=(autolabChecks[key]||{}).checked;
   var newChecked=!current,curKey=dk(curDate);
   autolabChecks[key]={checked:newChecked,completedDate:newChecked?curKey:''};
-  render();
+  var item=(allData._autolab||[]).find(function(i){return String(i.id)===String(id);});
+  var cardEl=item&&document.querySelector('.person-autolab-card[data-person="'+item.person+'"]');
+  if(cardEl){var tmp=document.createElement('div');tmp.innerHTML=_buildPersonCardHtml(item.person,curKey);cardEl.parentNode.replaceChild(tmp.firstElementChild,cardEl);}
+  else{render();}
   if(currentTab.startsWith('matrix-')) renderMatrix(currentTab.replace('matrix-',''));
   if(currentTab==='history') renderHistory();
   upsertCheck('autolab',String(id),newChecked,newChecked?curKey:'');
