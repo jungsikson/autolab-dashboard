@@ -1078,7 +1078,7 @@ async function submitDetailComment(){
     if(res.error) throw res.error;
     var comment={id:String(res.data.id),itemId:String(detailModalId),author:author,text:text,createdAt:createdAt};
     var el=document.getElementById('detail-modal-comments');
-    if(el){if(el.textContent.trim()==='아직 댓글이 없어요')el.innerHTML='';el.insertAdjacentHTML('beforeend',_renderOneComment(comment));}
+    if(el){if(el.textContent.trim()==='아직 댓글이 없어요')el.innerHTML='';el.insertAdjacentHTML('beforeend',_renderOneComment(comment));el.lastElementChild.scrollIntoView({behavior:'smooth',block:'nearest'});}
     if(!allData._autolabComments) allData._autolabComments={};
     var iid=String(detailModalId);
     if(!allData._autolabComments[iid]) allData._autolabComments[iid]=[];
