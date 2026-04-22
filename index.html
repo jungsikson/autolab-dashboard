@@ -1164,21 +1164,21 @@ function openAutolabDetailModal(id){
 }
 function _renderOneComment(c){
   var t=(c.text||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  return '<div id="comment-'+c.id+'" style="background:#F8FAFC;border-radius:8px;padding:8px 12px;margin-bottom:6px;border:1px solid #E2E8F0">'
+  return '<div id="comment-'+c.id+'" style="background:var(--bg-subtle);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:6px;border:1px solid var(--border-subtle)">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
-    +'<span style="font-size:12px;font-weight:700;color:#1E293B">'+c.author+'</span>'
+    +'<span style="font-size:12px;font-weight:600;color:var(--text-primary)">'+c.author+'</span>'
     +'<div style="display:flex;align-items:center;gap:8px">'
-    +'<span style="font-size:11px;color:#94A3B8">'+c.createdAt+'</span>'
+    +'<span style="font-size:11px;color:var(--text-tertiary)">'+c.createdAt+'</span>'
     +'<button onclick="editDetailComment(\''+c.id+'\')" style="font-size:11px;border:none;background:none;cursor:pointer;padding:2px;color:#94A3B8" title="수정">✏</button>'
     +'<button onclick="deleteDetailComment(\''+c.id+'\',\''+c.itemId+'\')" style="font-size:11px;border:none;background:none;cursor:pointer;padding:2px;color:#CBD5E1" title="삭제">✕</button>'
     +'</div></div>'
-    +'<div id="comment-text-'+c.id+'" style="font-size:13px;color:#374151;line-height:1.5">'+t+'</div>'
+    +'<div id="comment-text-'+c.id+'" style="font-size:13px;color:var(--text-primary);line-height:1.5">'+t+'</div>'
     +'</div>';
 }
 function renderDetailComments(comments){
   var el=document.getElementById('detail-modal-comments');
   if(!el) return;
-  if(!comments||!comments.length){el.innerHTML='<div style="font-size:12px;color:#CBD5E1;text-align:center;padding:10px">아직 댓글이 없어요</div>';return;}
+  if(!comments||!comments.length){el.innerHTML='<div style="font-size:12px;color:var(--text-tertiary);text-align:center;padding:10px">아직 댓글이 없어요</div>';return;}
   var h='';comments.forEach(function(c){h+=_renderOneComment(c);});el.innerHTML=h;
 }
 
@@ -1263,7 +1263,7 @@ async function deleteDetailComment(commentId,itemId){
   if(res.error){showToast('삭제 실패');return;}
   var el=document.getElementById('comment-'+commentId);if(el) el.remove();
   var ctn=document.getElementById('detail-modal-comments');
-  if(ctn&&!ctn.querySelector('[id^="comment-"]')) ctn.innerHTML='<div style="font-size:12px;color:#CBD5E1;text-align:center;padding:10px">아직 댓글이 없어요</div>';
+  if(ctn&&!ctn.querySelector('[id^="comment-"]')) ctn.innerHTML='<div style="font-size:12px;color:var(--text-tertiary);text-align:center;padding:10px">아직 댓글이 없어요</div>';
   var iid=String(itemId);
   if(allData._autolabComments&&allData._autolabComments[iid])
     allData._autolabComments[iid]=allData._autolabComments[iid].filter(function(c){return c.id!==String(commentId);});
