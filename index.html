@@ -287,14 +287,12 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
     </div>
     <div id="detail-modal-info" style="margin-bottom:12px"></div>
     <div style="margin-bottom:14px">
-      <div style="font-size:12px;color:var(--text-secondary);font-weight:600;margin-bottom:6px">📝 세부 내용</div>
       <textarea id="detail-modal-desc" rows="4" style="width:100%;font-size:13px;border:1px solid #CBD5E1;border-radius:8px;padding:10px 12px;resize:vertical;font-family:var(--font-sans);line-height:1.6;box-sizing:border-box" placeholder="자세한 내용을 적어주세요..."></textarea>
       <div style="text-align:right;margin-top:4px">
         <button id="detail-desc-btn" onclick="saveDetailDesc()" style="font-size:12px;padding:5px 14px;border-radius:var(--radius-sm);border:1px solid var(--border-default);cursor:pointer;background:var(--bg-subtle)">저장</button>
       </div>
     </div>
     <div>
-      <div style="font-size:12px;color:var(--text-secondary);font-weight:600;margin-bottom:6px">💬 댓글</div>
       <div id="detail-modal-comments" style="margin-bottom:10px;max-height:200px;overflow-y:auto"></div>
       <div style="display:flex;gap:6px;align-items:center">
         <select id="detail-comment-author" style="font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:7px 8px;background:var(--bg-surface);flex-shrink:0">
