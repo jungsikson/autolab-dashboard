@@ -22,10 +22,11 @@ function getTodayKST() {
 }
 
 function getDateLabelKST(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00+09:00');
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${m}월 ${dd}일(${DAY_NAMES[d.getDay()]})`;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const m = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return `${m}월 ${dd}일(${DAY_NAMES[d.getUTCDay()]})`;
 }
 
 function parseTaskText(text) {
@@ -70,8 +71,13 @@ async function main() {
     return;
   }
 
+  const [cy, cm, cd] = today.split('-').map(Number);
+  const cutoffDate = new Date(Date.UTC(cy, cm - 1, cd));
+  cutoffDate.setUTCDate(cutoffDate.getUTCDate() - 7);
+  const cutoff = cutoffDate.toISOString().slice(0, 10);
+
   const [scheduleRows, taskRows, checkRows] = await Promise.all([
-    sbFetch(`cohort_schedule?date_key=lte.${today}&raw_text=neq.&select=cohort,date_key,raw_text`),
+    sbFetch(`cohort_schedule?date_key=lte.${today}&date_key=gte.${cutoff}&raw_text=neq.&select=cohort,date_key,raw_text`),
     sbFetch(`autolab_task?start_date=lte.${today}&select=id,person,task,start_date,due_date`),
     sbFetch(`autolab_check?select=type,item_key,checked`),
   ]);
