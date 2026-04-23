@@ -39,6 +39,7 @@ function parseTaskText(text) {
     if (colonIdx > 0) {
       const before = line.substring(0, colonIdx).trim();
       const after = line.substring(colonIdx + 1).trim();
+      if (before === '근무' || before === '라벨') return;
       if (/^[가-힣]{2,6}$/.test(before) && after) {
         after.split(',').map(t => t.trim()).filter(Boolean).forEach(t => {
           tasks.push({ person: before, task: t });
@@ -71,13 +72,8 @@ async function main() {
     return;
   }
 
-  const [cy, cm, cd] = today.split('-').map(Number);
-  const cutoffDate = new Date(Date.UTC(cy, cm - 1, cd));
-  cutoffDate.setUTCDate(cutoffDate.getUTCDate() - 7);
-  const cutoff = cutoffDate.toISOString().slice(0, 10);
-
   const [scheduleRows, taskRows, checkRows] = await Promise.all([
-    sbFetch(`cohort_schedule?date_key=lte.${today}&date_key=gte.${cutoff}&raw_text=neq.&select=cohort,date_key,raw_text`),
+    sbFetch(`cohort_schedule?date_key=eq.${today}&raw_text=neq.&select=cohort,date_key,raw_text`),
     sbFetch(`autolab_task?start_date=lte.${today}&select=id,person,task,start_date,due_date`),
     sbFetch(`autolab_check?select=type,item_key,checked`),
   ]);
