@@ -105,7 +105,6 @@ async function main() {
   }
 
   for (const item of taskRows) {
-    if (item.due_date && item.due_date > today) continue;
     if (autolabCheckedIds.has(String(item.id))) continue;
     ensurePerson(item.person);
     if (item.start_date < today) personTasks[item.person].overdue.push(item.task);
