@@ -1076,8 +1076,10 @@ function renderCohortScheduleMatrix(){
       var cellHtml='',cellCls='';
       if(r){
         if(r.isWorkDay===false){
-          cellHtml='<span style="color:#CBD5E1;font-size:11px">–</span>';
           cellCls='cm-off';
+          if(r.label){cellHtml='<span style="font-size:12px;color:#94A3B8">'+r.label+'</span>';}
+          else if(r.tasks&&r.tasks.length>0){cellHtml='<span style="font-size:11px;color:#94A3B8">'+r.tasks[0].task.substring(0,14)+'</span>';}
+          else{cellHtml='<span style="color:#CBD5E1;font-size:11px">–</span>';}
         } else if(r.label){
           var lbl=r.label;
           cellCls=lbl.indexOf('현장')>=0?'cm-field':lbl.indexOf('오토랩')>=0?'cm-autolab':'';
