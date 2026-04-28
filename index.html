@@ -469,9 +469,10 @@ async function loadData(){
     (cohortRes.data||[]).forEach(function(row){
       if(!data[row.cohort]){data[row.cohort]=[];cohortOrderList.push(row.cohort);}
       var parsed=parseTaskTextFront(row.raw_text||'');
+      var _rd=new Date(row.date_key+'T00:00:00');var _DN=['일','월','화','수','목','금','토'];
       data[row.cohort].push({
-        dateKey:row.date_key, dateLabel:row.date_label||'', dayName:row.day_name||'',
-        isWeekend:!!row.is_weekend, rawText:row.raw_text||'', sheetRow:row.sheet_row,
+        dateKey:row.date_key, dateLabel:(_rd.getMonth()+1)+'/'+('0'+_rd.getDate()).slice(-2), dayName:_DN[_rd.getDay()],
+        isWeekend:_rd.getDay()===0||_rd.getDay()===6, rawText:row.raw_text||'', sheetRow:row.sheet_row,
         dbId:row.id, isWorkDay:parsed.isWorkDay, label:parsed.label, tasks:parsed.tasks, isOverdue:row.date_key<todayKey,
       });
     });
