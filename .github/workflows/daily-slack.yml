@@ -1,9 +1,7 @@
 name: 데일리 슬랙 알림
 
 on:
-  schedule:
-    - cron: '0 0 * * 1-5'  # 매주 월-금 오전 9시 KST (= UTC 00:00)
-  workflow_dispatch:        # 수동 실행 (테스트용)
+  workflow_dispatch:  # cron-job.org에서 KST 10:00 (UTC 01:00)에 트리거
 
 jobs:
   send-daily-slack:
