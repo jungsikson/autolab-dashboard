@@ -204,6 +204,7 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
     <button class="tab-btn" id="tab-matrix-강희준" onclick="switchTab('matrix-강희준')">강희준 매트릭스</button>
     <button class="tab-btn" id="tab-matrix-송민호" onclick="switchTab('matrix-송민호')">송민호 매트릭스</button>
     <button class="tab-btn" id="tab-matrix-윤건희" onclick="switchTab('matrix-윤건희')">윤건희 매트릭스</button>
+    <button class="tab-btn" id="tab-matrix-안보람" onclick="switchTab('matrix-안보람')">안보람 매트릭스</button>
     <button class="tab-btn" id="tab-history" onclick="switchTab('history')">업무 히스토리</button>
     <button class="tab-btn" id="tab-cohort-schedule" onclick="switchTab('cohort-schedule')">기수 일정</button>
   </div>
@@ -211,6 +212,7 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
   <div id="view-matrix-강희준" style="display:none"><div id="matrix-content-강희준"></div></div>
   <div id="view-matrix-송민호" style="display:none"><div id="matrix-content-송민호"></div></div>
   <div id="view-matrix-윤건희" style="display:none"><div id="matrix-content-윤건희"></div></div>
+  <div id="view-matrix-안보람" style="display:none"><div id="matrix-content-안보람"></div></div>
   <div id="view-history" style="display:none"><div id="history-content"><div class="loading"><div class="spinner"></div>불러오는 중...</div></div></div>
   <div id="view-cohort-schedule" style="display:none"><div id="cohort-schedule-content"></div></div>
 </div>
@@ -244,6 +246,7 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
         <option value="강희준">강희준</option>
         <option value="송민호">송민호</option>
         <option value="윤건희">윤건희</option>
+        <option value="안보람">안보람</option>
       </select>
     </div>
     <div style="margin-bottom:10px">
@@ -291,6 +294,7 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
               <option value="강희준">강희준</option>
               <option value="송민호">송민호</option>
               <option value="윤건희">윤건희</option>
+              <option value="안보람">안보람</option>
             </select>
             <select id="dm-priority-select" style="font-size:12px;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:5px 8px;background:var(--bg-surface);color:var(--text-primary)">
               <option value="">미분류</option>
@@ -320,6 +324,7 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
         <option value="강희준">강희준</option>
         <option value="송민호">송민호</option>
         <option value="윤건희">윤건희</option>
+        <option value="안보람">안보람</option>
       </select>
       <input type="text" id="detail-comment-input" placeholder="댓글 입력..." style="flex:1;font-size:13px;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:7px 10px;color:var(--text-primary)" onkeydown="if(event.key===\'Enter\'&&!event.isComposing)submitDetailComment()">
       <button onclick="submitDetailComment()" style="font-size:12px;padding:7px 14px;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#fff;cursor:pointer;flex-shrink:0">등록</button>
@@ -344,7 +349,7 @@ var _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // 상태 변수
 // =============================================
 var DAYS=['일','월','화','수','목','금','토'];
-var PERSONS=['강희준','송민호','윤건희'];
+var PERSONS=['강희준','송민호','윤건희','안보람'];
 var PRIORITY_LABELS={DO:'🔴 긴급+중요',DELEGATE:'🟡 긴급+안중요',SCHEDULE:'🔵 중요+안긴급',ELIMINATE:'⚪ 둘다아님','':'미분류'};
 var PRIORITY_SHORT={DO:'🔴 DO',DELEGATE:'🟡 위임',SCHEDULE:'🔵 예정',ELIMINATE:'⚪ 제거','':'미분류'};
 var PRIORITY_ORDER={DO:0,DELEGATE:1,SCHEDULE:2,ELIMINATE:3,'':4};
@@ -434,7 +439,7 @@ function toggleShowDone(){
 }
 function switchTab(tab){
   currentTab=tab;
-  var allTabs=['dashboard','matrix-강희준','matrix-송민호','matrix-윤건희','history','cohort-schedule'];
+  var allTabs=['dashboard','matrix-강희준','matrix-송민호','matrix-윤건희','matrix-안보람','history','cohort-schedule'];
   allTabs.forEach(function(t){
     document.getElementById('tab-'+t).className='tab-btn'+(tab===t?' active':'');
     document.getElementById('view-'+t).style.display=tab===t?'':'none';

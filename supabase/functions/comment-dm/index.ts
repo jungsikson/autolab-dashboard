@@ -9,6 +9,7 @@ const MENTION_MAP: Record<string, string> = {
   '강희준': 'U06PSEETK54',
   '윤건희': 'U042D22A1RT',
   '황두현': 'U086L4NUPEF',
+  '안보람': 'U032FKB6SJK',
 };
 
 const DASHBOARD_URL = 'https://jungsikson.github.io/autolab-dashboard/';
