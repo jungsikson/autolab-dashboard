@@ -181,6 +181,18 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
 .autolab-item:has(.p-SCHEDULE){border-left:3px solid var(--accent)}
 .autolab-item:has(.p-DELEGATE){border-left:3px solid #F59E0B}
 .autolab-item:has(.p-DO):hover,.autolab-item:has(.p-SCHEDULE):hover,.autolab-item:has(.p-DELEGATE):hover{background:var(--bg-subtle)}
+@media (max-width: 640px) {
+  .main{padding:12px}
+  .header{padding:10px 14px}
+  .date-label{min-width:120px;font-size:13px}
+  .tab-bar{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;border-radius:12px}
+  .tab-btn{white-space:nowrap;padding:8px 14px}
+  .person-autolab-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .matrix-grid{grid-template-columns:1fr}
+  .cohort-grid{grid-template-columns:1fr}
+  .modal-bg{padding:16px 10px}
+  .modal{padding:20px 16px}
+}
 </style>
 </head>
 <body>
