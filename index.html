@@ -339,6 +339,8 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
 .modal-bg.open{align-items:stretch}
 .modal{width:100%;max-width:460px;height:100%;max-height:100%;margin:0;border-radius:0;padding:24px 28px 30px;box-shadow:-10px 0 40px rgba(0,0,0,0.14);transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.85,.25,1);position:relative;overflow-y:auto}
 .modal-bg.open .modal{transform:translateX(0)}
+.dm-close{flex:none;width:30px;height:30px;border:none;background:transparent;border-radius:8px;color:var(--text-tertiary);font-size:14px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .12s,color .12s}
+.dm-close:hover{background:var(--bg-subtle);color:var(--text-primary)}
 .modal-title{font-size:18px;font-weight:700;letter-spacing:-0.02em}
 .modal textarea,.modal input[type=text],.modal select,.modal input[type=date]{border-radius:var(--radius-md)}
 .modal textarea:focus,.modal input[type=text]:focus{border-color:var(--border-brand);border-width:1.5px}
@@ -366,7 +368,7 @@ body{background:var(--bg-canvas)}
 .sidebar{width:180px;flex:none;background:var(--bg-surface);border-right:1px solid var(--border-1);
   display:flex;flex-direction:column;gap:22px;padding:20px 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
 .sidebar .brand-lockup{padding:2px 8px;flex-direction:column;align-items:flex-start;gap:7px}
-.brand-logo{height:20px;width:auto;display:block}
+.brand-logo{height:20px;width:auto;display:block;filter:none}
 .nav{display:flex;flex-direction:column;gap:22px}
 .nav-group{display:flex;flex-direction:column;gap:2px}
 .nav-label{font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--text-tertiary);text-transform:uppercase;padding:0 10px 8px}
@@ -607,7 +609,10 @@ body{background:var(--bg-canvas)}
           </div>
         </div>
       </div>
-      <button id="dm-edit-btn" class="btn-ghost" onclick="enterDetailEdit()" style="flex-shrink:0;padding:6px 14px">수정</button>
+      <div style="flex:none;display:flex;align-items:center;gap:6px">
+        <button id="dm-edit-btn" class="btn-ghost" onclick="enterDetailEdit()" style="padding:6px 14px">수정</button>
+        <button class="dm-close" onclick="closeDetailModal()" aria-label="닫기" title="닫기 (Esc)">✕</button>
+      </div>
     </div>
     <div id="detail-modal-info" style="margin-bottom:10px"></div>
     <div id="dm-desc-view" style="min-height:36px;font-size:13px;color:var(--text-primary);line-height:1.7;margin-bottom:16px;white-space:pre-wrap"></div>
@@ -1607,6 +1612,7 @@ function closeDetailModal(){
   document.getElementById('detail-modal-bg').classList.remove('open');
 }
 document.getElementById('detail-modal-bg').onclick=function(e){if(e.target===this)closeDetailModal();};
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeModal();closeAutolabModal();closeDetailModal();}});
 function editFromDetail(){if(detailModalId)enterDetailEdit();}
 
 function enterDetailEdit(){
@@ -1627,6 +1633,7 @@ function enterDetailEdit(){
   document.getElementById('detail-modal-info').style.display='none';
   document.getElementById('dm-edit-btn').style.display='none';
   document.getElementById('dm-cancel-btn').textContent='취소';
+  document.getElementById('dm-cancel-btn').style.display='';
   document.getElementById('dm-cancel-btn').setAttribute('onclick','exitDetailEdit()');
   document.getElementById('dm-save-btn').style.display='';
   setTimeout(function(){document.getElementById('dm-task-input').focus();},80);
@@ -1640,6 +1647,7 @@ function exitDetailEdit(silent){
   document.getElementById('detail-modal-info').style.display='';
   document.getElementById('dm-edit-btn').style.display='';
   document.getElementById('dm-cancel-btn').textContent='닫기';
+  document.getElementById('dm-cancel-btn').style.display='none';
   document.getElementById('dm-cancel-btn').setAttribute('onclick','closeDetailModal()');
   document.getElementById('dm-save-btn').style.display='none';
 }
