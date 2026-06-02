@@ -334,20 +334,18 @@ body{font-family:var(--font-sans);background:var(--bg-canvas);color:var(--text-p
 .cohort-matrix-table th{background:var(--bg-subtle);color:var(--text-secondary);text-transform:none;border-color:var(--border-subtle)}
 .cohort-matrix-table td{border-color:var(--border-subtle)}
 
-/* ---- Modals → bottom sheets ---- */
-.modal-bg{align-items:flex-end;justify-content:center;padding:0 0 0;background:var(--bg-scrim);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
-.modal-bg.open{align-items:flex-end}
-.modal{border-radius:12px 12px 0 0;max-width:580px;margin:0 auto;padding:26px 28px 28px;box-shadow:var(--shadow-sheet);transform:translateY(24px);transition:transform .25s ease;position:relative}
-.modal-bg.open .modal{transform:translateY(0)}
+/* ---- Modals → right slide-in drawer (keeps the list in view) ---- */
+.modal-bg{align-items:stretch;justify-content:flex-end;padding:0;background:var(--bg-scrim);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.modal-bg.open{align-items:stretch}
+.modal{width:100%;max-width:460px;height:100%;max-height:100%;margin:0;border-radius:0;padding:24px 28px 30px;box-shadow:-10px 0 40px rgba(0,0,0,0.14);transform:translateX(100%);transition:transform .28s cubic-bezier(.2,.85,.25,1);position:relative;overflow-y:auto}
+.modal-bg.open .modal{transform:translateX(0)}
 .modal-title{font-size:18px;font-weight:700;letter-spacing:-0.02em}
 .modal textarea,.modal input[type=text],.modal select,.modal input[type=date]{border-radius:var(--radius-md)}
 .modal textarea:focus,.modal input[type=text]:focus{border-color:var(--border-brand);border-width:1.5px}
 .modal-btns button{border-radius:var(--radius-md);font-weight:700;padding:11px 20px}
 .btn-save{box-shadow:none}
 @media (min-width:560px){
-  .modal-bg{align-items:center;padding:24px}
-  .modal{border-radius:12px;transform:translateY(12px)}
-  .modal-bg.open .modal{transform:translateY(0)}
+  .modal{border-radius:0}
 }
 
 /* ---- Empty / loading ---- */
@@ -579,7 +577,7 @@ body{background:var(--bg-canvas)}
   </div>
 </div>
 <div class="modal-bg" id="detail-modal-bg">
-  <div class="modal" style="max-width:560px">
+  <div class="modal" style="max-width:460px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
       <div style="min-width:0;flex:1;margin-right:12px">
         <div id="dm-view-header">
