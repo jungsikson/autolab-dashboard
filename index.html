@@ -499,6 +499,7 @@ body{background:var(--bg-canvas)}
         </div>
       </div>
       <div class="topbar-right">
+        <button class="toggle-done-btn" id="toggle-unclassified-btn" onclick="toggleShowUnclassified()" style="display:none">미분류 보이기</button>
         <button class="toggle-done-btn" id="toggle-done-btn" onclick="toggleShowDone()">완료 숨기기</button>
         <button class="icon-btn" onclick="goToday()">오늘</button>
         <button class="icon-btn" onclick="loadData()">↺ 새로고침</button>
@@ -660,6 +661,7 @@ var allData={}, checks={}, autolabChecks={};
 var editTarget={cohort:null,dbId:null};
 var currentTab='dashboard';
 var showDone=true;
+var showUnclassified=false;
 var dragItemId=null;
 
 var personColorPool=[
@@ -746,6 +748,13 @@ function toggleShowDone(){
   render();
   if(currentTab.startsWith('matrix-')) renderMatrix(currentTab.replace('matrix-',''));
 }
+function toggleShowUnclassified(){
+  showUnclassified=!showUnclassified;
+  var btn=document.getElementById('toggle-unclassified-btn');
+  btn.textContent=showUnclassified?'미분류 숨기기':'미분류 보이기';
+  btn.className='toggle-done-btn'+(showUnclassified?' active':'');
+  if(currentTab.startsWith('matrix-')) renderMatrix(currentTab.replace('matrix-',''));
+}
 function switchTab(tab){
   currentTab=tab;
   var allTabs=['dashboard','matrix-강희준','matrix-송민호','matrix-윤건희','matrix-안보람','history','cohort-schedule'];
@@ -756,6 +765,7 @@ function switchTab(tab){
   document.getElementById('date-nav-wrap').style.display=tab==='dashboard'?'flex':'none';
   var showToggleBtn=tab==='dashboard'||tab.startsWith('matrix-');
   document.getElementById('toggle-done-btn').style.display=showToggleBtn?'block':'none';
+  document.getElementById('toggle-unclassified-btn').style.display=tab.startsWith('matrix-')?'block':'none';
   if(tab==='history') renderHistory();
   if(tab==='cohort-schedule') renderCohortScheduleMatrix();
   if(tab.startsWith('matrix-')) renderMatrix(tab.replace('matrix-',''));
@@ -1151,6 +1161,7 @@ function renderMatrix(person){
 
   var unclassified=quadrants['']||[];
   if(!showDone) unclassified=unclassified.filter(function(i){return !(autolabChecks[alKey(i)]||{}).checked;});
+  if(showUnclassified){
   html+='<div class="unclassified-section" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,\''+person+'\',\'\')">';
   html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
   html+='<div style="font-size:12px;font-weight:700;color:#6D727A">미분류 — 4분면으로 드래그하거나 추가해서 배치하세요</div>';
@@ -1185,6 +1196,7 @@ function renderMatrix(person){
     });
   }
   html+='</div></div>';
+  } // end if(showUnclassified)
   document.getElementById('matrix-content-'+person).innerHTML=html;
   if(matrixAddingIn[person]!==undefined){
     var inputId=matrixAddingIn[person]===''?'ma-task-'+person+'-unclass':'ma-task-'+person+'-'+matrixAddingIn[person];
