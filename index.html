@@ -1382,7 +1382,15 @@ function renderCohortScheduleMatrix(){
       dateSet[r.dateKey]={dateLabel:r.dateLabel,dayName:r.dayName,isWeekend:r.isWeekend};
     });
   });
-  var dates=Object.keys(dateSet).sort();
+  var todayKey=dk(new Date());
+
+  // 오늘 이후 일정이 있는 기수만
+  cohorts=cohorts.filter(function(c){
+    return (allData[c]||[]).some(function(r){return r.dateKey>=todayKey;});
+  });
+
+  // 오늘 이후 날짜만
+  var dates=Object.keys(dateSet).filter(function(d){return d>=todayKey;}).sort();
 
   var byDate={};
   cohorts.forEach(function(c){
@@ -1391,8 +1399,6 @@ function renderCohortScheduleMatrix(){
       byDate[r.dateKey][c]=r;
     });
   });
-
-  var todayKey=dk(new Date());
 
   var html='<div style="padding:16px;overflow-x:auto">';
   html+='<table class="cohort-matrix-table"><thead><tr>';
