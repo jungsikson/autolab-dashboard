@@ -499,6 +499,7 @@ body{background:var(--bg-canvas)}
         </div>
       </div>
       <div class="topbar-right">
+        <button class="toggle-done-btn" id="toggle-unclassified-btn" onclick="toggleShowUnclassified()" style="display:none">미분류 보이기</button>
         <button class="toggle-done-btn" id="toggle-done-btn" onclick="toggleShowDone()">완료 숨기기</button>
         <button class="icon-btn" onclick="goToday()">오늘</button>
         <button class="icon-btn" onclick="loadData()">↺ 새로고침</button>
@@ -662,6 +663,7 @@ var currentTab='dashboard';
 var showDoneDashboard=true;
 var showDoneMatrix=false;
 var showDone=true;
+var showUnclassified=false;
 var dragItemId=null;
 
 var personColorPool=[
@@ -740,6 +742,13 @@ function shouldShowCohortTask(dateKey,cohort,taskIndex,curKey){
   return cd!==''&&curKey<=cd;
 }
 
+function toggleShowUnclassified(){
+  showUnclassified=!showUnclassified;
+  var btn=document.getElementById('toggle-unclassified-btn');
+  btn.textContent=showUnclassified?'미분류 숨기기':'미분류 보이기';
+  btn.className='toggle-done-btn'+(showUnclassified?' active':'');
+  render();
+}
 function toggleShowDone(){
   showDone=!showDone;
   if(currentTab==='dashboard') showDoneDashboard=showDone;
@@ -760,6 +769,7 @@ function switchTab(tab){
   document.getElementById('date-nav-wrap').style.display=tab==='dashboard'?'flex':'none';
   var showToggleBtn=tab==='dashboard'||tab.startsWith('matrix-');
   document.getElementById('toggle-done-btn').style.display=showToggleBtn?'block':'none';
+  document.getElementById('toggle-unclassified-btn').style.display=tab==='dashboard'?'block':'none';
   if(tab==='dashboard'){showDone=showDoneDashboard;}
   else if(tab.startsWith('matrix-')){showDone=showDoneMatrix;}
   var btn=document.getElementById('toggle-done-btn');
@@ -848,7 +858,7 @@ async function upsertCheck(type,itemKey,checked,completedDate){
 // =============================================
 function _buildPersonCardHtml(person,key){
   var autolab=allData._autolab||[];
-  var personItems=autolab.filter(function(item){return item.person===person&&shouldShowAutolab(item,key)&&item.priority!=='';});
+  var personItems=autolab.filter(function(item){return item.person===person&&shouldShowAutolab(item,key)&&(showUnclassified||item.priority!=='');});
   var displayItems=showDone?personItems:personItems.filter(function(i){return !(autolabChecks[alKey(i)]||{}).checked;});
   displayItems.sort(function(a,b){
     var pa=PRIORITY_ORDER[a.priority];if(pa==null)pa=4;
