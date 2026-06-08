@@ -1384,13 +1384,13 @@ function renderCohortScheduleMatrix(){
   });
   var todayKey=dk(new Date());
 
-  // 오늘 이후 일정이 있는 기수만
+  // 오늘 이후 일정이 하나라도 있는 기수만 (진행 중인 기수)
   cohorts=cohorts.filter(function(c){
     return (allData[c]||[]).some(function(r){return r.dateKey>=todayKey;});
   });
 
-  // 오늘 이후 날짜만
-  var dates=Object.keys(dateSet).filter(function(d){return d>=todayKey;}).sort();
+  // 해당 기수의 전체 날짜 (과거 포함)
+  var dates=Object.keys(dateSet).sort();
 
   var byDate={};
   cohorts.forEach(function(c){
