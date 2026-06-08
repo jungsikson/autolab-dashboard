@@ -1376,12 +1376,6 @@ function renderCohortScheduleMatrix(){
   cohorts.sort(function(a,b){return parseInt(a)-parseInt(b);});
   if(!cohorts.length){document.getElementById('cohort-schedule-content').innerHTML='<div style="padding:32px;text-align:center;color:#8A8F96;">기수 데이터가 없어요</div>';return;}
 
-  var dateSet={};
-  cohorts.forEach(function(c){
-    (allData[c]||[]).forEach(function(r){
-      dateSet[r.dateKey]={dateLabel:r.dateLabel,dayName:r.dayName,isWeekend:r.isWeekend};
-    });
-  });
   var todayKey=dk(new Date());
 
   // 오늘 이후 일정이 하나라도 있는 기수만 (진행 중인 기수)
@@ -1389,7 +1383,13 @@ function renderCohortScheduleMatrix(){
     return (allData[c]||[]).some(function(r){return r.dateKey>=todayKey;});
   });
 
-  // 해당 기수의 전체 날짜 (과거 포함)
+  // 필터된 기수의 날짜만 모으기
+  var dateSet={};
+  cohorts.forEach(function(c){
+    (allData[c]||[]).forEach(function(r){
+      dateSet[r.dateKey]={dateLabel:r.dateLabel,dayName:r.dayName,isWeekend:r.isWeekend};
+    });
+  });
   var dates=Object.keys(dateSet).sort();
 
   var byDate={};
