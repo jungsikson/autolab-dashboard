@@ -499,7 +499,6 @@ body{background:var(--bg-canvas)}
         </div>
       </div>
       <div class="topbar-right">
-        <button class="toggle-done-btn" id="toggle-unclassified-btn" onclick="toggleShowUnclassified()" style="display:none">미분류 보이기</button>
         <button class="toggle-done-btn" id="toggle-done-btn" onclick="toggleShowDone()">완료 숨기기</button>
         <button class="icon-btn" onclick="goToday()">오늘</button>
         <button class="icon-btn" onclick="loadData()">↺ 새로고침</button>
@@ -660,8 +659,9 @@ var curDate=new Date(); curDate.setHours(0,0,0,0);
 var allData={}, checks={}, autolabChecks={};
 var editTarget={cohort:null,dbId:null};
 var currentTab='dashboard';
+var showDoneDashboard=true;
+var showDoneMatrix=false;
 var showDone=true;
-var showUnclassified=false;
 var dragItemId=null;
 
 var personColorPool=[
@@ -742,17 +742,12 @@ function shouldShowCohortTask(dateKey,cohort,taskIndex,curKey){
 
 function toggleShowDone(){
   showDone=!showDone;
+  if(currentTab==='dashboard') showDoneDashboard=showDone;
+  else if(currentTab.startsWith('matrix-')) showDoneMatrix=showDone;
   var btn=document.getElementById('toggle-done-btn');
   btn.textContent=showDone?'완료 숨기기':'완료 보이기';
   btn.className='toggle-done-btn'+(showDone?' active':'');
   render();
-  if(currentTab.startsWith('matrix-')) renderMatrix(currentTab.replace('matrix-',''));
-}
-function toggleShowUnclassified(){
-  showUnclassified=!showUnclassified;
-  var btn=document.getElementById('toggle-unclassified-btn');
-  btn.textContent=showUnclassified?'미분류 숨기기':'미분류 보이기';
-  btn.className='toggle-done-btn'+(showUnclassified?' active':'');
   if(currentTab.startsWith('matrix-')) renderMatrix(currentTab.replace('matrix-',''));
 }
 function switchTab(tab){
@@ -765,7 +760,11 @@ function switchTab(tab){
   document.getElementById('date-nav-wrap').style.display=tab==='dashboard'?'flex':'none';
   var showToggleBtn=tab==='dashboard'||tab.startsWith('matrix-');
   document.getElementById('toggle-done-btn').style.display=showToggleBtn?'block':'none';
-  document.getElementById('toggle-unclassified-btn').style.display=tab.startsWith('matrix-')?'block':'none';
+  if(tab==='dashboard'){showDone=showDoneDashboard;}
+  else if(tab.startsWith('matrix-')){showDone=showDoneMatrix;}
+  var btn=document.getElementById('toggle-done-btn');
+  btn.textContent=showDone?'완료 숨기기':'완료 보이기';
+  btn.className='toggle-done-btn'+(showDone?' active':'');
   if(tab==='history') renderHistory();
   if(tab==='cohort-schedule') renderCohortScheduleMatrix();
   if(tab.startsWith('matrix-')) renderMatrix(tab.replace('matrix-',''));
@@ -849,7 +848,7 @@ async function upsertCheck(type,itemKey,checked,completedDate){
 // =============================================
 function _buildPersonCardHtml(person,key){
   var autolab=allData._autolab||[];
-  var personItems=autolab.filter(function(item){return item.person===person&&shouldShowAutolab(item,key);});
+  var personItems=autolab.filter(function(item){return item.person===person&&shouldShowAutolab(item,key)&&item.priority!=='';});
   var displayItems=showDone?personItems:personItems.filter(function(i){return !(autolabChecks[alKey(i)]||{}).checked;});
   displayItems.sort(function(a,b){
     var pa=PRIORITY_ORDER[a.priority];if(pa==null)pa=4;
@@ -1161,7 +1160,6 @@ function renderMatrix(person){
 
   var unclassified=quadrants['']||[];
   if(!showDone) unclassified=unclassified.filter(function(i){return !(autolabChecks[alKey(i)]||{}).checked;});
-  if(showUnclassified){
   html+='<div class="unclassified-section" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,\''+person+'\',\'\')">';
   html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
   html+='<div style="font-size:12px;font-weight:700;color:#6D727A">미분류 — 4분면으로 드래그하거나 추가해서 배치하세요</div>';
@@ -1196,7 +1194,6 @@ function renderMatrix(person){
     });
   }
   html+='</div></div>';
-  } // end if(showUnclassified)
   document.getElementById('matrix-content-'+person).innerHTML=html;
   if(matrixAddingIn[person]!==undefined){
     var inputId=matrixAddingIn[person]===''?'ma-task-'+person+'-unclass':'ma-task-'+person+'-'+matrixAddingIn[person];
