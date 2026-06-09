@@ -75,7 +75,7 @@ async function main() {
 
   const [scheduleRows, taskRows, checkRows] = await Promise.all([
     sbFetch(`cohort_schedule?date_key=eq.${today}&raw_text=neq.&select=cohort,date_key,raw_text`),
-    sbFetch(`autolab_task?start_date=lte.${today}&select=id,person,task,start_date,due_date`),
+    sbFetch(`autolab_task?start_date=lte.${today}&priority=neq.&select=id,person,task,start_date,due_date`),
     sbFetch(`autolab_check?select=type,item_key,checked`),
   ]);
 
@@ -124,11 +124,11 @@ async function main() {
     if (!tasks.today.length && !tasks.overdue.length) continue;
     lines.push(`*${MENTION_MAP[person] || person}*`);
     if (tasks.today.length) {
-      lines.push('   📌 *오늘 할일*');
+      lines.push('   *오늘 할일*');
       tasks.today.forEach(t => lines.push(`   ${t}`));
     }
     if (tasks.overdue.length) {
-      lines.push('   ⚠️ *미완료 이월*');
+      lines.push('   *미완료 이월*');
       tasks.overdue.forEach(t => lines.push(`   ${t}`));
     }
     lines.push('');
