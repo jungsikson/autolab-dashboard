@@ -14,7 +14,7 @@ const MENTION_MAP = {
   '안보람': '<@U032FKB6SJK>',
 };
 
-const PERSONS = ['황두현', '강희준', '송민호', '윤건희', '안보람'];
+const PERSONS = ['황두현', '강희준', '송민호', '안보람'];
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 
 function getTodayKST() {
