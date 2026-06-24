@@ -479,6 +479,7 @@ body{background:var(--bg-canvas)}
         <button class="tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">오늘 대시보드</button>
         <button class="tab-btn" id="tab-history" onclick="switchTab('history')">업무 히스토리</button>
         <button class="tab-btn" id="tab-cohort-schedule" onclick="switchTab('cohort-schedule')">기수 일정</button>
+        <button class="tab-btn" id="tab-cells" onclick="switchTab('cells')">셀현황</button>
       </div>
       <div class="nav-group">
         <div class="nav-label">우선순위 매트릭스</div>
@@ -511,6 +512,7 @@ body{background:var(--bg-canvas)}
   <div id="view-matrix-안보람" style="display:none"><div id="matrix-content-안보람"></div></div>
   <div id="view-history" style="display:none"><div id="history-content"><div class="loading"><div class="spinner"></div>불러오는 중...</div></div></div>
   <div id="view-cohort-schedule" style="display:none"><div id="cohort-schedule-content"></div></div>
+  <div id="view-cells" style="display:none"><div id="cells-content"></div></div>
     </main>
   </div>
 </div>
@@ -755,7 +757,7 @@ function toggleShowDone(){
 }
 function switchTab(tab){
   currentTab=tab;
-  var allTabs=['dashboard','matrix-강희준','matrix-송민호','matrix-안보람','history','cohort-schedule'];
+  var allTabs=['dashboard','matrix-강희준','matrix-송민호','matrix-안보람','history','cohort-schedule','cells'];
   allTabs.forEach(function(t){
     document.getElementById('tab-'+t).className='tab-btn'+(tab===t?' active':'');
     document.getElementById('view-'+t).style.display=tab===t?'':'none';
@@ -771,6 +773,7 @@ function switchTab(tab){
   btn.className='toggle-done-btn'+(showDone?' active':'');
   if(tab==='history') renderHistory();
   if(tab==='cohort-schedule') renderCohortScheduleMatrix();
+  if(tab==='cells') renderCellStatus();
   if(tab.startsWith('matrix-')) renderMatrix(tab.replace('matrix-',''));
 }
 
@@ -1434,6 +1437,50 @@ function renderCohortScheduleMatrix(){
   });
   html+='</tbody></table></div>';
   document.getElementById('cohort-schedule-content').innerHTML=html;
+}
+
+// =============================================
+// 셀현황 (시트 직접 fetch — 읽기 전용, gviz)
+// =============================================
+var CELL_SHEET_ID='1cHfnjE4Aac2DMjFnIJsr0WxHeulkWPo2F0Axqs3qjqs';
+var CELL_SHEET_NAME='셀현황(자동)';
+async function renderCellStatus(){
+  var el=document.getElementById('cells-content');
+  el.innerHTML='<div class="loading"><div class="spinner"></div>셀현황 불러오는 중...</div>';
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  try{
+    var url='https://docs.google.com/spreadsheets/d/'+CELL_SHEET_ID+'/gviz/tq?tqx=out:json&headers=0&sheet='+encodeURIComponent(CELL_SHEET_NAME);
+    var resp=await fetch(url,{cache:'no-store'});
+    var txt=await resp.text();
+    var json=JSON.parse(txt.substring(txt.indexOf('(')+1,txt.lastIndexOf(')')));
+    var rows=(json.table&&json.table.rows)||[];
+    var grid=rows.map(function(r){return (r.c||[]).map(function(c){return c&&c.v!=null?c.v:'';});});
+    if(!grid.length){el.innerHTML='<div style="padding:32px;text-align:center;color:var(--text-secondary)">셀현황 데이터가 없어요</div>';return;}
+    var head=grid[0],colCount=0;
+    for(var j=0;j<head.length;j++){if(String(head[j]).trim()!=='')colCount=j+1;}
+    var html='<div style="padding:16px;overflow-x:auto">';
+    html+='<table class="cohort-matrix-table"><thead><tr>';
+    for(var j=0;j<colCount;j++){html+='<th style="'+(j===0?'text-align:left;':'')+'">'+esc(head[j])+'</th>';}
+    html+='</tr></thead><tbody>';
+    for(var i=1;i<grid.length;i++){
+      var row=grid[i];
+      var label=String(row[0]||'').trim();
+      var isSummary=(label==='셀장'||label==='ZONE'||label==='인원');
+      html+='<tr>';
+      for(var j=0;j<colCount;j++){
+        var v=row[j]==null?'':row[j];
+        var style=j===0?'text-align:left;font-weight:600;color:var(--text-secondary);white-space:nowrap':(isSummary?'font-weight:600;color:var(--text-primary)':'color:var(--text-primary)');
+        html+='<td style="'+style+'">'+esc(v)+'</td>';
+      }
+      html+='</tr>';
+    }
+    html+='</tbody></table>';
+    html+='<div style="padding:10px 4px 0;font-size:var(--text-xs);color:var(--text-tertiary)">시트 "셀현황(자동)" 실시간 반영 · 새로고침하면 최신</div>';
+    html+='</div>';
+    el.innerHTML=html;
+  }catch(e){
+    el.innerHTML='<div style="padding:32px;text-align:center;color:var(--text-secondary)">셀현황을 불러오지 못했어요<br><span style="font-size:12px;color:var(--text-tertiary)">'+esc(e.message||e)+'</span></div>';
+  }
 }
 
 // =============================================
