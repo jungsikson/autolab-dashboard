@@ -1456,8 +1456,10 @@ async function renderCellStatus(){
     var rows=(json.table&&json.table.rows)||[];
     var grid=rows.map(function(r){return (r.c||[]).map(function(c){return c&&c.v!=null?c.v:'';});});
     if(!grid.length){el.innerHTML='<div style="padding:32px;text-align:center;color:var(--text-secondary)">셀현황 데이터가 없어요</div>';return;}
-    var head=grid[0],colCount=0;
-    for(var j=0;j<head.length;j++){if(String(head[j]).trim()!=='')colCount=j+1;}
+    var colCount=0;
+    grid.forEach(function(row){for(var j=0;j<row.length;j++){if(String(row[j]==null?'':row[j]).trim()!=='')colCount=Math.max(colCount,j+1);}});
+    var head=grid[0].slice();
+    if(colCount>0&&String(head[colCount-1]==null?'':head[colCount-1]).trim()===''){head[colCount-1]='합계';}
     var html='<div style="padding:16px;overflow-x:auto">';
     html+='<table class="cohort-matrix-table"><thead><tr>';
     for(var j=0;j<colCount;j++){html+='<th style="'+(j===0?'text-align:left;':'')+'">'+esc(head[j])+'</th>';}
