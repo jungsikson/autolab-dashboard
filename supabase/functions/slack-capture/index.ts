@@ -37,6 +37,13 @@ const TEAM_CONFIG: Record<Team, { table: string; dashboard: string; label: strin
 };
 
 const TRIGGER = 'pushpin'; // 📌
+const APPROVE_TRIGGER = 'white_check_mark'; // ✅ — 근무 밖 예약 차단 해제 (슬롯 열기)
+// 👌 — "확인했고 정상이다". 무반응을 '정상'으로 흡수하지 않기 위해 별도 반응으로 받는다.
+// ☑️·✔️ 는 쓰지 않는다 — ✅ 와 시각적으로 가까운데 ✅ 는 실제로 차단을 지운다.
+const KEEP_TRIGGER = 'ok_hand';
+const RECHECK_LEAD_DAYS = 3; // 정상 확인은 영구 면제가 아니다 — 차단일 D-3에 한 번 더 묻는다
+// 차단 해제 승인은 강희준만. 📌 캡처(USERS)보다 좁다 — 운영 데이터를 지우는 행위라 권한을 따로 둔다.
+const APPROVERS = new Set(['U06PSEETK54']);
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 const PRIORITY_LABEL: Record<string, string> = {
@@ -75,6 +82,76 @@ async function slackGet(token: string, method: string, params: Record<string, st
   return await r.json();
 }
 
+// ✅ 승인 처리 — block-audit 이 올린 "차단 해제 후보" 메시지에만 반응한다.
+// 📌 캡처 경로와 완전히 분리돼 있어 이 함수가 실패해도 일감 캡처에는 영향이 없다.
+// 실제 삭제는 여기서 하지 않는다. MySQL 은 원격에서 못 닿으므로 승인만 기록하고,
+// 로컬 잡(block-audit.py apply)이 다시 검증한 뒤 지운다.
+async function handleReleaseApproval(ev: any): Promise<Response> {
+  if (!APPROVERS.has(ev.user)) return new Response('not an approver', { status: 200 });
+  const who = USERS[ev.user];
+  if (!who) return new Response('unknown user', { status: 200 });
+  if (!ev.item || ev.item.type !== 'message') return new Response('not a message', { status: 200 });
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+  );
+
+  // 그 메시지가 점검 카드인지 slack_ts 로 확인 (아무 메시지에나 달아도 무시)
+  const { data: rows } = await supabase
+    .from('block_release_approval')
+    .select('id, holiday_id, detailer_name, block_day, block_window, decision')
+    .eq('slack_ts', ev.item.ts)
+    .is('applied_at', null);
+
+  if (!rows || !rows.length) return new Response('not an approval target', { status: 200 });
+
+  const r = rows[0];
+  const release = ev.reaction === APPROVE_TRIGGER;
+  const now = new Date().toISOString();
+
+  // 👌 뒤에 ✅ 가 달리면 ✅ 가 이긴다. 반대로 이미 해제 결정된 건을 👌 로 되돌리지는 않는다.
+  if (!release && r.decision === 'released') {
+    return new Response('already released', { status: 200 });
+  }
+
+  const patch: Record<string, unknown> = release
+    ? { decision: 'released', decided_by: who.person, decided_at: now,
+        approved_by: who.person, approved_at: now }
+    : { decision: 'kept', decided_by: who.person, decided_at: now,
+        recheck_at: recheckDate(r.block_day) };
+
+  await supabase.from('block_release_approval').update(patch)
+    .in('id', rows.map((x: any) => x.id));
+
+  const token = Deno.env.get('SLACK_TOKEN');
+  if (token) {
+    await fetch('https://slack.com/api/chat.postMessage', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        channel: ev.item.channel,
+        thread_ts: ev.item.ts,
+        text: release
+          ? `승인 접수: ${r.detailer_name} ${r.block_day} ${r.block_window} 차단 해제\n`
+            + `• 승인자 ${who.person}\n`
+            + `• 다음 점검에서 조건을 다시 확인한 뒤 해제하고, 결과를 이 스레드에 남깁니다`
+          : `정상 확인: ${r.detailer_name} ${r.block_day} ${r.block_window} 차단 유지\n`
+            + `• 확인자 ${who.person}\n`
+            + `• 차단일 D-${RECHECK_LEAD_DAYS}(${recheckDate(r.block_day)})에 한 번만 다시 확인 요청드립니다`,
+      }),
+    });
+  }
+  return new Response(release ? 'approved' : 'kept', { status: 200 });
+}
+
+/** 차단일 D-3. 정상 확인이 영구 면제가 되지 않게 재확인 시점을 박아둔다. */
+function recheckDate(blockDay: string): string {
+  const d = new Date(`${blockDay}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - RECHECK_LEAD_DAYS);
+  return d.toISOString().slice(0, 10);
+}
+
 // ---------------------------------------------------------------- 핸들러
 
 serve(async (req) => {
@@ -93,7 +170,12 @@ serve(async (req) => {
   if (body.type !== 'event_callback') return new Response('ok', { status: 200 });
 
   const ev = body.event || {};
-  if (ev.type !== 'reaction_added' || ev.reaction !== TRIGGER) return new Response('ignored', { status: 200 });
+  if (ev.type !== 'reaction_added') return new Response('ignored', { status: 200 });
+
+  // ✅ 는 차단 해제 승인 경로로 빠진다 (📌 경로는 아래로 그대로 흐른다)
+  if (ev.reaction === APPROVE_TRIGGER || ev.reaction === KEEP_TRIGGER) return await handleReleaseApproval(ev);
+
+  if (ev.reaction !== TRIGGER) return new Response('ignored', { status: 200 });
   if (!ev.item || ev.item.type !== 'message') return new Response('not a message', { status: 200 });
 
   const who = USERS[ev.user];
