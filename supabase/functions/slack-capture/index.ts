@@ -42,8 +42,17 @@ const APPROVE_TRIGGER = 'white_check_mark'; // ✅ — 근무 밖 예약 차단 
 // ☑️·✔️ 는 쓰지 않는다 — ✅ 와 시각적으로 가까운데 ✅ 는 실제로 차단을 지운다.
 const KEEP_TRIGGER = 'ok_hand';
 const RECHECK_LEAD_DAYS = 3; // 정상 확인은 영구 면제가 아니다 — 차단일 D-3에 한 번 더 묻는다
-// 차단 해제 승인은 강희준만. 📌 캡처(USERS)보다 좁다 — 운영 데이터를 지우는 행위라 권한을 따로 둔다.
-const APPROVERS = new Set(['U06PSEETK54']);
+// 점검 카드에 반응할 수 있는 사람. 📌 캡처(USERS)와 별개로 둔다 — 여기 오는 사람은
+// 팀·테이블 라우팅이 필요 없고, 반대로 USERS 에 없어도 점검에는 참여해야 한다.
+const AUDIT_PEOPLE: Record<string, string> = {
+  'U06PSEETK54': '강희준',
+  'U0AJUTQR84X': '심형석',
+};
+// ✅ 슬롯 열기 = 운영 데이터(차단)를 지우는 행위 → 강희준 단독.
+const RELEASE_APPROVERS = new Set(['U06PSEETK54']);
+// 👌 정상 확인 = 아무것도 지우지 않는다 → 점검 멘션을 받는 사람 전원.
+// 멘션은 받는데 반응은 못 하는 상태면 그 사람 몫의 확인이 영구 미확인으로 남는다.
+const KEEP_CONFIRMERS = new Set(Object.keys(AUDIT_PEOPLE));
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 const PRIORITY_LABEL: Record<string, string> = {
@@ -86,16 +95,27 @@ async function slackGet(token: string, method: string, params: Record<string, st
 // 📌 캡처 경로와 완전히 분리돼 있어 이 함수가 실패해도 일감 캡처에는 영향이 없다.
 // 실제 삭제는 여기서 하지 않는다. MySQL 은 원격에서 못 닿으므로 승인만 기록하고,
 // 로컬 잡(block-audit.py apply)이 다시 검증한 뒤 지운다.
+async function slackReply(channel: string, ts: string, text: string) {
+  const token = Deno.env.get('SLACK_TOKEN');
+  if (!token) return;
+  await fetch('https://slack.com/api/chat.postMessage', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel, thread_ts: ts, text }),
+  });
+}
+
 async function handleReleaseApproval(ev: any): Promise<Response> {
-  if (!APPROVERS.has(ev.user)) return new Response('not an approver', { status: 200 });
-  const who = USERS[ev.user];
-  if (!who) return new Response('unknown user', { status: 200 });
+  const person = AUDIT_PEOPLE[ev.user];
+  if (!person) return new Response('unknown user', { status: 200 });
   if (!ev.item || ev.item.type !== 'message') return new Response('not a message', { status: 200 });
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
+
+  const release = ev.reaction === APPROVE_TRIGGER;
 
   // 그 메시지가 점검 카드인지 slack_ts 로 확인 (아무 메시지에나 달아도 무시)
   const { data: rows } = await supabase
@@ -104,10 +124,24 @@ async function handleReleaseApproval(ev: any): Promise<Response> {
     .eq('slack_ts', ev.item.ts)
     .is('applied_at', null);
 
-  if (!rows || !rows.length) return new Response('not an approval target', { status: 200 });
+  // 차단 해제 카드가 아니면 '차단 필요' 카드인지 본다
+  if (!rows || !rows.length) return await handleGapAck(supabase, ev, person, release);
+
+  // 권한은 방향별로 다르다 — 지우는 쪽만 좁힌다.
+  // 🔴 조용히 무시하지 않는다. 멘션받은 사람이 ✅ 를 눌렀는데 아무 일도 안 일어나면
+  //    "반응했다"고 믿고 넘어가 그 건이 영구 미확인으로 남는다.
+  if (release && !RELEASE_APPROVERS.has(ev.user)) {
+    await slackReply(ev.item.channel, ev.item.ts,
+      `${person}님, 슬롯 열기(차단 해제)는 강희준만 실행할 수 있습니다.\n`
+      + `• 그대로 둬도 되는 건이면 👌 를 달아주세요 — 그건 누구나 가능합니다`);
+    return new Response('not a release approver', { status: 200 });
+  }
+  if (!release && !KEEP_CONFIRMERS.has(ev.user)) {
+    return new Response('not a confirmer', { status: 200 });
+  }
 
   const r = rows[0];
-  const release = ev.reaction === APPROVE_TRIGGER;
+  const who = { person };
   const now = new Date().toISOString();
 
   // 👌 뒤에 ✅ 가 달리면 ✅ 가 이긴다. 반대로 이미 해제 결정된 건을 👌 로 되돌리지는 않는다.
@@ -143,6 +177,43 @@ async function handleReleaseApproval(ev: any): Promise<Response> {
     });
   }
   return new Response(release ? 'approved' : 'kept', { status: 200 });
+}
+
+// '차단 필요' 카드 — 창 밖 예약은 있는데 보상 차단이 없는 건.
+// 지울 차단이 없으니 holiday_id 가 없다 → block_gap_ack 테이블에 따로 기록한다.
+// ✅(자동 차단 등록)는 주지 않는다: 앞을 막을지 뒤를 막을지, 몇 시간 막을지가 예약 시각마다
+// 달라 규칙이 자명하지 않고, 차단 INSERT 는 /block-hours 절차 안에서만 하기로 돼 있다.
+// 실제로 차단을 걸면 다음 점검에서 이 건은 저절로 사라진다. 👌 는 "걸 필요 없다"는 확인이다.
+async function handleGapAck(
+  supabase: any, ev: any, person: string, release: boolean,
+): Promise<Response> {
+  const { data: gaps } = await supabase
+    .from('block_gap_ack')
+    .select('id, detailer_name, gap_day, slots, work_window, decision')
+    .eq('slack_ts', ev.item.ts);
+
+  if (!gaps || !gaps.length) return new Response('not an audit card', { status: 200 });
+  const g = gaps[0];
+
+  if (release) {
+    await slackReply(ev.item.channel, ev.item.ts,
+      `${person}님, 이 카드는 차단을 자동으로 걸지 않습니다.\n`
+      + `• 차단이 필요하면 직접 등록해주세요 — 등록되면 다음 점검에서 이 건은 사라집니다\n`
+      + `• 걸 필요가 없는 건이면 👌 를 달아주세요`);
+    return new Response('no auto-insert', { status: 200 });
+  }
+  if (!KEEP_CONFIRMERS.has(ev.user)) return new Response('not a confirmer', { status: 200 });
+
+  await supabase.from('block_gap_ack').update({
+    decision: 'kept', decided_by: person, decided_at: new Date().toISOString(),
+    recheck_at: recheckDate(g.gap_day),
+  }).eq('id', g.id);
+
+  await slackReply(ev.item.channel, ev.item.ts,
+    `정상 확인: ${g.detailer_name} ${g.gap_day} ${g.slots} 예약 — 보상 차단 불필요\n`
+    + `• 확인자 ${person}\n`
+    + `• 예약일 D-${RECHECK_LEAD_DAYS}(${recheckDate(g.gap_day)})에 한 번만 다시 확인 요청드립니다`);
+  return new Response('gap acked', { status: 200 });
 }
 
 /** 차단일 D-3. 정상 확인이 영구 면제가 되지 않게 재확인 시점을 박아둔다. */

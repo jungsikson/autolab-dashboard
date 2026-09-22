@@ -33,6 +33,15 @@ interface Candidate {
   reason?: string;
 }
 
+// '차단 필요' 항목 — 지울 차단이 없어 holiday_id 가 없다. block_gap_ack 에 따로 기록한다.
+interface Gap {
+  detailer_id: number;
+  detailer_name: string;
+  gap_day: string;     // YYYY-MM-DD
+  slots: string;       // "20:00" / "08:00, 21:00"
+  work_window: string; // "10:00-19:00"
+}
+
 function sb() {
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -88,22 +97,46 @@ serve(async (req) => {
       return true;                                  // 무반응 = 미확인 → 다시 올린다
     });
 
-    if (!fresh.length && !body.need_block_text) {
+    // 차단 필요 건도 같은 규칙으로 — 반응이 달릴 때까지 매일 다시 묻는다
+    const gaps: Gap[] = body.gaps || [];
+    const { data: gapRows } = gaps.length
+      ? await supabase.from('block_gap_ack')
+          .select('id, detailer_id, gap_day, decision, recheck_at, posted_at, post_count, decided_by, decided_at')
+          .in('detailer_id', gaps.map((g) => g.detailer_id))
+      : { data: [] as any[] };
+    const gapKey = (detailerId: number, day: string) => `${detailerId}|${day}`;
+    const prevGap = new Map<string, any>(
+      (gapRows || []).map((r: any) => [gapKey(r.detailer_id, r.gap_day), r]),
+    );
+    const freshGaps = gaps.filter((g) => {
+      const p = prevGap.get(gapKey(g.detailer_id, g.gap_day));
+      if (!p) return true;
+      if (p.decision === 'kept') return !!p.recheck_at && p.recheck_at <= todayKst;
+      return true;
+    });
+
+    if (!fresh.length && !freshGaps.length && !body.need_block_text) {
       return new Response(JSON.stringify({ posted: 0, note: 'nothing to ask' }), { status: 200 });
     }
 
     // 미확인 며칠째인지. posted_at 은 '처음 올린 시각'이라 재게시해도 안 건드린다.
+    // 🔴 경과 시간(/86400000)이 아니라 KST 날짜 차이로 센다 — 9/18 저녁에 올라온 건이
+    // 9/22 낮에는 아직 4일이 안 지나 '4일차'로 하루 적게 나왔다. 사람이 읽는 숫자는 달력 기준.
+    const kstDay = (ms: number) => new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 10);
     const unheldDays = (p: any) =>
       p?.posted_at
-        ? Math.floor((Date.now() - new Date(p.posted_at).getTime()) / 86400000) + 1
+        ? (Date.parse(kstDay(Date.now())) - Date.parse(kstDay(new Date(p.posted_at).getTime())))
+            / 86400000 + 1
         : 1;
 
-    const brandNew = fresh.filter((c) => !prev.get(c.holiday_id)).length;
-    const unchecked = fresh.filter((c) => {
-      const p = prev.get(c.holiday_id);
-      return p && !p.decision;
-    }).length;
-    const rechecks = fresh.length - brandNew - unchecked;
+    const seen = [
+      ...fresh.map((c) => prev.get(c.holiday_id)),
+      ...freshGaps.map((g) => prevGap.get(gapKey(g.detailer_id, g.gap_day))),
+    ];
+    const total = seen.length;
+    const brandNew = seen.filter((p) => !p).length;
+    const unchecked = seen.filter((p) => p && !p.decision).length;
+    const rechecks = total - brandNew - unchecked;
 
     const header = body.title || '근무 밖 예약 차단 점검';
     // 멘션은 로컬 .env(AUDIT_MENTIONS)에서 온다 — 사람이 바뀌어도 함수 재배포 없이 바꾸도록
@@ -116,7 +149,7 @@ serve(async (req) => {
     const parent = await slackPost(token, {
       channel,
       text: (mentions ? `${mentions}\n` : '')
-        + `${header}\n\n확인 필요: ${fresh.length}건 (${breakdown})\n`
+        + `${header}\n\n확인 필요: ${total}건 (${breakdown})\n`
         + `무반응은 '정상'이 아니라 '미확인'입니다 — 반응 전까지 계속 올라옵니다`
         + (body.summary ? `\n${body.summary}` : ''),
     });
@@ -171,12 +204,51 @@ serve(async (req) => {
       if (!error) posted++;
     }
 
-    // 차단이 필요한 건(반대 방향)은 승인 대상이 아니라 알림만
-    if (body.need_block_text) {
+    // 차단 필요 건도 각각 카드로 — 묶어서 한 덩이로 올리면 개별 확인이 안 된다
+    let gapsPosted = 0;
+    for (const g of freshGaps) {
+      const p = prevGap.get(gapKey(g.detailer_id, g.gap_day));
+      let again = '';
+      if (p?.decision === 'kept') {
+        again = `\n• ${(p.decided_at || '').slice(0, 10) || '이전'}에 정상 확인(${p.decided_by || '확인자'})`
+          + ` · 예약일 D-3 — 여전히 차단이 필요 없나요?`;
+      } else if (p) {
+        again = `\n• 미확인 ${unheldDays(p)}일차 — ${String(p.posted_at).slice(0, 10)}에 처음 올라온 건입니다`;
+      }
+      const reply = await slackPost(token, {
+        channel,
+        thread_ts: threadTs,
+        text: `${g.detailer_name} ${g.gap_day} ${g.slots} 예약 (근무창 ${g.work_window})\n`
+          + `• 근무창 밖 예약인데 보상 차단이 없습니다 — 그날 근무가 길어집니다\n`
+          + `• 👌 정상 (차단 불필요)  /  차단이 필요하면 직접 등록해주세요${again}`,
+      });
+      if (!reply.ok) continue;
+
+      const row: Record<string, unknown> = {
+        detailer_id: g.detailer_id,
+        detailer_name: g.detailer_name,
+        gap_day: g.gap_day,
+        slots: g.slots,
+        work_window: g.work_window,
+        slack_channel: channel,
+        slack_ts: reply.ts,
+        last_posted_at: new Date().toISOString(),
+        post_count: (p?.post_count ?? 0) + 1,
+      };
+      if (p?.decision === 'kept') {
+        Object.assign(row, { decision: null, decided_by: null, decided_at: null, recheck_at: null });
+      }
+      const { error } = await supabase.from('block_gap_ack')
+        .upsert(row, { onConflict: 'detailer_id,gap_day' });
+      if (!error) gapsPosted++;
+    }
+
+    // gaps 를 안 보내는 예전 호출과의 호환 — 텍스트 한 덩이로라도 알린다
+    if (!gaps.length && body.need_block_text) {
       await slackPost(token, { channel, thread_ts: threadTs, text: body.need_block_text });
     }
 
-    return new Response(JSON.stringify({ posted, thread_ts: threadTs }), { status: 200 });
+    return new Response(JSON.stringify({ posted, gaps: gapsPosted, thread_ts: threadTs }), { status: 200 });
   }
 
   // ── pending: 승인됐지만 아직 반영 안 된 건 (로컬 잡이 가져간다) ────
