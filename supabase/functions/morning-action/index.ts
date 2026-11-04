@@ -155,7 +155,7 @@ serve(async (req) => {
         await sb.from('autolab_task').update({ description: d }).eq('id', row.task_id);
       }
     } else if (row.decision === 'done' && row.kind === 'progress' && row.task_id) {
-      await sb.from('autolab_check').upsert({ type: 'autolab', item_key: `autolab_${row.task_id}`, checked: false, completed_date: '' }, { onConflict: 'item_key' });
+      await sb.from('autolab_check').upsert({ type: 'autolab', item_key: String(row.task_id), checked: false, completed_date: '' }, { onConflict: 'item_key' });
     }
     if (row.followup_task_id) {
       await sb.from('autolab_task').delete().eq('id', row.followup_task_id).ilike('description', `%${fuMark}%`);
@@ -184,7 +184,7 @@ serve(async (req) => {
       if (!(t.description || '').includes(c)) await sb.from('autolab_task').update({ description: (t.description || '') + c }).eq('id', row.task_id);
       upd.decided_task_id = row.task_id;
     } else if (p.action === 'done' && row.kind === 'progress' && row.task_id) {
-      await sb.from('autolab_check').upsert({ type: 'autolab', item_key: `autolab_${row.task_id}`, checked: true, completed_date: today }, { onConflict: 'item_key' });
+      await sb.from('autolab_check').upsert({ type: 'autolab', item_key: String(row.task_id), checked: true, completed_date: today }, { onConflict: 'item_key' });
       upd.decided_task_id = row.task_id;
     } else if (!['done', 'read', 'later', 'mute'].includes(p.action)) {
       return json({ ok: false, error: 'unknown action' }, 400);
