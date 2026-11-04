@@ -1929,9 +1929,16 @@ async function loadMorning(){
   if(last.error){box.innerHTML='<div class="loading">불러오기 실패: '+mpEsc(last.error.message)+'</div>';return;}
   if(!last.data.length){box.innerHTML='<div class="loading">아직 발행된 아침판이 없습니다.</div>';return;}
   MP.date=last.data[0].edition_date;
-  var res=await _sb.from('morning_item').select('*').eq('person',MP.person).eq('edition_date',MP.date).order('sort');
+  // 오늘 판 전부 + 지난 판에서 아직 안 정한 항목(놓치지 않게 다음 판으로 넘어온다)
+  var res=await _sb.from('morning_item').select('*').eq('person',MP.person)
+    .or('edition_date.eq.'+MP.date+',and(decision.is.null,kind.neq.info)')
+    .order('edition_date',{ascending:false}).order('sort');
   if(res.error){box.innerHTML='<div class="loading">불러오기 실패: '+mpEsc(res.error.message)+'</div>';return;}
-  MP.rows=res.data;
+  // 지난 판에서 넘어온 항목은 묶음 이름에 날짜를 붙여 맨 뒤로
+  MP.rows=res.data.map(function(r){
+    if(r.edition_date!==MP.date){var d=new Date(r.edition_date+'T00:00:00');r=Object.assign({},r,{grp:'지난 판 '+(d.getMonth()+1)+'/'+d.getDate()+' · '+r.grp,sort:10000+r.sort});}
+    return r;
+  }).sort(function(a,b){return a.sort-b.sort;});
   var acts=MP.rows.filter(mpAct);
   if(!MP.sel||!acts.some(function(r){return r.id===MP.sel;})){var f=acts.filter(function(r){return !r.decision;})[0]||acts[0];MP.sel=f?f.id:null;}
   renderMorning();
@@ -1969,12 +1976,12 @@ function renderMorning(){
 function mpReadHtml(info){
   var html='';
   var by=function(g){return info.filter(function(r){return r.grp===g;});};
-  var day=by('어제 하루'), ch=by('채널 요약'), news=by('뉴스');
+  var day=by('어제 하루'), ch=by('채널 요약'), news=by('뉴스').concat(by('커뮤니티'));
   var li=function(r,withLink){return '<li>'+(withLink&&r.link?'<a href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">'+mpEsc(r.hl)+'</a>':'<b>'+mpEsc(r.hl)+'</b>')+'<small>'+mpEsc(r.body)+'</small></li>';};
   html+='<div class="mp-read">'+
     '<div class="mp-panel"><h3>어제 하루</h3>'+(day[0]&&day[0].note?'<p class="lead">'+mpEsc(day[0].note)+'</p>':'')+'<ul>'+day.map(function(r){return li(r,false);}).join('')+'</ul></div>'+
     '<div class="mp-panel"><h3>채널 요약</h3><ul>'+ch.map(function(r){return li(r,true);}).join('')+'</ul></div>'+
-    '<div class="mp-panel full"><h3>세차·차량 뉴스</h3><ul>'+news.map(function(r){return li(r,true);}).join('')+'</ul></div></div>';
+    '<div class="mp-panel full"><h3>세차·차량 뉴스 · 커뮤니티</h3><ul>'+news.map(function(r){return li(r,true);}).join('')+'</ul></div></div>';
   return html;
 }
 function mpDetail(){
@@ -2009,7 +2016,7 @@ async function mpCall(body){
   if(res.error) throw res.error;
   return res.data;
 }
-function mpReplace(row){for(var i=0;i<MP.rows.length;i++){if(MP.rows[i].id===row.id){MP.rows[i]=row;}}}
+function mpReplace(row){for(var i=0;i<MP.rows.length;i++){if(MP.rows[i].id===row.id){MP.rows[i]=Object.assign({},row,{grp:MP.rows[i].grp,sort:MP.rows[i].sort});}}}
 function mpInputs(){
   var m=document.getElementById('mp-memo'), d=document.getElementById('mp-due');
   return {memo:m?m.value.trim():'', due:d&&d.value?d.value:''};
