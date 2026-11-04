@@ -467,7 +467,7 @@ body{background:var(--bg-canvas)}
 .ptag-ELIMINATE{background:#EEF0F2;color:#6D727A}
 
 /* ---------- 아침판 (봇 DM을 한 화면으로, 항목마다 바로 처리) — taste-skill editorial-greeting · 카라멜 토큰 ---------- */
-#morning-content{max-width:1100px;padding:28px 32px 48px;word-break:keep-all;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+#morning-content{max-width:1480px;padding:28px 32px 48px;word-break:keep-all;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .mp-head h1{font-size:28px;font-weight:600;line-height:1.25;letter-spacing:-0.01em;color:var(--text-primary)}
 .mp-head p{margin-top:8px;font-size:var(--text-base);color:var(--text-secondary)}
 .mp-head p b{color:var(--text-primary);font-weight:600}
@@ -488,7 +488,7 @@ body{background:var(--bg-canvas)}
 .mp-cell.done{background:var(--accent)}
 .mp-cell.sel{outline:2px solid var(--text-primary);outline-offset:-2px}
 .mp-groups{margin-top:8px;font-size:var(--text-xs);color:var(--text-secondary)}
-.mp-work{margin-top:24px;display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+.mp-work{margin-top:24px;display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start}
 .mp-list,.mp-detail{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);min-width:0}
 .mp-list{padding:6px;position:sticky;top:12px;max-height:calc(100vh - 120px);overflow-y:auto}
 .mp-tabs{display:flex;gap:18px;padding:8px 10px 0;border-bottom:1px solid var(--border-subtle);margin-bottom:4px}
@@ -621,6 +621,31 @@ body{background:var(--bg-canvas)}
 .pl-guide{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--accent);opacity:.6}
 .pl-guide::after{content:attr(data-label);position:absolute;top:4px;left:6px;white-space:nowrap;font-size:12px;font-weight:600;color:#fff;background:var(--accent);padding:2px 6px;border-radius:4px}
 .dmp-pick{background:none;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:4px 8px;font-family:var(--font-sans);font-size:12px;color:var(--text-primary);cursor:pointer}
+/* 기다림 */
+.wait-tag{margin-top:3px;font-size:11.5px;color:#8A6D00}
+.wait-tag.due{color:#C8392E;font-weight:600}
+.wait-pill{flex:none;font-size:11px;font-weight:500;padding:1px 7px;border-radius:999px;background:#FBEFD7;color:#7A5A12}
+.dmp-wait{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12.5px;color:var(--text-secondary)}
+.dmp-wait input{flex:1;min-width:140px;font-family:var(--font-sans);font-size:12.5px;padding:5px 8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary)}
+.mp-wait{margin-top:20px;padding:14px 16px;background:#FFF8E8;border:1px solid #F3DFAE;border-radius:var(--radius-lg)}
+.mp-wait-h{font-size:var(--text-sm);font-weight:600;color:#7A5A12;margin-bottom:8px}
+.mp-wait-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #F3DFAE}
+.mp-wait-row:first-of-type{border-top:0}
+.mp-wait-t{flex:1;min-width:200px;text-align:left;color:var(--text-primary);text-decoration:none;font-weight:500}
+.mp-wait-who{font-size:12.5px;color:#7A5A12}
+.mp-wait .mp-btn{height:30px;padding:0 12px;font-size:12.5px}
+/* 외장 모니터 반쪽 창(약 1,000px) 기준 — 희준님 실제 사용 폭(11/4) */
+@media (min-width:901px) and (max-width:1320px){
+  #morning-content{padding:24px 24px 40px}
+  .mp-work{grid-template-columns:320px minmax(0,1fr)}
+  .mp-detail{grid-template-columns:minmax(0,1fr);padding:20px}
+  .mp-kv{display:grid;grid-template-columns:repeat(4,auto);gap:0 16px;justify-content:start}
+  .mp-kv div{border-bottom:0;padding:2px 0;gap:6px}
+  #plan-content{padding:24px 24px 40px}
+  .pl-row{grid-template-columns:240px minmax(0,1fr)}
+  .pl-layer{left:240px}
+  .pl-grid{min-width:0}
+}
 /* 일정 v2 — 큰 주제 지도 */
 .pl-row>.pl-name{position:sticky;left:0;z-index:3;background:var(--bg-surface)}
 .pl-row.drop-over>.pl-name,.pl-name.drop-over{background:var(--accent-subtle)}
@@ -1068,7 +1093,7 @@ async function loadData(quiet){
     data._autolab=(taskRes.data||[]).map(function(row){
       return {id:String(row.id),dateKey:row.start_date,task:row.task,person:row.person,
         priority:row.priority||'',dueDate:row.due_date||'',createdAt:row.created_at,
-        description:row.description||'',isOverdue:row.start_date<todayKey,parentId:row.parent_id?String(row.parent_id):null};
+        description:row.description||'',isOverdue:row.start_date<todayKey,parentId:row.parent_id?String(row.parent_id):null,waitingOn:row.waiting_on||'',waitingSince:row.waiting_since||'',recheckDate:row.recheck_date||''};
     });
 
     var checksMap={},autolabChecksMap={};
@@ -1151,7 +1176,7 @@ function _buildPersonCardHtml(person,key){
       h+='<div class="autolab-check-area">';
       h+='<div class="checkbox'+(done?' checked':'')+'" onclick="toggleAutolabCheck(\''+item.id+'\')">'+(done?'✓':'')+'</div>';
       h+='<div style="flex:1;min-width:0;cursor:pointer" onclick="openAutolabDetailModal(\''+item.id+'\')">';
-      h+='<div class="autolab-task-text">'+item.task+'</div>'+parentTagHtml(item);
+      h+='<div class="autolab-task-text">'+item.task+'</div>'+parentTagHtml(item)+waitTagHtml(item);
       h+='<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">';
       if(isOverdue&&!done&&!item.dueDate) h+='<span class="overdue-badge">이월</span>';
       if(done) h+='<span class="done-badge">완료</span>';
@@ -1401,7 +1426,7 @@ function renderMatrix(person){
       h+='<div class="matrix-item'+(done?' done':'')+(isOverdue?' matrix-overdue':'')+'" draggable="true" ondragstart="onDragStart(event,\''+item.id+'\')" ondragend="onDragEnd(event)">';
       h+='<div class="checkbox'+(done?' checked':'')+'" onclick="toggleAutolabCheck(\''+item.id+'\')">'+(done?'✓':'')+'</div>';
       h+='<div style="flex:1;min-width:0;cursor:pointer" onclick="openAutolabDetailModal(\''+item.id+'\')">';
-      h+='<div class="matrix-task-text">'+item.task+'</div>'+parentTagHtml(item);
+      h+='<div class="matrix-task-text">'+item.task+'</div>'+parentTagHtml(item)+waitTagHtml(item);
       h+='<div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:2px">';
       if(isOverdue&&!item.dueDate) h+='<span class="overdue-badge">이월</span>';
       if(done) h+='<span class="done-badge">완료</span>';
@@ -2125,6 +2150,7 @@ function renderMorning(){
   html+='<div class="mp-views">'+[['decide','정할 것',(acts.length-nDec)],['read','읽을거리',info.length]].map(function(v){
     return '<button class="mp-view'+(MP.view===v[0]?' on':'')+'" onclick="MP.view=\''+v[0]+'\';renderMorning()">'+v[1]+' <span>'+v[2]+'</span></button>';}).join('')+'</div>';
   if(MP.view==='read'){ html+=mpReadHtml(info); document.getElementById('morning-content').innerHTML=html; return; }
+  html+=mpWaitHtml();
   // 판정 띠
   var prev=null, cells=acts.map(function(r){var first=r.grp!==prev;prev=r.grp;
     return '<button class="mp-cell'+(first?' first':'')+(r.decision?' done':(r.kind==='new'?' new':''))+(MP.sel===r.id?' sel':'')+'" title="'+mpEsc((r.who||'')+' · '+r.hl)+'" aria-label="'+mpEsc(r.hl)+'" onclick="mpPick('+r.id+')"></button>';}).join('');
@@ -2142,6 +2168,30 @@ function renderMorning(){
   var tabs=[['left','남은 것'],['all','전체'],['done','정한 것']].map(function(t){return '<button class="mp-tab'+(MP.filter===t[0]?' on':'')+'" onclick="MP.filter=\''+t[0]+'\';renderMorning()">'+t[1]+'</button>';}).join('');
   html+='<div class="mp-work'+(MP.open?' open':'')+'"><div class="mp-list"><div class="mp-tabs">'+tabs+'</div>'+rows+'</div><article class="mp-detail">'+mpDetail()+'</article></div>';
   document.getElementById('morning-content').innerHTML=html;
+}
+// 기다림 중 다시 볼 날이 된 할 일 — 봇 없이 할 일 표에서 바로 계산
+function mpWaitDue(){
+  var today=dk(new Date());
+  return (allData._autolab||[]).filter(function(i){return i.person===MP.person&&i.waitingOn&&i.recheckDate&&i.recheckDate<=today&&!(autolabChecks[alKey(i)]||{}).checked;})
+    .sort(function(a,b){return a.recheckDate.localeCompare(b.recheckDate);});
+}
+function mpWaitHtml(){
+  var list=mpWaitDue(); if(!list.length) return '';
+  var today=new Date(); today.setHours(0,0,0,0);
+  return '<div class="mp-wait"><div class="mp-wait-h">다시 볼 기다림 '+list.length+'건 — 답이 왔는지 확인하세요</div>'+list.map(function(i){
+    var days=i.waitingSince?Math.round((today-new Date(i.waitingSince+'T00:00:00'))/86400000):null;
+    return '<div class="mp-wait-row"><button class="mp-link mp-wait-t" onclick="openAutolabDetailModal(\''+i.id+'\')">#'+i.id+' '+_alEsc(i.task)+'</button>'+
+      '<span class="mp-wait-who">'+_alEsc(i.waitingOn)+(days!=null?' · '+days+'일째':'')+'</span>'+
+      '<button class="mp-btn" onclick="mpWaitAct(\''+i.id+'\',\'got\')">답 받음</button>'+
+      '<button class="mp-btn" onclick="mpWaitAct(\''+i.id+'\',\'more\',this)">더 기다리기…</button>'+
+      '<button class="mp-btn" onclick="mpWaitAct(\''+i.id+'\',\'done\')">완료</button></div>';}).join('')+'</div>';
+}
+async function mpWaitAct(id,k,btn){
+  var it=_alFind(id); if(!it) return;
+  if(k==='more'){ duePicker(btn,it.recheckDate,async function(v){ if(!v) return; var r=await _sb.from('autolab_task').update({recheck_date:v}).eq('id',Number(id)); if(r.error){showToast('실패: '+r.error.message);return;} it.recheckDate=v; showToast('#'+id+' '+v.slice(5).replace('-','/')+'에 다시'); renderMorning(); }); return; }
+  if(k==='got'){ var r=await _sb.from('autolab_task').update({waiting_on:null,waiting_since:null,recheck_date:null}).eq('id',Number(id)); if(r.error){showToast('실패: '+r.error.message);return;}
+    it.waitingOn='';it.waitingSince='';it.recheckDate=''; showToast('#'+id+' 기다림 끝 — 이제 내 할 일'); renderMorning(); return; }
+  if(k==='done'){ var cd=dk(new Date()); autolabChecks[alKey(it)]={checked:true,completedDate:cd}; await upsertCheck('autolab',String(id),true,cd); showToast('#'+id+' 완료'); renderMorning(); }
 }
 function mpReadHtml(info){
   var html='';
@@ -2194,10 +2244,9 @@ function mpDetail(){
       '<button class="mp-link" onclick="mpUndo('+r.id+')">되돌리기</button></div>'+
       (r.memo?'<p class="mp-memo-shown">📝 '+mpEsc(r.memo).replace(/\n/g,'<br>')+'</p>':'')+
       (r.decided_task_id?memoBox+'<div class="mp-acts"><button class="mp-btn"'+(MP.busy?' disabled':'')+' onclick="mpMemo('+r.id+')">메모 덧붙이기</button></div>':'')
-    :memoBox+'<div class="mp-acts">'+mpButtons(r).map(function(b){var k=MP_KEYS[b[0]]&&!(b[0]==='merge')?MP_KEYS[b[0]]:(b[1]===sug?'1':'');
-        return '<button class="mp-btn'+(b[1]===sug?' pri':'')+'"'+(MP.busy?' disabled':'')+' onclick="mpDecide('+r.id+',\''+b[0]+'\',\''+mpEsc(b[1])+'\')">'+mpEsc(b[1])+(b[1]===sug?' <kbd>1</kbd>':(k?' <kbd>'+k+'</kbd>':''))+'</button>';}).join('')+
-      (r.kind!=='progress'?'<button class="mp-btn"'+(MP.busy?' disabled':'')+' onclick="mpOpenPicker('+r.id+')">다른 할 일에 덧붙이기… <kbd>3</kbd></button>':'')+'</div>'+
-      '<p class="mp-keys">1 제안대로 · 2 새로 넣기 · 3 덧붙일 할 일 찾기 · 4 이미 끝남 · H 내일 다시 · J/K 위아래 · M 메모 · U 되돌리기</p>';
+    :memoBox+'<div class="mp-acts">'+mpButtons(r).map(function(b){
+        return '<button class="mp-btn'+(b[1]===sug?' pri':'')+'"'+(MP.busy?' disabled':'')+' onclick="mpDecide('+r.id+',\''+b[0]+'\',\''+mpEsc(b[1])+'\')">'+mpEsc(b[1])+'</button>';}).join('')+
+      (r.kind!=='progress'?'<button class="mp-btn"'+(MP.busy?' disabled':'')+' onclick="mpOpenPicker('+r.id+')">다른 할 일에 덧붙이기…</button>':'')+'</div>';
   return '<div><button class="mp-link mp-back" onclick="MP.open=false;renderMorning()">← 목록</button>'+
     '<h2>'+mpEsc(r.hl)+'</h2><p class="src">'+mpEsc((r.who||'')+(r.when_label?' · '+r.when_label:''))+'</p>'+
     (r.quote?'<blockquote>'+mpEsc(r.quote)+'</blockquote>':'')+(r.body?'<p class="body">'+mpEsc(r.body)+'</p>':'')+
@@ -2254,29 +2303,7 @@ function mpPickTask(taskId){
   var t=_alFind(taskId); mpClosePicker();
   mpDecide(MPP.rowId,'merge','#'+taskId+'에 덧붙이기',Number(taskId));
 }
-// 단축키 — 정할 것 탭에서, 글을 쓰는 중이 아닐 때만
-document.addEventListener('keydown',function(e){
-  if(currentTab!=='morning'||MP.view==='read') return;
-  var a=document.activeElement;
-  if(e.isComposing||e.metaKey||e.ctrlKey||e.altKey) return;
-  if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){ if(e.key==='Escape') a.blur(); return; }
-  if(document.getElementById('mp-picker')&&document.getElementById('mp-picker').classList.contains('open')) return;
-  if(document.getElementById('detail-modal-bg').classList.contains('open')) return;
-  var acts=MP.rows.filter(mpAct);
-  var r=acts.filter(function(x){return x.id===MP.sel;})[0]; if(!r) return;
-  var list=acts.filter(function(x){return MP.filter==='all'||(MP.filter==='left'?!x.decision:!!x.decision);});
-  var key=e.key.toLowerCase(), pos=list.findIndex(function(x){return x.id===r.id;});
-  if(key==='j'||key==='arrowdown'){ if(pos<list.length-1){MP.sel=list[pos+1].id;renderMorning();} e.preventDefault(); return; }
-  if(key==='k'||key==='arrowup'){ if(pos>0){MP.sel=list[pos-1].id;renderMorning();} e.preventDefault(); return; }
-  if(key==='m'){ var m=document.getElementById('mp-memo'); if(m){m.focus();e.preventDefault();} return; }
-  if(key==='u'&&r.decision){ mpUndo(r.id); return; }
-  if(r.decision) return;
-  if(key==='1'){ var sug=mpSuggest(r), b=mpButtons(r).filter(function(x){return x[1]===sug;})[0]; if(b) mpDecide(r.id,b[0],b[1]); }
-  else if(key==='2'){ mpDecide(r.id,'add','할 일에 넣기'); }
-  else if(key==='3'&&r.kind!=='progress'){ e.preventDefault(); mpOpenPicker(r.id); }
-  else if(key==='4'){ mpDecide(r.id,'done',r.kind==='progress'?'완료':'이미 끝남'); }
-  else if(key==='h'){ mpDecide(r.id,'later','내일 다시'); }
-});
+
 
 // =============================================
 // 큰 주제(상위 할 일) — 목록·매트릭스·상세 창에서 보이고 상세 창에서 바꾼다
@@ -2402,14 +2429,14 @@ function renderPlan(){
     var has=!!kidsAll[i.id], isOpen=!!PL.open[i.id];
     return '<div class="pl-name'+(has?' topic':'')+'" data-drop="'+i.id+'">'+
       (has?'<button class="pl-caret" onclick="PL.open[\''+i.id+'\']=!PL.open[\''+i.id+'\'];renderPlan()" aria-label="하위 펼치기">'+(isOpen?'▾':'▸')+'</button>':'<span class="pl-caret-sp"></span>')+
-      '<span class="pr pr-'+(i.priority||'none')+'"></span><span class="t" onclick="openAutolabDetailModal(\''+i.id+'\')" title="#'+i.id+' '+_alEsc(i.task)+'">'+_alEsc(i.task)+'</span>'+progress(i)+'</div>';
+      '<span class="pr pr-'+(i.priority||'none')+'"></span><span class="t" onclick="openAutolabDetailModal(\''+i.id+'\')" title="#'+i.id+' '+_alEsc(i.task)+'">'+_alEsc(i.task)+'</span>'+(i.waitingOn?'<span class="wait-pill" title="'+_alEsc(i.waitingOn)+' 답 기다림">기다림</span>':'')+progress(i)+'</div>';
   };
   var kidsList=function(i){
     if(!kidsAll[i.id]||!PL.open[i.id]) return '';
     return kidsAll[i.id].slice().sort(function(a,b){return (plDone(a)?1:0)-(plDone(b)?1:0)||(a.dueDate||'9').localeCompare(b.dueDate||'9');}).map(function(c){
       var dn=plDone(c), cd=c.dueDate?plDay(c.dueDate):null;
       return '<div class="pl-row kid'+(dn?' done':'')+'"><div class="pl-name" draggable="true" data-kid="'+c.id+'"><span class="pl-caret-sp"></span><span class="pl-check">'+(dn?'완료':'')+'</span>'+
-        '<span class="t" onclick="openAutolabDetailModal(\''+c.id+'\')" title="#'+c.id+' '+_alEsc(c.task)+'">'+_alEsc(c.task)+'</span>'+
+        '<span class="t" onclick="openAutolabDetailModal(\''+c.id+'\')" title="#'+c.id+' '+_alEsc(c.task)+'">'+_alEsc(c.task)+'</span>'+(c.waitingOn&&!dn?'<span class="wait-pill">기다림</span>':'')+
         (cd?'<span class="pl-due'+(!dn&&cd<today?' over':'')+'">'+plMD(cd)+'</span>':'')+'</div><div class="pl-track"></div></div>';}).join('');
   };
   dated.forEach(function(i){rows+='<div class="pl-row line" data-row="'+i.id+'">'+nameHtml(i)+'<div class="pl-track">'+barHtml(i)+'</div></div>'+kidsList(i);});
@@ -2567,6 +2594,9 @@ function dmEnhance(id){
   var hasKids=(allData._autolab||[]).some(function(i){return String(i.parentId)===String(item.id);});
   var props='<div class="dmp">'+
     '<div class="dmp-row"><span>상태</span><label class="dmp-done"><input type="checkbox" id="dmp-done"'+(dmIsDone(item)?' checked':'')+'> 완료</label></div>'+
+    '<div class="dmp-row"><span>기다림</span>'+(item.waitingOn
+      ?'<div class="dmp-wait"><input id="dmp-wait-who" value="'+_alEsc(item.waitingOn)+'" aria-label="누구의 답" placeholder="누구"><span>답 기다림 · '+(item.waitingSince?item.waitingSince.slice(5).replace('-','/')+'부터':'')+'</span><button class="dmp-pick" id="dmp-recheck">다시 볼 날 '+(item.recheckDate?item.recheckDate.slice(5).replace('-','/'):'정하기')+'</button><button class="dmp-x" id="dmp-wait-end">기다림 끝</button></div>'
+      :'<div class="dmp-wait"><input id="dmp-wait-who" placeholder="누구의 답을 기다리나요? (예: 이수민 팀장) — 쓰고 Enter" aria-label="기다리는 사람"></div>')+'</div>'+
     '<div class="dmp-row"><span>우선순위</span><div class="dmp-chips">'+DMP_PRIO.map(function(p){return '<button class="dmp-chip p-'+(p[0]||'none')+((item.priority||'')===p[0]?' on':'')+'" data-prio="'+p[0]+'">'+p[1]+'</button>';}).join('')+'</div></div>'+
     '<div class="dmp-row"><span>기간</span><div class="dmp-dates"><input type="date" id="dmp-start" value="'+(item.dateKey||'')+'" aria-label="시작일"><span>→</span><input type="date" id="dmp-due" value="'+(item.dueDate||'')+'" aria-label="마감일"><button class="dmp-pick" id="dmp-due-pick">마감 고르기</button>'+(item.dueDate?'<button class="dmp-x" id="dmp-due-clear" title="마감 지우기">지우기</button>':'')+'</div></div>'+
     '<div class="dmp-row"><span>큰 주제</span><select id="dmp-parent"'+(hasKids?' disabled title="하위가 있는 큰 주제는 다른 주제 밑에 넣을 수 없습니다"':'')+'><option value="">없음</option>'+
@@ -2598,6 +2628,16 @@ function dmEnhance(id){
   var dpk=document.getElementById('dmp-due-pick'); if(dpk) dpk.onclick=function(){duePicker(dpk,item.dueDate,function(v){dmSave(item,{due_date:v||null},'마감');});};
   document.getElementById('dmp-parent').onchange=function(e){dmSave(item,{parent_id:e.target.value?Number(e.target.value):null},'큰 주제');};
   document.getElementById('dmp-person').onchange=function(e){dmSave(item,{person:e.target.value},'담당');};
+  // 기다림: 누구를 쓰면 시작(다시 볼 날 기본 3일 뒤), 다시 볼 날은 날짜 버튼, [기다림 끝]은 지움
+  var ww=document.getElementById('dmp-wait-who');
+  if(ww){ var commit=function(){var v=ww.value.trim(); if(v===(item.waitingOn||'')) return;
+      if(!v){dmSave(item,{waiting_on:null,waiting_since:null,recheck_date:null},'기다림');return;}
+      var upd={waiting_on:v}; if(!item.waitingOn){var t=new Date();upd.waiting_since=dk(t);t.setDate(t.getDate()+3);upd.recheck_date=dk(t);}
+      dmSave(item,upd,'기다림');};
+    ww.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();ww.blur();}});
+    ww.addEventListener('blur',commit); }
+  var rc=document.getElementById('dmp-recheck'); if(rc) rc.onclick=function(){duePicker(rc,item.recheckDate,function(v){dmSave(item,{recheck_date:v||null},'다시 볼 날');});};
+  var we=document.getElementById('dmp-wait-end'); if(we) we.onclick=function(){dmSave(item,{waiting_on:null,waiting_since:null,recheck_date:null},'기다림 끝');};
   document.querySelectorAll('[data-kid]').forEach(function(c){c.onchange=function(){var k=dmItem(c.dataset.kid); if(k) dmSetDone(k,c.checked,item.id);};});
   var ak=document.getElementById('dmp-addkid'); if(ak) ak.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing&&ak.value.trim()){e.preventDefault();dmAddKid(item,ak.value.trim());}});
   var pg=document.getElementById('dmp-prog'); pg.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing&&pg.value.trim()){e.preventDefault();dmAddProgress(item,pg.value.trim());}});
@@ -2610,7 +2650,7 @@ function dmRefresh(reopenId){
   if(reopenId&&document.getElementById('detail-modal-bg').classList.contains('open')) openAutolabDetailModal(reopenId);
 }
 // DB 칸 → 화면 칸
-var DMP_MAP={task:'task',priority:'priority',start_date:'dateKey',due_date:'dueDate',parent_id:'parentId',person:'person',description:'description'};
+var DMP_MAP={waiting_on:'waitingOn',waiting_since:'waitingSince',recheck_date:'recheckDate',task:'task',priority:'priority',start_date:'dateKey',due_date:'dueDate',parent_id:'parentId',person:'person',description:'description'};
 async function dmSave(item,upd,label){
   var res=await _sb.from('autolab_task').update(upd).eq('id',parseInt(item.id));
   if(res.error){showToast(label+' 저장 실패: '+res.error.message);return;}
