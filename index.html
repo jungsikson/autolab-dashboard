@@ -579,6 +579,40 @@ body{background:var(--bg-canvas)}
 .pl-tick.today{color:var(--accent);font-weight:600}
 .pl-root{margin:0;padding:12px;text-align:center;font-size:var(--text-xs);color:var(--text-secondary);border-top:1px dashed var(--border-default)}
 .pl-root.drop-over{background:var(--accent-subtle);color:var(--text-primary)}
+/* 일정 v2 — 큰 주제 지도 */
+.pl-help{margin-top:4px;font-size:var(--text-xs);color:var(--text-tertiary)}
+.pl-over-t{color:#C8392E}
+.pl-row.line{border-top:1px solid var(--border-default)}
+.pl-name.topic{font-weight:600}
+.pl-caret{width:18px;flex:none;background:none;border:0;padding:0;cursor:pointer;color:var(--text-secondary);font-size:12px}
+.pl-caret-sp{width:18px;flex:none}
+.pl-prog{flex:none;width:38px;height:4px;border-radius:2px;background:var(--border-subtle);overflow:hidden}
+.pl-prog i{display:block;height:100%;background:var(--accent)}
+.pl-prog.all i{background:#1B8E4D}
+.pl-bar{cursor:grab;touch-action:none;background:var(--border-strong)}
+.pl-bar.topic{background:var(--text-secondary)}
+.pl-bar.over{background:#C8392E}
+.pl-bar.dragging{cursor:grabbing;opacity:.85;outline:2px solid var(--accent);outline-offset:1px}
+.pl-h{position:absolute;top:-2px;bottom:-2px;width:8px;cursor:ew-resize}
+.pl-h.l{left:-3px}.pl-h.r{right:-3px}
+.pl-bar:hover .pl-h{background:rgba(255,255,255,.35)}
+.pl-dia{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;transform:rotate(45deg);background:var(--bg-surface);border:2px solid var(--text-primary);cursor:pointer;z-index:1}
+.pl-dia.over{border-color:#C8392E}.pl-dia.done{border-color:#1B8E4D;background:#1B8E4D}
+.pl-row.kid{min-height:30px}
+.pl-row.kid .pl-name{padding-left:28px;font-size:12.5px;color:var(--text-primary);cursor:grab}
+.pl-row.kid.done .t{color:var(--text-tertiary);text-decoration:line-through}
+.pl-check{min-width:14px;flex:none;color:#1B8E4D;font-size:11px}
+.pl-due{flex:none;font-size:var(--text-xs);color:var(--text-secondary)}
+.pl-due.over{color:#C8392E;font-weight:600}
+.pl-grid.drop-over{outline:2px dashed var(--accent);outline-offset:-2px}
+.pl-name.drop-over{background:var(--accent-subtle);outline:2px dashed var(--accent);outline-offset:-3px}
+.pl-lane{margin-top:14px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:14px 16px}
+.pl-lane-h{font-size:var(--text-xs);color:var(--text-secondary);margin-bottom:10px}
+.pl-chips{display:flex;flex-wrap:wrap;gap:8px}
+.pl-chip{display:flex;align-items:center;gap:6px;max-width:100%;padding:6px 10px;border:1px solid var(--border-default);border-radius:8px;background:var(--bg-surface);font-size:13px;cursor:grab}
+.pl-chip.topic{font-weight:600;border-color:var(--border-strong)}
+.pl-chip .t{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;cursor:pointer}
+.pl-chip .pr{align-self:stretch;margin:2px 0}
 @media (max-width:900px){#plan-content{padding:20px 16px 40px}.pl-head h1{font-size:22px}.pl-row{grid-template-columns:200px minmax(0,1fr)}.pl-layer{left:200px}.pl-grid{min-width:760px}}
 .mp-btn kbd,.mp-keys kbd{font-family:var(--font-sans);font-size:10.5px;padding:0 5px;margin-left:4px;border:1px solid currentColor;border-radius:4px;opacity:.6}
 .mp-keys{margin-top:10px;font-size:var(--text-xs);color:var(--text-tertiary)}
@@ -2264,94 +2298,148 @@ function fillParentSelect(item){
 })();
 
 // =============================================
-// 일정 — 강희준 미완료 할 일을 큰 주제(상위) → 하위로, 시작일부터 마감일까지 막대로. 이름을 끌어 큰 주제를 바꾼다
+// 일정 — "큰 주제 지도"(Linear 타임라인 방식). 줄 하나 = 큰 주제(또는 날짜 있는 독립 할 일).
+// 막대 = 시작일부터 마감(목표)일. 하위는 펼치면 목록, 마감 있는 하위는 막대 위 ◆.
+// 막대 몸통을 끌면 날짜 이동, 양 끝을 끌면 시작·마감 조정. 마감 없는 것은 아래 '날짜 없음' 칸 → 끌어다 놓으면 날짜가 생김.
 // =============================================
-var PL={person:'강희준',drag:null,daysBack:14,days:56};
+var PL={person:'강희준',daysBack:14,days:56,open:{},drag:null};
 function plDay(s){return new Date(s+'T00:00:00');}
+function plKey(d){return dk(d);}
 function plDone(i){var a=autolabChecks[alKey(i)]||autolabChecks['autolab_'+alKey(i)];return !!(a&&a.checked);}
+function plMD(d){return (d.getMonth()+1)+'/'+d.getDate();}
 function renderPlan(){
   var box=document.getElementById('plan-content'); if(!box) return;
-  var items=(allData._autolab||[]).filter(function(i){return i.person===PL.person&&!plDone(i)&&Number(i.id)>=2358;});
-  var byId={}; items.forEach(function(i){byId[i.id]=i;});
-  var today=plDay(dk(new Date()));
-  var start=new Date(today); start.setDate(start.getDate()-PL.daysBack); start.setDate(start.getDate()-((start.getDay()+6)%7)); // 월요일부터
-  var DAY=86400000, span=PL.days;
+  var all=(allData._autolab||[]).filter(function(i){return i.person===PL.person&&Number(i.id)>=2358;});
+  var open=all.filter(function(i){return !plDone(i);});
+  var byId={}; all.forEach(function(i){byId[i.id]=i;});
+  var kidsAll={}; all.forEach(function(i){if(i.parentId&&byId[i.parentId])(kidsAll[i.parentId]=kidsAll[i.parentId]||[]).push(i);});
+  var today=plDay(dk(new Date())), DAY=86400000, span=PL.days;
+  var start=new Date(today); start.setDate(start.getDate()-PL.daysBack); start.setDate(start.getDate()-((start.getDay()+6)%7));
+  PL.start=start; PL.DAY=DAY;
   var pos=function(d){return (d-start)/DAY/span*100;};
-  var kids={}; items.forEach(function(i){if(i.parentId&&byId[i.parentId]){(kids[i.parentId]=kids[i.parentId]||[]).push(i);}});
-  var tops=items.filter(function(i){return !(i.parentId&&byId[i.parentId]);});
-  var bySt=function(a,b){return (a.dateKey||'').localeCompare(b.dateKey||'')||Number(a.id)-Number(b.id);};
-  tops.sort(function(a,b){var ka=kids[a.id]?0:1,kb=kids[b.id]?0:1;return ka-kb||bySt(a,b);});
-  var nOver=items.filter(function(i){return i.dueDate&&plDay(i.dueDate)<today;}).length;
-  var nOpen=items.filter(function(i){return !i.dueDate;}).length;
-  var nTop=tops.filter(function(t){return kids[t.id];}).length;
-  var html='<div class="pl-head"><h1>일정 · 미완료 할 일 '+items.length+'건</h1>'+
-    '<p>큰 주제 <b>'+nTop+'개</b> 아래 묶여 있고, 마감 지난 것 <b>'+nOver+'건</b>, 마감 없는 것 '+nOpen+'건입니다. 이름을 끌어 다른 큰 주제 위에 놓으면 그 밑으로 옮겨집니다.</p>'+
-    '<div class="pl-legend"><span><i style="background:var(--text-secondary)"></i>큰 주제</span><span><i style="background:var(--border-strong)"></i>하위 할 일</span>'+
-    '<span><i style="background:repeating-linear-gradient(90deg,var(--border-strong) 0 4px,transparent 4px 7px)"></i>마감 없음</span><span><i style="background:#C8392E"></i>마감 지남</span>'+
-    '<span><i style="background:var(--accent);width:2px"></i>오늘</span></div></div>';
-  // 눈금: 매주 월요일 + 오늘
+  // 줄 = 열린 큰 주제(하위가 있는 것) + 하위도 상위도 없는 열린 독립 할 일
+  var tops=open.filter(function(i){return !(i.parentId&&byId[i.parentId]&&!plDone(byId[i.parentId]));});
+  var topics=tops.filter(function(i){return kidsAll[i.id];});
+  var solos=tops.filter(function(i){return !kidsAll[i.id];});
+  var dated=topics.concat(solos).filter(function(i){return i.dueDate;});
+  var undated=topics.concat(solos).filter(function(i){return !i.dueDate;});
+  dated.sort(function(a,b){return a.dueDate.localeCompare(b.dueDate);});
+  undated.sort(function(a,b){var ka=kidsAll[a.id]?0:1,kb=kidsAll[b.id]?0:1;return ka-kb||Number(b.id)-Number(a.id);});
+  var nOver=dated.filter(function(i){return plDay(i.dueDate)<today;}).length;
+
+  var html='<div class="pl-head"><h1>일정</h1>'+
+    '<p>큰 주제 <b>'+topics.length+'개</b> · 독립 할 일 '+solos.length+'건 · 날짜가 잡힌 것 <b>'+dated.length+'</b> · 날짜 없음 <b>'+undated.length+'</b>'+(nOver?' · <b class="pl-over-t">마감 지남 '+nOver+'</b>':'')+'</p>'+
+    '<p class="pl-help">막대를 끌면 날짜가 옮겨지고, 막대 양 끝을 끌면 시작·마감이 바뀝니다. 아래 \'날짜 없음\'에서 끌어 올리면 그 날을 마감으로 잡습니다. 큰 주제 이름을 누르면 하위가 펼쳐집니다.</p></div>';
   var ticks='', wk='';
   for(var d=0;d<span;d++){var day=new Date(start.getTime()+d*DAY);
     if(day.getDay()===0||day.getDay()===6) wk+='<div class="pl-wkend" style="left:'+pos(day)+'%;width:'+(100/span)+'%"></div>';
-    if(day.getDay()===1) ticks+='<span class="pl-tick" style="left:'+pos(day)+'%">'+(day.getMonth()+1)+'/'+day.getDate()+'</span>';}
-  var layer='<div class="pl-layer">'+wk+'<div class="pl-today" style="left:'+(pos(today)+50/span)+'%"></div></div>';
-  var rows='<div class="pl-row pl-scale"><div class="pl-name" style="cursor:default">할 일</div><div class="pl-track">'+ticks+
-    '<span class="pl-tick today" style="left:'+(pos(today)+50/span)+'%;bottom:22px">오늘</span></div></div>';
-  var bar=function(i){
-    var s=plDay(i.dateKey||dk(new Date())), winEnd=new Date(start.getTime()+span*DAY);
-    var l=Math.max(0,pos(s));
-    if(!i.dueDate){ return '<div class="pl-bar open" style="left:'+l+'%;width:'+Math.max(0.6,100-l)+'%"></div>'+(s>=start?'<span class="pl-start" style="left:'+l+'%"></span>':''); }
-    var e=plDay(i.dueDate), over=e<today;
-    var r=Math.min(100,pos(new Date(e.getTime()+DAY))), w=Math.max(0.6,r-l);
-    var lbl=over?Math.round((today-e)/DAY)+'일 지남 ('+(e.getMonth()+1)+'/'+e.getDate()+')':(e.getMonth()+1)+'/'+e.getDate();
-    if(e<start) return '<span class="pl-lbl over" style="left:0">← '+lbl+'</span>';
-    return '<div class="pl-bar'+(over?' over':'')+'" style="left:'+l+'%;width:'+w+'%"></div><span class="pl-lbl'+(over?' over':'')+'" style="left:'+Math.min(r,92)+'%">'+lbl+'</span>';
+    if(day.getDay()===1) ticks+='<span class="pl-tick" style="left:'+pos(day)+'%">'+plMD(day)+'</span>';}
+  var tpos=pos(today)+50/span;
+  var layer='<div class="pl-layer">'+wk+'<div class="pl-today" style="left:'+tpos+'%"></div></div>';
+  var rows='<div class="pl-row pl-scale"><div class="pl-name">큰 주제 · 할 일</div><div class="pl-track" id="pl-scale-track">'+ticks+'<span class="pl-tick today" style="left:'+tpos+'%;bottom:22px">오늘</span></div></div>';
+
+  var progress=function(i){var k=kidsAll[i.id]||[];if(!k.length) return '';var dn=k.filter(plDone).length;
+    return '<span class="pl-prog'+(dn===k.length?' all':'')+'" title="하위 '+dn+'/'+k.length+' 완료"><i style="width:'+Math.round(dn/k.length*100)+'%"></i></span><span class="n">'+dn+'/'+k.length+'</span>';};
+  var barHtml=function(i){
+    var s=plDay(i.dateKey||dk(new Date())), e=plDay(i.dueDate); if(s>e) s=e;
+    var over=e<today, l=pos(s), r=pos(new Date(e.getTime()+DAY));
+    var lab=over?Math.round((today-e)/DAY)+'일 지남 · '+plMD(e):plMD(e);
+    if(r<=0) return '<span class="pl-lbl over" style="left:0">← '+lab+'</span>';
+    var lc=Math.max(0,l), rc=Math.min(100,r);
+    var dia=(kidsAll[i.id]||[]).filter(function(c){return c.dueDate;}).map(function(c){var cd=plDay(c.dueDate),p=pos(new Date(cd.getTime()+DAY/2));
+      if(p<0||p>100) return ''; var cls=plDone(c)?'done':(cd<today?'over':'');
+      return '<span class="pl-dia '+cls+'" style="left:'+p+'%" title="#'+c.id+' '+_alEsc(c.task)+' · '+plMD(cd)+'" onclick="event.stopPropagation();openAutolabDetailModal(\''+c.id+'\')"></span>';}).join('');
+    return '<div class="pl-bar'+(over?' over':'')+(kidsAll[i.id]?' topic':'')+'" data-id="'+i.id+'" style="left:'+lc+'%;width:'+Math.max(0.8,rc-lc)+'%">'+
+      '<span class="pl-h l" data-edge="l"></span><span class="pl-h r" data-edge="r"></span></div>'+dia+
+      '<span class="pl-lbl'+(over?' over':'')+'" style="left:'+Math.min(rc,90)+'%">'+lab+'</span>';
   };
-  var row=function(i,cls){
-    var n=kids[i.id]?'<span class="n">'+kids[i.id].length+'</span>':'';
-    return '<div class="pl-row '+cls+'" data-id="'+i.id+'" draggable="true">'+
-      '<div class="pl-name"><span class="pr pr-'+(i.priority||'none')+'"></span><span class="id">#'+i.id+'</span><span class="t" onclick="openAutolabDetailModal(\''+i.id+'\')" title="'+mpEsc(i.task)+'">'+mpEsc(i.task)+'</span>'+n+'</div>'+
-      '<div class="pl-track">'+bar(i)+'</div></div>';
+  var nameHtml=function(i){
+    var has=!!kidsAll[i.id], isOpen=!!PL.open[i.id];
+    return '<div class="pl-name'+(has?' topic':'')+'" data-drop="'+i.id+'">'+
+      (has?'<button class="pl-caret" onclick="PL.open[\''+i.id+'\']=!PL.open[\''+i.id+'\'];renderPlan()" aria-label="하위 펼치기">'+(isOpen?'▾':'▸')+'</button>':'<span class="pl-caret-sp"></span>')+
+      '<span class="pr pr-'+(i.priority||'none')+'"></span><span class="t" onclick="openAutolabDetailModal(\''+i.id+'\')" title="#'+i.id+' '+_alEsc(i.task)+'">'+_alEsc(i.task)+'</span>'+progress(i)+'</div>';
   };
-  tops.forEach(function(t){
-    rows+=row(t,kids[t.id]?'top':'solo');
-    (kids[t.id]||[]).sort(bySt).forEach(function(c){rows+=row(c,'child');});
-  });
-  html+='<div class="pl-scroll"><div class="pl-grid" id="pl-grid">'+layer+rows+'<p class="pl-root" id="pl-root">여기에 놓으면 큰 주제에서 빼서 독립 할 일로</p></div></div>';
+  var kidsList=function(i){
+    if(!kidsAll[i.id]||!PL.open[i.id]) return '';
+    return kidsAll[i.id].slice().sort(function(a,b){return (plDone(a)?1:0)-(plDone(b)?1:0)||(a.dueDate||'9').localeCompare(b.dueDate||'9');}).map(function(c){
+      var dn=plDone(c), cd=c.dueDate?plDay(c.dueDate):null;
+      return '<div class="pl-row kid'+(dn?' done':'')+'"><div class="pl-name" draggable="true" data-kid="'+c.id+'"><span class="pl-caret-sp"></span><span class="pl-check">'+(dn?'완료':'')+'</span>'+
+        '<span class="t" onclick="openAutolabDetailModal(\''+c.id+'\')" title="#'+c.id+' '+_alEsc(c.task)+'">'+_alEsc(c.task)+'</span>'+
+        (cd?'<span class="pl-due'+(!dn&&cd<today?' over':'')+'">'+plMD(cd)+'</span>':'')+'</div><div class="pl-track"></div></div>';}).join('');
+  };
+  dated.forEach(function(i){rows+='<div class="pl-row line" data-row="'+i.id+'">'+nameHtml(i)+'<div class="pl-track">'+barHtml(i)+'</div></div>'+kidsList(i);});
+  if(!dated.length) rows+='<div class="pl-row line"><div class="pl-name"><span class="pl-help">아직 날짜가 잡힌 큰 주제가 없습니다. 아래에서 끌어 올려 보세요.</span></div><div class="pl-track"></div></div>';
+  var lane='<div class="pl-lane"><div class="pl-lane-h">날짜 없음 · '+undated.length+'</div><div class="pl-chips">'+undated.map(function(i){
+    var has=!!kidsAll[i.id];
+    return '<div class="pl-chip'+(has?' topic':'')+'" draggable="true" data-chip="'+i.id+'" title="끌어서 일정 위에 놓으면 그 날이 마감이 됩니다"><span class="pr pr-'+(i.priority||'none')+'"></span>'+
+      '<span class="t" onclick="openAutolabDetailModal(\''+i.id+'\')">'+_alEsc(i.task)+'</span>'+progress(i)+'</div>';}).join('')+'</div></div>';
+  html+='<div class="pl-scroll"><div class="pl-grid" id="pl-grid">'+layer+rows+'</div></div>'+lane;
   box.innerHTML=html;
-  plWireDrag(byId,kids);
+  plWire(byId,kidsAll);
 }
-function plWireDrag(byId,kids){
+// 화면 x좌표 → 날짜
+function plDateAt(clientX){
+  var tr=document.getElementById('pl-scale-track'); if(!tr) return null;
+  var b=tr.getBoundingClientRect(); var f=(clientX-b.left)/b.width; if(f<0||f>1) return null;
+  return new Date(PL.start.getTime()+Math.floor(f*PL.days)*PL.DAY);
+}
+function plWire(byId,kidsAll){
   var grid=document.getElementById('pl-grid'); if(!grid) return;
-  grid.querySelectorAll('.pl-row[data-id]').forEach(function(el){
-    el.addEventListener('dragstart',function(e){PL.drag=el.dataset.id;el.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',el.dataset.id);}catch(_){}});
-    el.addEventListener('dragend',function(){el.classList.remove('dragging');grid.querySelectorAll('.drop-over').forEach(function(x){x.classList.remove('drop-over');});});
-    el.addEventListener('dragover',function(e){if(PL.drag&&PL.drag!==el.dataset.id){e.preventDefault();el.classList.add('drop-over');}});
-    el.addEventListener('dragleave',function(){el.classList.remove('drop-over');});
-    el.addEventListener('drop',function(e){e.preventDefault();el.classList.remove('drop-over');
-      var target=byId[el.dataset.id]; if(!target) return;
-      // 한 단계만: 하위 위에 놓으면 그 하위의 큰 주제 밑으로
-      var parent=target.parentId&&byId[target.parentId]?target.parentId:target.id;
-      plMove(PL.drag,parent,byId,kids);});
+  var tr=document.getElementById('pl-scale-track'); var dayPx=tr?tr.getBoundingClientRect().width/PL.days:16;
+  // 막대 끌기: 몸통=이동, 양 끝=시작·마감
+  grid.querySelectorAll('.pl-bar[data-id]').forEach(function(bar){
+    bar.addEventListener('pointerdown',function(e){
+      if(e.button!==0) return;
+      var it=byId[bar.dataset.id]; if(!it) return;
+      var edge=e.target.dataset.edge||'move';
+      var s0=plDay(it.dateKey||it.dueDate), e0=plDay(it.dueDate); if(s0>e0) s0=e0;
+      var x0=e.clientX, left0=parseFloat(bar.style.left), w0=parseFloat(bar.style.width), pct=100/PL.days, moved=false;
+      bar.setPointerCapture(e.pointerId); bar.classList.add('dragging');
+      function mv(ev){ var dd=Math.round((ev.clientX-x0)/dayPx); if(dd!==0) moved=true;
+        if(edge==='move'){bar.style.left=(left0+dd*pct)+'%';}
+        else if(edge==='r'){bar.style.width=Math.max(pct,w0+dd*pct)+'%';}
+        else {bar.style.left=(left0+dd*pct)+'%';bar.style.width=Math.max(pct,w0-dd*pct)+'%';}
+        bar.dataset.dd=dd; }
+      function up(ev){ bar.removeEventListener('pointermove',mv); bar.removeEventListener('pointerup',up); bar.classList.remove('dragging');
+        var dd=Number(bar.dataset.dd||0);
+        if(!moved||!dd){ if(!moved) openAutolabDetailModal(it.id); return; }
+        var ns=new Date(s0), ne=new Date(e0);
+        if(edge==='move'){ns.setDate(ns.getDate()+dd);ne.setDate(ne.getDate()+dd);}
+        else if(edge==='r'){ne.setDate(ne.getDate()+dd); if(ne<ns) ne=new Date(ns);}
+        else {ns.setDate(ns.getDate()+dd); if(ns>ne) ns=new Date(ne);}
+        plSetDates(it,plKey(ns),plKey(ne)); }
+      bar.addEventListener('pointermove',mv); bar.addEventListener('pointerup',up);
+    });
   });
-  var root=document.getElementById('pl-root');
-  root.addEventListener('dragover',function(e){if(PL.drag){e.preventDefault();root.classList.add('drop-over');}});
-  root.addEventListener('dragleave',function(){root.classList.remove('drop-over');});
-  root.addEventListener('drop',function(e){e.preventDefault();root.classList.remove('drop-over');plMove(PL.drag,null,byId,kids);});
+  // 날짜 없음 → 일정 위에 놓기 / 하위 → 다른 큰 주제 이름 위에 놓기
+  document.querySelectorAll('[data-chip],[data-kid]').forEach(function(el){
+    el.addEventListener('dragstart',function(e){PL.drag={id:el.dataset.chip||el.dataset.kid,kind:el.dataset.chip?'chip':'kid'};try{e.dataTransfer.setData('text/plain',PL.drag.id);}catch(_){} e.dataTransfer.effectAllowed='move';});
+    el.addEventListener('dragend',function(){PL.drag=null;document.querySelectorAll('.drop-over').forEach(function(x){x.classList.remove('drop-over');});});
+  });
+  grid.addEventListener('dragover',function(e){ if(!PL.drag) return; e.preventDefault();
+    var nm=e.target.closest('[data-drop]'); document.querySelectorAll('.drop-over').forEach(function(x){if(x!==nm)x.classList.remove('drop-over');});
+    if(nm) nm.classList.add('drop-over'); else grid.classList.add('drop-over'); });
+  grid.addEventListener('dragleave',function(e){ if(e.target===grid) grid.classList.remove('drop-over'); });
+  grid.addEventListener('drop',function(e){ if(!PL.drag) return; e.preventDefault(); var d=PL.drag; PL.drag=null;
+    document.querySelectorAll('.drop-over').forEach(function(x){x.classList.remove('drop-over');});
+    var it=byId[d.id]; if(!it) return;
+    var nm=e.target.closest('[data-drop]');
+    if(nm){ plReparent(it,nm.dataset.drop,kidsAll); return; }   // 이름 위 = 그 큰 주제 밑으로
+    var day=plDateAt(e.clientX); if(!day) return;                // 날짜 칸 위 = 그 날을 마감으로
+    var s=it.dateKey&&plDay(it.dateKey)<=day?it.dateKey:plKey(day);
+    plSetDates(it,s,plKey(day)); });
 }
-async function plMove(id,parent,byId,kids){
-  PL.drag=null;
-  var it=byId[id]; if(!it) return;
-  if(parent===id) return;
-  if((it.parentId||null)===(parent||null)) return;
-  if(parent&&kids[id]&&kids[id].length){showToast('하위가 있는 큰 주제는 다른 주제 밑에 넣을 수 없습니다');return;}
-  var prev=it.parentId||null;
-  var res=await _sb.from('autolab_task').update({parent_id:parent?Number(parent):null}).eq('id',Number(id));
+async function plSetDates(it,s,e){
+  var res=await _sb.from('autolab_task').update({start_date:s,due_date:e}).eq('id',Number(it.id));
+  if(res.error){showToast('날짜 저장 실패: '+res.error.message);renderPlan();return;}
+  it.dateKey=s; it.dueDate=e; renderPlan(); showToast('#'+it.id+' '+s.slice(5).replace('-','/')+' → '+e.slice(5).replace('-','/'));
+}
+async function plReparent(it,parentId,kidsAll){
+  if(String(parentId)===String(it.id)) return;
+  if(kidsAll[it.id]&&kidsAll[it.id].length){showToast('하위가 있는 큰 주제는 다른 주제 밑에 넣을 수 없습니다');return;}
+  var res=await _sb.from('autolab_task').update({parent_id:Number(parentId)}).eq('id',Number(it.id));
   if(res.error){showToast('옮기기 실패: '+res.error.message);return;}
-  it.parentId=parent;
-  renderPlan();
-  showToast(parent?'#'+id+' → #'+parent+' 밑으로':'#'+id+' 독립 할 일로');
-  PL.last={id:id,prev:prev};
+  it.parentId=String(parentId); PL.open[parentId]=true; renderPlan(); showToast('#'+it.id+' → #'+parentId+' 밑으로');
 }
 // 처리는 전부 Edge Function morning-action 한 곳에서 한다(슬랙 DM 카드와 같은 경로, 카드도 같이 갱신됨)
 async function mpCall(body){
