@@ -2755,6 +2755,93 @@ async function mpUndo(id){
   }catch(e){showToast('실패: '+(e.message||e));}
   finally{MP.busy=false;renderMorning();}
 }
+// =============================================
+// ⌘Z 되돌리기 — 화면에서 바꾼 것을 바로 앞 상태로. 할 일 표 바꾸기·넣기·지우기, 완료 체크, 정할 것 결정.
+// 모든 쓰기를 DB로 보내기 직전에 잡아 이전 값을 기억한다. 한 번 누른 동작(0.5초 안 묶음)이 한 단계.
+// 글 입력 칸 안에서는 브라우저 기본 ⌘Z(글자 되돌리기)를 그대로 둔다.
+// =============================================
+var UNDO={stack:[],replaying:false,lastPush:0,max:50};
+var UNDO_MAP={task:'task',priority:'priority',start_date:'dateKey',due_date:'dueDate',description:'description',person:'person',parent_id:'parentId',waiting_on:'waitingOn',waiting_since:'waitingSince',recheck_date:'recheckDate'};
+function undoPush(label,fn){
+  if(UNDO.replaying) return;
+  var now=Date.now(), top=UNDO.stack[UNDO.stack.length-1];
+  if(top&&now-UNDO.lastPush<500){ top.fns.push(fn); top.label=top.label||label; }
+  else { UNDO.stack.push({label:label,fns:[fn]}); if(UNDO.stack.length>UNDO.max) UNDO.stack.shift(); }
+  UNDO.lastPush=now;
+}
+function _undoPrev(id,upd){
+  var it=_alFind(id); if(!it) return null;
+  var prev={}; Object.keys(upd).forEach(function(k){ if(!(k in UNDO_MAP)) return; var v=it[UNDO_MAP[k]];
+    prev[k]=(v===''||v===undefined)?null:(k==='parent_id'&&v?Number(v):v); });
+  return prev;
+}
+function _undoRowFromItem(it){
+  return {person:it.person,task:it.task,priority:it.priority||'',start_date:it.dateKey||dk(new Date()),due_date:it.dueDate||null,created_at:(it.createdAt||dk(new Date())).slice(0,10),
+    description:it.description||'',parent_id:it.parentId?Number(it.parentId):null,waiting_on:it.waitingOn||null,waiting_since:it.waitingSince||null,recheck_date:it.recheckDate||null};
+}
+(function(){
+  var origFrom=_sb.from.bind(_sb);
+  _sb.from=function(table){
+    var b=origFrom(table);
+    if(table!=='autolab_task') return b;
+    var oUpdate=b.update.bind(b), oInsert=b.insert.bind(b), oDelete=b.delete.bind(b);
+    b.update=function(upd){ var q=oUpdate(upd), oEq=q.eq.bind(q);
+      q.eq=function(col,val){ if(col==='id'&&!UNDO.replaying){ var prev=_undoPrev(val,upd); if(prev&&Object.keys(prev).length)
+          undoPush('#'+val+' 변경',function(){return origFrom('autolab_task').update(prev).eq('id',Number(val));}); }
+        return oEq(col,val); };
+      return q; };
+    b.insert=function(rows){ var q=oInsert(rows), oThen=q.then.bind(q);
+      q.then=function(ok,bad){ return oThen(function(r){ if(r&&r.data&&!UNDO.replaying){ [].concat(r.data).forEach(function(row){ if(row&&row.id)
+            undoPush('#'+row.id+' 추가',function(){return Promise.all([origFrom('autolab_task').delete().eq('id',Number(row.id)),origFrom('autolab_check').delete().eq('type','autolab').eq('item_key',String(row.id))]);}); }); }
+          return ok?ok(r):r; },bad); };
+      return q; };
+    b.delete=function(){ var q=oDelete(), oEq=q.eq.bind(q);
+      q.eq=function(col,val){ if(col==='id'&&!UNDO.replaying){ var it=_alFind(val); if(it){ var row=_undoRowFromItem(it), chk=autolabChecks[alKey(it)];
+          undoPush('#'+val+' 삭제',async function(){ var r=await origFrom('autolab_task').insert(row).select('id').single();
+            if(r.data&&chk&&chk.checked) await _sb.from('autolab_check').upsert({type:'autolab',item_key:String(r.data.id),checked:true,completed_date:chk.completedDate||''},{onConflict:'item_key'});
+            if(r.data) showToast('#'+val+' 다시 살림 → 새 번호 #'+r.data.id); }); } }
+        return oEq(col,val); };
+      return q; };
+    return b;
+  };
+  // 완료 체크
+  var origUpsert=upsertCheck;
+  upsertCheck=async function(type,itemKey,checked,completedDate){
+    if(!UNDO.replaying&&type==='autolab'){ var prev=(autolabChecks['autolab_'+itemKey])||{checked:false,completedDate:''};
+      var wasChecked=!!prev.checked, wasDate=prev.completedDate||'';
+      if(wasChecked!==!!checked) undoPush('#'+itemKey+(checked?' 완료':' 완료 취소'),function(){ return origUpsert(type,itemKey,wasChecked,wasDate); }); }
+    return origUpsert(type,itemKey,checked,completedDate);
+  };
+})();
+// 정할 것 결정도 한 단계로(처리 함수가 할 일까지 같이 되돌린다)
+var _mpDecideOrig=mpDecide;
+mpDecide=async function(id,k,label,taskId){
+  await _mpDecideOrig(id,k,label,taskId);
+  var r=(MP.rows||[]).find(function(x){return x.id===id;});
+  if(r&&r.decision&&!UNDO.replaying){ UNDO.stack.push({label:'정할 것 "'+(r.hl||'').slice(0,20)+'" 결정',fns:[function(){return mpCall({id:id,action:'undo'});}]}); UNDO.lastPush=Date.now()-600; }
+};
+async function undoLast(){
+  var g=UNDO.stack.pop(); if(!g){ showToast('되돌릴 것이 없습니다'); return; }
+  UNDO.replaying=true;
+  try{ for(var i=g.fns.length-1;i>=0;i--){ await g.fns[i](); } }
+  catch(e){ showToast('되돌리기 실패: '+(e.message||e)); }
+  finally{ UNDO.replaying=false; }
+  await loadData(true);
+  if(currentTab==='morning') await loadMorning(true);
+  if(document.getElementById('detail-modal-bg').classList.contains('open')&&detailModalId){
+    if(_alFind(detailModalId)) openAutolabDetailModal(detailModalId); else closeDetailModal(); }
+  showToast('되돌림: '+g.label+(UNDO.stack.length?' · 더 누르면 그 전으로':''));
+}
+document.addEventListener('keydown',function(e){
+  if(!(e.metaKey||e.ctrlKey)||e.shiftKey||e.altKey||String(e.key).toLowerCase()!=='z') return;
+  var a=document.activeElement;
+  if(a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable)) return; // 글자 되돌리기는 브라우저에 맡김
+  e.preventDefault(); undoLast();
+});
+// 바꾼 직후 알림에 되돌리는 법을 붙인다
+var _toastOrig=showToast;
+showToast=function(msg){ var hint=(!UNDO.replaying&&Date.now()-UNDO.lastPush<1500&&UNDO.stack.length&&!/되돌/.test(msg))?' · ⌘Z 되돌리기':''; _toastOrig(msg+hint); };
+
 </script>
 </body>
 </html>
