@@ -229,7 +229,7 @@ serve(async (req) => {
         const { data: chk } = await sb.from('autolab_check').select('item_key').eq('type', 'autolab').eq('checked', true).in('item_key', kids.map((k: any) => String(k.id)));
         const left = kids.length - (chk || []).length;
         if (left > 0) {
-          const msg = `#${target}은 하위 ${left}개가 남은 큰 주제라 완료하지 않았습니다. 하위를 먼저 끝내세요`;
+          const msg = `#${target} 할 일은 하위 ${left}개가 남은 큰 주제라 완료하지 않았습니다. 하위를 먼저 끝내세요`;
           // 슬랙에서 눌렀으면 카드 밑에 이유를 남긴다(버튼만 눌리고 아무 일 없어 보이지 않게)
           if (p.via === 'slack' && row.slack_channel && row.slack_ts) await slack('chat.postMessage', { channel: row.slack_channel, thread_ts: row.slack_ts, text: msg });
           return json({ ok: false, error: msg }, 409);
