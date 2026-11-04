@@ -580,6 +580,19 @@ body{background:var(--bg-canvas)}
 .pl-root{margin:0;padding:12px;text-align:center;font-size:var(--text-xs);color:var(--text-secondary);border-top:1px dashed var(--border-default)}
 .pl-root.drop-over{background:var(--accent-subtle);color:var(--text-primary)}
 @media (max-width:900px){#plan-content{padding:20px 16px 40px}.pl-head h1{font-size:22px}.pl-row{grid-template-columns:200px minmax(0,1fr)}.pl-layer{left:200px}.pl-grid{min-width:760px}}
+.mp-btn kbd,.mp-keys kbd{font-family:var(--font-sans);font-size:10.5px;padding:0 5px;margin-left:4px;border:1px solid currentColor;border-radius:4px;opacity:.6}
+.mp-keys{margin-top:10px;font-size:var(--text-xs);color:var(--text-tertiary)}
+.mpp-bg{position:fixed;inset:0;background:var(--bg-scrim);display:none;align-items:flex-start;justify-content:center;padding:12vh 16px 0;z-index:200}
+.mpp-bg.open{display:flex}
+.mpp{width:min(620px,100%);background:var(--bg-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-sheet);overflow:hidden}
+.mpp input{width:100%;box-sizing:border-box;border:0;border-bottom:1px solid var(--border-subtle);padding:16px 18px;font-family:var(--font-sans);font-size:var(--text-base);outline:none;color:var(--text-primary)}
+.mpp-list{max-height:52vh;overflow-y:auto;padding:6px}
+.mpp-item{display:grid;gap:2px;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:9px 12px;cursor:pointer;font-family:var(--font-sans);color:var(--text-primary)}
+.mpp-item b{font-size:var(--text-sm);font-weight:600}
+.mpp-item small{font-size:12px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mpp-item.on,.mpp-item:hover{background:var(--bg-muted)}
+.mpp-bot{font-size:11px;font-weight:500;color:var(--accent)}
+.mpp-hint{margin:0;padding:10px 18px;font-size:var(--text-xs);color:var(--text-tertiary)}
 .mp-memo{margin-top:12px;display:grid;gap:6px}
 .mp-fu{display:flex;gap:6px}
 .mp-fu input[type=text]{flex:1;min-width:0;font-family:var(--font-sans);font-size:var(--text-sm);padding:6px 10px;border:1px solid var(--border-default);border-radius:var(--radius-md);color:var(--text-primary)}
@@ -645,7 +658,7 @@ body{background:var(--bg-canvas)}
       </div>
       <div class="nav-group" id="nav-morning" style="display:none">
         <div class="nav-label">강희준</div>
-        <button class="tab-btn" id="tab-morning" onclick="switchTab('morning')">아침판</button>
+        <button class="tab-btn" id="tab-morning" onclick="switchTab('morning')">정할 것</button>
         <button class="tab-btn" id="tab-plan" onclick="switchTab('plan')">일정</button>
       </div>
     </nav>
@@ -1974,8 +1987,11 @@ loadData();
 var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준'};
 (function(){
   try{
-    if(new URLSearchParams(location.search).get('morning')==='1') localStorage.setItem('autolab_morning','1');
+    var qs=new URLSearchParams(location.search);
+    if(qs.get('morning')==='1') localStorage.setItem('autolab_morning','1');
     if(localStorage.getItem('autolab_morning')==='1') document.getElementById('nav-morning').style.display='';
+    // DM의 "정할 것 열기" 주소(?morning=1)로 들어오면 바로 그 화면을 연다(저장소가 막힌 폰 브라우저에서도)
+    if(qs.get('morning')==='1'){ document.getElementById('nav-morning').style.display=''; setTimeout(function(){switchTab('morning');},0); }
   }catch(e){}
 })();
 function mpEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
@@ -2100,7 +2116,10 @@ function mpDetail(){
       '<button class="mp-link" onclick="mpUndo('+r.id+')">되돌리기</button></div>'+
       (r.memo?'<p class="mp-memo-shown">📝 '+mpEsc(r.memo).replace(/\n/g,'<br>')+'</p>':'')+
       (r.decided_task_id?memoBox+'<div class="mp-acts"><button class="mp-btn"'+(MP.busy?' disabled':'')+' onclick="mpMemo('+r.id+')">메모 덧붙이기</button></div>':'')
-    :memoBox+'<div class="mp-acts">'+mpButtons(r).map(function(b){return '<button class="mp-btn'+(b[1]===sug?' pri':'')+'"'+(MP.busy?' disabled':'')+' onclick="mpDecide('+r.id+',\''+b[0]+'\',\''+mpEsc(b[1])+'\')">'+mpEsc(b[1])+'</button>';}).join('')+'</div>';
+    :memoBox+'<div class="mp-acts">'+mpButtons(r).map(function(b){var k=MP_KEYS[b[0]]&&!(b[0]==='merge')?MP_KEYS[b[0]]:(b[1]===sug?'1':'');
+        return '<button class="mp-btn'+(b[1]===sug?' pri':'')+'"'+(MP.busy?' disabled':'')+' onclick="mpDecide('+r.id+',\''+b[0]+'\',\''+mpEsc(b[1])+'\')">'+mpEsc(b[1])+(b[1]===sug?' <kbd>1</kbd>':(k?' <kbd>'+k+'</kbd>':''))+'</button>';}).join('')+
+      (r.kind!=='progress'?'<button class="mp-btn"'+(MP.busy?' disabled':'')+' onclick="mpOpenPicker('+r.id+')">다른 할 일에 덧붙이기… <kbd>3</kbd></button>':'')+'</div>'+
+      '<p class="mp-keys">1 제안대로 · 2 새로 넣기 · 3 덧붙일 할 일 찾기 · 4 이미 끝남 · H 내일 다시 · J/K 위아래 · M 메모 · U 되돌리기</p>';
   return '<div><button class="mp-link mp-back" onclick="MP.open=false;renderMorning()">← 목록</button>'+
     '<h2>'+mpEsc(r.hl)+'</h2><p class="src">'+mpEsc((r.who||'')+(r.when_label?' · '+r.when_label:''))+'</p>'+
     (r.quote?'<blockquote>'+mpEsc(r.quote)+'</blockquote>':'')+(r.body?'<p class="body">'+mpEsc(r.body)+'</p>':'')+
@@ -2109,6 +2128,76 @@ function mpDetail(){
     '<div class="mp-kv"><div><span>출처</span><span>'+mpEsc(r.source)+'</span></div><div><span>묶음</span><span>'+mpEsc(r.grp)+'</span></div><div><span>봇 제안</span><span>'+mpEsc(sug)+'</span></div><div><span>상태</span><span>'+(r.decision?'<span class="mp-pill">정함</span>':'<span class="mp-pill gray">남음</span>')+'</span></div></div>';
 }
 function mpPick(id){MP.sel=id;MP.open=true;renderMorning();}
+
+// 덧붙일 할 일 찾기 — 봇 제안이 틀렸을 때 검색해서 고른다(Linear의 '중복 처리'처럼 한 창에서)
+var MPP={rowId:null,list:[],idx:0};
+function mpOpenPicker(rowId){
+  var r=MP.rows.filter(function(x){return x.id===rowId;})[0]; if(!r) return;
+  MPP.rowId=rowId; MPP.idx=0;
+  var bg=document.getElementById('mp-picker');
+  if(!bg){bg=document.createElement('div');bg.id='mp-picker';bg.className='mpp-bg';
+    bg.innerHTML='<div class="mpp" role="dialog" aria-label="덧붙일 할 일 찾기"><input id="mpp-q" type="text" placeholder="할 일 검색 — 번호·제목·내용" autocomplete="off"><div id="mpp-list" class="mpp-list"></div><p class="mpp-hint">↑↓ 고르기 · Enter 덧붙이기 · Esc 닫기</p></div>';
+    document.body.appendChild(bg);
+    bg.addEventListener('click',function(e){if(e.target===bg)mpClosePicker();});
+    document.getElementById('mpp-q').addEventListener('input',function(){MPP.idx=0;mpRenderPicker();});
+    document.getElementById('mpp-q').addEventListener('keydown',function(e){
+      if(e.isComposing) return;
+      if(e.key==='ArrowDown'){e.preventDefault();MPP.idx=Math.min(MPP.idx+1,MPP.list.length-1);mpRenderPicker();}
+      else if(e.key==='ArrowUp'){e.preventDefault();MPP.idx=Math.max(MPP.idx-1,0);mpRenderPicker();}
+      else if(e.key==='Enter'){e.preventDefault();var t=MPP.list[MPP.idx];if(t)mpPickTask(t.id);}
+      else if(e.key==='Escape'){e.preventDefault();mpClosePicker();}
+    });
+  }
+  bg.classList.add('open');
+  var q=document.getElementById('mpp-q'); q.value=''; mpRenderPicker(); setTimeout(function(){q.focus();},30);
+}
+function mpClosePicker(){var bg=document.getElementById('mp-picker');if(bg)bg.classList.remove('open');}
+function mpRenderPicker(){
+  var r=MP.rows.filter(function(x){return x.id===MPP.rowId;})[0]; if(!r) return;
+  var q=(document.getElementById('mpp-q').value||'').trim().toLowerCase();
+  // 항목 글에 나온 두 글자 이상 낱말이 할 일 제목·설명에 몇 개 겹치나로 먼저 보여 준다
+  var words=((r.hl||'')+' '+(r.body||'')+' '+(r.who||'')).toLowerCase().split(/[^0-9a-z가-힣]+/).filter(function(w){return w.length>=2;});
+  var open=(allData._autolab||[]).filter(function(i){return i.person===MP.person&&Number(i.id)>=2358&&!(autolabChecks[alKey(i)]||{}).checked;});
+  var scored=open.map(function(i){var hay=(i.task+' '+(i.description||'')).toLowerCase();
+    var s=words.reduce(function(n,w){return n+(hay.indexOf(w)>=0?1:0);},0)+(String(i.id)===String(r.task_id)?100:0);
+    return {i:i,s:s,hay:hay};});
+  if(q) scored=scored.filter(function(x){return ('#'+x.i.id+' '+x.hay).indexOf(q)>=0;});
+  scored.sort(function(a,b){return b.s-a.s||Number(b.i.id)-Number(a.i.id);});
+  MPP.list=scored.slice(0,12).map(function(x){return x.i;});
+  document.getElementById('mpp-list').innerHTML=MPP.list.map(function(t,n){
+    var p=t.parentId?_alFind(t.parentId):null;
+    var first=(t.description||'').split('\n').map(function(s){return s.trim();}).filter(function(s){return s&&!/^\[|^\(|^https?:/.test(s);})[0]||'';
+    return '<button class="mpp-item'+(n===MPP.idx?' on':'')+'" onclick="mpPickTask(\''+t.id+'\')"><b>#'+t.id+' '+_alEsc(t.task)+'</b>'+
+      (String(t.id)===String(r.task_id)?' <span class="mpp-bot">봇 제안</span>':'')+
+      '<small>'+(p?'↳ '+_alEsc(p.task)+' · ':'')+_alEsc(first.slice(0,70))+'</small></button>';}).join('')||'<p class="mpp-hint">맞는 할 일이 없습니다. [할 일에 넣기]로 새로 만드세요.</p>';
+}
+function mpPickTask(taskId){
+  var t=_alFind(taskId); mpClosePicker();
+  mpDecide(MPP.rowId,'merge','#'+taskId+'에 덧붙이기',Number(taskId));
+}
+// 단축키 — 정할 것 탭에서, 글을 쓰는 중이 아닐 때만
+document.addEventListener('keydown',function(e){
+  if(currentTab!=='morning'||MP.view==='read') return;
+  var a=document.activeElement;
+  if(e.isComposing||e.metaKey||e.ctrlKey||e.altKey) return;
+  if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)){ if(e.key==='Escape') a.blur(); return; }
+  if(document.getElementById('mp-picker')&&document.getElementById('mp-picker').classList.contains('open')) return;
+  if(document.getElementById('detail-modal-bg').classList.contains('open')) return;
+  var acts=MP.rows.filter(mpAct);
+  var r=acts.filter(function(x){return x.id===MP.sel;})[0]; if(!r) return;
+  var list=acts.filter(function(x){return MP.filter==='all'||(MP.filter==='left'?!x.decision:!!x.decision);});
+  var key=e.key.toLowerCase(), pos=list.findIndex(function(x){return x.id===r.id;});
+  if(key==='j'||key==='arrowdown'){ if(pos<list.length-1){MP.sel=list[pos+1].id;renderMorning();} e.preventDefault(); return; }
+  if(key==='k'||key==='arrowup'){ if(pos>0){MP.sel=list[pos-1].id;renderMorning();} e.preventDefault(); return; }
+  if(key==='m'){ var m=document.getElementById('mp-memo'); if(m){m.focus();e.preventDefault();} return; }
+  if(key==='u'&&r.decision){ mpUndo(r.id); return; }
+  if(r.decision) return;
+  if(key==='1'){ var sug=mpSuggest(r), b=mpButtons(r).filter(function(x){return x[1]===sug;})[0]; if(b) mpDecide(r.id,b[0],b[1]); }
+  else if(key==='2'){ mpDecide(r.id,'add','할 일에 넣기'); }
+  else if(key==='3'&&r.kind!=='progress'){ e.preventDefault(); mpOpenPicker(r.id); }
+  else if(key==='4'){ mpDecide(r.id,'done',r.kind==='progress'?'완료':'이미 끝남'); }
+  else if(key==='h'){ mpDecide(r.id,'later','내일 다시'); }
+});
 
 // =============================================
 // 큰 주제(상위 할 일) — 목록·매트릭스·상세 창에서 보이고 상세 창에서 바꾼다
@@ -2279,11 +2368,12 @@ function mpInputs(){
     followup:f&&f.value.trim()?{task:f.value.trim(),due:fd&&fd.value?fd.value:''}:null,
     priority:pr?pr.value:''};
 }
-async function mpDecide(id,k,label){
+var MP_KEYS={add:'2',done:'4',later:'H'};
+async function mpDecide(id,k,label,taskId){
   if(MP.busy) return;
   var inp=mpInputs(); MP.busy=true; renderMorning();
   try{
-    var out=await mpCall({id:id,action:k,label:label,by:MP.person,via:'dashboard',memo:inp.memo,due:inp.due,followup:inp.followup,priority:inp.priority});
+    var out=await mpCall({id:id,action:k,label:label,by:MP.person,via:'dashboard',memo:inp.memo,due:inp.due,followup:inp.followup,priority:inp.priority,task_id:taskId||null});
     if(out.already){showToast('이미 정한 항목: '+out.row.decision_label);mpReplace(out.row);return;}
     if(!out.ok) throw new Error(out.error||'처리 실패');
     mpReplace(out.row);

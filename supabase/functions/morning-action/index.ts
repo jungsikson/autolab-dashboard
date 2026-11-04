@@ -49,6 +49,8 @@ function buttons(row: any): [string, string][] {
   if (row.kind === 'done') a.push(['done', '이미 끝남'], ['add', '할 일에 넣기']);
   if (row.kind === 'read') a.push(['read', '읽음'], ['add', '할 일에 넣기']);
   if (row.kind !== 'done') a.push(['done', '이미 끝남']);
+  // 대시보드와 같은 버튼 — 폰에서 DM만으로 끝낼 수 있게(11/4 UX 검토)
+  a.push(['later', '내일 다시'], ['mute', '그만 알림']);
   return a;
 }
 
@@ -177,6 +179,14 @@ serve(async (req) => {
       if (e) return json({ ok: false, error: e.message }, 500);
       upd.decided_task_id = data.id;
     } else if (p.action === 'merge') {
+      // 사람이 검색창에서 다른 할 일을 고르면 그 번호로 덧붙인다(봇 제안이 틀렸을 때)
+      if (p.task_id && Number(p.task_id) !== Number(row.task_id)) {
+        const { data: pick } = await sb.from('autolab_task').select('id, task').eq('id', Number(p.task_id)).single();
+        if (!pick) return json({ ok: false, error: `#${p.task_id} 없음` }, 404);
+        row.task_id = pick.id; row.task_title = pick.task;
+        Object.assign(upd, { task_id: pick.id, task_title: pick.task });
+      }
+      if (!row.task_id) return json({ ok: false, error: '덧붙일 할 일을 고르세요' }, 400);
       const { data: t, error: e } = await sb.from('autolab_task').select('description').eq('id', row.task_id).single();
       if (e || !t) return json({ ok: false, error: `#${row.task_id} 없음` }, 404);
       const c = chunk(row);
