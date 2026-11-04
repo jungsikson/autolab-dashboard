@@ -2809,7 +2809,9 @@ function _undoRowFromItem(it){
   upsertCheck=async function(type,itemKey,checked,completedDate){
     if(!UNDO.replaying&&type==='autolab'){ var prev=(autolabChecks['autolab_'+itemKey])||{checked:false,completedDate:''};
       var wasChecked=!!prev.checked, wasDate=prev.completedDate||'';
-      if(wasChecked!==!!checked) undoPush('#'+itemKey+(checked?' 완료':' 완료 취소'),function(){ return origUpsert(type,itemKey,wasChecked,wasDate); }); }
+      // 화면이 저장 전에 상태를 먼저 바꿔 두는 경우가 있어, 같아 보이면 반대 상태를 이전 값으로 본다
+      if(wasChecked===!!checked){ wasChecked=!checked; wasDate=''; }
+      undoPush('#'+itemKey+(checked?' 완료':' 완료 취소'),function(){ autolabChecks['autolab_'+itemKey]={checked:wasChecked,completedDate:wasDate}; return origUpsert(type,itemKey,wasChecked,wasDate); }); }
     return origUpsert(type,itemKey,checked,completedDate);
   };
 })();
