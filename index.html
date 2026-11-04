@@ -2315,6 +2315,11 @@ function parentTagHtml(item){
   var p=_alFind(item.parentId); if(!p) return '';
   return '<div class="parent-tag" onclick="event.stopPropagation();openAutolabDetailModal(\''+p.id+'\')" title="큰 주제 열기">↳ '+_alEsc(p.task)+'</div>';
 }
+function waitTagHtml(item){
+  if(!item.waitingOn) return '';
+  var today=dk(new Date()), due=item.recheckDate&&item.recheckDate<=today;
+  return '<div class="wait-tag'+(due?' due':'')+'">기다림 · '+_alEsc(item.waitingOn)+(item.recheckDate?' · '+item.recheckDate.slice(5).replace('-','/')+(due?' 다시 볼 날':' 확인'):'')+'</div>';
+}
 function familyHtml(item){
   var html='';
   var p=item.parentId?_alFind(item.parentId):null;
