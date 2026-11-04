@@ -65,7 +65,7 @@ function cardBlocks(row: any) {
     value: JSON.stringify({ mid: row.id, k, label: t }), ...(primary ? { style: 'primary' } : {}),
   });
   if (row.decision) {
-    const res = `✅ ${row.decision_label}${row.decided_task_id ? ` · #${row.decided_task_id}` : ''}${row.decided_by ? ` · ${row.decided_by}` : ''}${row.decided_via === 'dashboard' ? ' (대시보드)' : ''}`;
+    const res = `✅ ${row.decision_label}${row.decided_task_id ? ` · #${row.decided_task_id}` : ''}${row.followup_task_id ? ` · 후속 #${row.followup_task_id}` : ''}${row.decided_by ? ` · ${row.decided_by}` : ''}${row.decided_via === 'dashboard' ? ' (대시보드)' : ''}`;
     return [section, { type: 'context', elements: [{ type: 'mrkdwn', text: res }] }, { type: 'actions', elements: [btn('되돌리기', 'undo')] }];
   }
   const sug = suggestion(row);
@@ -101,18 +101,39 @@ serve(async (req) => {
   const today = kstToday();
   const upd: Record<string, unknown> = {};
   const memo = typeof p.memo === 'string' ? p.memo.trim() : '';
-  const due = typeof p.due === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.due) ? p.due : null;
+  const isDate = (s: unknown) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+  const due = isDate(p.due) ? p.due : null;
+  const prio = ['DO', 'DELEGATE', 'SCHEDULE', 'ELIMINATE'].includes(p.priority) ? p.priority : '';
+  // 후속 할 일: 이 항목을 정하면서 생긴 다음 일(예: "이수민 블랙박스 결과 확인")을 별도 할 일로 만든다
+  const fu = p.followup && typeof p.followup.task === 'string' && p.followup.task.trim()
+    ? { task: p.followup.task.trim().slice(0, 80), due: isDate(p.followup.due) ? p.followup.due : null } : null;
+  const fuMark = `(정할 것 #${row.id} 후속)`;
+  async function makeFollowup(): Promise<number | null> {
+    if (!fu) return null;
+    const { data, error: e } = await sb.from('autolab_task').insert({
+      person: row.person, task: fu.task, priority: prio, start_date: today, due_date: fu.due, created_at: today,
+      description: `[후속 · 정할 것 ${row.edition_date}] ${row.hl}${row.link ? `\n${row.link}` : ''}${memo ? `\n\n메모: ${memo}` : ''}\n${fuMark}`,
+    }).select('id').single();
+    if (e) throw new Error(`후속 할 일 실패: ${e.message}`);
+    return data.id;
+  }
 
   // 이미 정한 항목에 메모만 더한다 — 연결된 할 일이 있으면 그 설명 끝에도 붙인다
   if (p.action === 'memo') {
-    if (!memo) return json({ ok: false, error: 'empty memo' }, 400);
+    if (!memo && !fu) return json({ ok: false, error: 'empty memo' }, 400);
+    if (!memo) {
+      const fid = await makeFollowup();
+      const { data: saved } = await sb.from('morning_item').update({ followup_task_id: fid }).eq('id', row.id).select('*').single();
+      return json({ ok: true, row: saved });
+    }
     const tid = row.decided_task_id || row.task_id;
     if (row.decision && tid && ['add', 'merge', 'done'].includes(row.decision)) {
       const { data: t } = await sb.from('autolab_task').select('description').eq('id', tid).single();
       // 마감은 이 항목으로 새로 만든 할 일일 때만 바꾼다
       if (t) await sb.from('autolab_task').update({ description: (t.description || '') + memoChunk(row, memo, today), ...(due && row.decision === 'add' ? { due_date: due } : {}) }).eq('id', tid);
     }
-    const { data: saved } = await sb.from('morning_item').update({ memo: row.memo ? `${row.memo}\n${memo}` : memo }).eq('id', row.id).select('*').single();
+    const fid = fu ? await makeFollowup() : null;
+    const { data: saved } = await sb.from('morning_item').update({ memo: row.memo ? `${row.memo}\n${memo}` : memo, ...(fid ? { followup_task_id: fid } : {}) }).eq('id', row.id).select('*').single();
     return json({ ok: true, row: saved });
   }
 
@@ -134,7 +155,10 @@ serve(async (req) => {
     } else if (row.decision === 'done' && row.kind === 'progress' && row.task_id) {
       await sb.from('autolab_check').upsert({ type: 'autolab', item_key: `autolab_${row.task_id}`, checked: false, completed_date: '' }, { onConflict: 'item_key' });
     }
-    Object.assign(upd, { decision: null, decision_label: null, decided_task_id: null, decided_at: null, decided_by: null, decided_via: null, memo: null });
+    if (row.followup_task_id) {
+      await sb.from('autolab_task').delete().eq('id', row.followup_task_id).ilike('description', `%${fuMark}%`);
+    }
+    Object.assign(upd, { decision: null, decision_label: null, decided_task_id: null, decided_at: null, decided_by: null, decided_via: null, memo: null, followup_task_id: null });
   } else {
     // 다른 창에서 먼저 정했으면 덮어쓰지 않는다
     if (row.decision) {
@@ -144,7 +168,7 @@ serve(async (req) => {
     if (memo) { row.memo = memo; upd.memo = memo; }
     if (p.action === 'add') {
       const { data, error: e } = await sb.from('autolab_task').insert({
-        person: row.person, task: row.hl.length > 60 ? row.hl.slice(0, 60) + '…' : row.hl, priority: '',
+        person: row.person, task: row.hl.length > 60 ? row.hl.slice(0, 60) + '…' : row.hl, priority: prio,
         start_date: today, due_date: due, created_at: today,
         description: `[정할 것 ${row.edition_date} · ${row.source}]${row.link ? `\n${row.link}` : ''}\n\n${[row.who, row.when_label].filter(Boolean).join(' · ')}\n${row.quote ? `"${row.quote}"` : (row.body || '')}${memo ? `\n\n메모: ${memo}` : ''}\n${mark(row)}`,
       }).select('id').single();
@@ -163,6 +187,7 @@ serve(async (req) => {
     } else if (!['done', 'read', 'later', 'mute'].includes(p.action)) {
       return json({ ok: false, error: 'unknown action' }, 400);
     }
+    try { upd.followup_task_id = await makeFollowup(); } catch (e) { return json({ ok: false, error: String((e as Error).message) }, 500); }
     Object.assign(upd, { decision: p.action, decision_label: p.label || p.action, decided_at: new Date().toISOString(), decided_by: p.by || row.person, decided_via: p.via || null });
   }
 
