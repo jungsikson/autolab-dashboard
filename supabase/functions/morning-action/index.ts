@@ -68,6 +68,8 @@ function buttons(row: any): [string, string][] {
   if (row.kind === 'progress') return [['later', '내일 다시'], ['done', '완료'], ['mute', '그만 알림']];
   const a: [string, string][] = [];
   if (row.kind === 'merge') a.push(['merge', `#${row.task_id}에 덧붙이기`], ['add', '다른 일 · 새로 넣기']);
+  // 연결된 할 일 자체가 끝났으면 그 할 일까지 완료로(11/4). '이미 끝남'은 이 항목만 닫는다
+  if (row.task_id && (row.kind === 'merge' || row.kind === 'done')) a.push(['done_task', `#${row.task_id} 완료 처리`]);
   if (row.kind === 'new') a.push(['add', '할 일에 넣기']);
   if (row.kind === 'done') a.push(['done', '이미 끝남'], ['add', '할 일에 넣기']);
   if (row.kind === 'read') a.push(['read', '읽음'], ['add', '할 일에 넣기']);
@@ -171,7 +173,7 @@ serve(async (req) => {
     if (!row.decision) return json({ ok: true, row });
     if (row.decision === 'add' && row.decided_task_id) {
       await sb.from('autolab_task').delete().eq('id', row.decided_task_id).ilike('description', `%${mark(row)}%`);
-    } else if (row.decision === 'merge' && (row.decided_task_id || row.task_id)) {
+    } else if (['merge', 'done_task'].includes(row.decision) && (row.decided_task_id || row.task_id)) {
       const mergedId = row.decided_task_id || row.task_id;
       // 덧붙인 단락은 "[정할 것 날짜] 제목"부터 표식까지. 나중에 붙인 메모 단락(같은 표식)도 함께 걷어 낸다
       const { data: t } = await sb.from('autolab_task').select('description').eq('id', mergedId).single();
@@ -183,6 +185,7 @@ serve(async (req) => {
         if (lastMark > s) d = d.slice(0, s) + d.slice(lastMark + mark(row).length);
         await sb.from('autolab_task').update({ description: d }).eq('id', mergedId);
       }
+      if (row.decision === 'done_task') await sb.from('autolab_check').upsert({ type: 'autolab', item_key: String(mergedId), checked: false, completed_date: '' }, { onConflict: 'item_key' });
     } else if (row.decision === 'done' && row.kind === 'progress' && row.task_id) {
       await sb.from('autolab_check').upsert({ type: 'autolab', item_key: String(row.task_id), checked: false, completed_date: '' }, { onConflict: 'item_key' });
     }
@@ -214,6 +217,27 @@ serve(async (req) => {
       const c = chunk(row);
       // 덧붙이기는 기존 할 일의 마감을 바꾸지 않는다(큰 묶음 할 일의 마감이 덮이는 걸 막음, 11/4)
       if (!(t.description || '').includes(c)) await sb.from('autolab_task').update({ description: (t.description || '') + c }).eq('id', target);
+      upd.decided_task_id = target;
+    } else if (p.action === 'done_task') {
+      // 연결된 할 일을 완료로. 하위가 남은 큰 주제는 완료하지 않는다(하위부터)
+      const target = p.task_id ? Number(p.task_id) : row.task_id;
+      if (!target) return json({ ok: false, error: '완료할 할 일이 없습니다' }, 400);
+      const { data: t, error: e } = await sb.from('autolab_task').select('description').eq('id', target).single();
+      if (e || !t) return json({ ok: false, error: `#${target} 없음` }, 404);
+      const { data: kids } = await sb.from('autolab_task').select('id').eq('parent_id', target);
+      if (kids && kids.length) {
+        const { data: chk } = await sb.from('autolab_check').select('item_key').eq('type', 'autolab').eq('checked', true).in('item_key', kids.map((k: any) => String(k.id)));
+        const left = kids.length - (chk || []).length;
+        if (left > 0) {
+          const msg = `#${target}은 하위 ${left}개가 남은 큰 주제라 완료하지 않았습니다. 하위를 먼저 끝내세요`;
+          // 슬랙에서 눌렀으면 카드 밑에 이유를 남긴다(버튼만 눌리고 아무 일 없어 보이지 않게)
+          if (p.via === 'slack' && row.slack_channel && row.slack_ts) await slack('chat.postMessage', { channel: row.slack_channel, thread_ts: row.slack_ts, text: msg });
+          return json({ ok: false, error: msg }, 409);
+        }
+      }
+      const c = chunk(row);
+      if (!(t.description || '').includes(c)) await sb.from('autolab_task').update({ description: (t.description || '') + c }).eq('id', target);
+      await sb.from('autolab_check').upsert({ type: 'autolab', item_key: String(target), checked: true, completed_date: today }, { onConflict: 'item_key' });
       upd.decided_task_id = target;
     } else if (p.action === 'done' && row.kind === 'progress' && row.task_id) {
       await sb.from('autolab_check').upsert({ type: 'autolab', item_key: String(row.task_id), checked: true, completed_date: today }, { onConflict: 'item_key' });
