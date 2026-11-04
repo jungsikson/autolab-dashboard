@@ -933,6 +933,33 @@ var SUPABASE_ANON_KEY = 'sb_publishable_fmSMAvC9DqvA9EG41fC2HA_Qb_SpMOJ';
 var _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // =============================================
+// 회사 구글 계정 로그인 (2026-11-04) — 표는 로그인한 @thetrive.com 계정만 읽고 쓸 수 있다(RLS).
+// 로그인 전엔 표를 부르지 않고 로그인 화면만 띄운다. AUTH_READY가 풀린 뒤에 loadData·실시간 구독을 시작한다
+// =============================================
+function authScreen(msg){
+  var el=document.getElementById('auth-gate');
+  if(!el){
+    el=document.createElement('div'); el.id='auth-gate';
+    el.style.cssText='position:fixed;inset:0;z-index:9999;background:var(--bg-canvas,#F5F7FA);display:flex;align-items:center;justify-content:center;padding:16px';
+    el.innerHTML='<div style="background:var(--bg-surface,#fff);border-radius:12px;padding:28px 24px;max-width:340px;width:100%;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.08)">'
+      +'<div style="font-size:17px;font-weight:700;margin-bottom:8px">오토랩 대시보드</div>'
+      +'<div id="auth-msg" style="font-size:14px;color:#666;margin-bottom:20px">회사 구글 계정(@thetrive.com)으로 로그인해 주세요</div>'
+      +'<button id="auth-btn" style="width:100%;padding:12px;border:0;border-radius:8px;background:#1a73e8;color:#fff;font-size:15px;font-weight:600;cursor:pointer">회사 계정으로 로그인</button></div>';
+    document.body.appendChild(el);
+    document.getElementById('auth-btn').onclick=function(){
+      _sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin+location.pathname+location.search,queryParams:{hd:'thetrive.com',prompt:'select_account'}}});
+    };
+  }
+  if(msg) document.getElementById('auth-msg').textContent=msg;
+}
+var AUTH_READY=(async function(){
+  var s=(await _sb.auth.getSession()).data.session;
+  if(s&&!/@thetrive\.com$/i.test(s.user.email||'')){ await _sb.auth.signOut(); s=null; authScreen('회사 계정(@thetrive.com)만 들어올 수 있어요'); }
+  if(!s){ authScreen(); return new Promise(function(){}); }
+  return s;
+})();
+
+// =============================================
 // 상태 변수
 // =============================================
 var DAYS=['일','월','화','수','목','금','토'];
@@ -2087,7 +2114,7 @@ document.getElementById('detail-modal-desc').addEventListener('keydown',function
   }
 });
 
-loadData();
+AUTH_READY.then(function(){loadData();});
 </script>
 
 <script>
@@ -2379,11 +2406,13 @@ function fillParentSelect(item){
       if(currentTab==='morning') loadMorning(true);
     },800);
   }
+  AUTH_READY.then(function(){
   _sb.channel('autolab-live')
     .on('postgres_changes',{event:'*',schema:'public',table:'autolab_task'},soon)
     .on('postgres_changes',{event:'*',schema:'public',table:'autolab_check'},soon)
     .on('postgres_changes',{event:'*',schema:'public',table:'morning_item'},soon)
     .subscribe();
+  });
 })();
 
 // =============================================
