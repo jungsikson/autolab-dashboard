@@ -109,7 +109,8 @@ serve(async (req) => {
     const tid = row.decided_task_id || row.task_id;
     if (row.decision && tid && ['add', 'merge', 'done'].includes(row.decision)) {
       const { data: t } = await sb.from('autolab_task').select('description').eq('id', tid).single();
-      if (t) await sb.from('autolab_task').update({ description: (t.description || '') + memoChunk(row, memo, today), ...(due ? { due_date: due } : {}) }).eq('id', tid);
+      // 마감은 이 항목으로 새로 만든 할 일일 때만 바꾼다
+      if (t) await sb.from('autolab_task').update({ description: (t.description || '') + memoChunk(row, memo, today), ...(due && row.decision === 'add' ? { due_date: due } : {}) }).eq('id', tid);
     }
     const { data: saved } = await sb.from('morning_item').update({ memo: row.memo ? `${row.memo}\n${memo}` : memo }).eq('id', row.id).select('*').single();
     return json({ ok: true, row: saved });
@@ -153,7 +154,8 @@ serve(async (req) => {
       const { data: t, error: e } = await sb.from('autolab_task').select('description').eq('id', row.task_id).single();
       if (e || !t) return json({ ok: false, error: `#${row.task_id} 없음` }, 404);
       const c = chunk(row);
-      if (!(t.description || '').includes(c)) await sb.from('autolab_task').update({ description: (t.description || '') + c, ...(due ? { due_date: due } : {}) }).eq('id', row.task_id);
+      // 덧붙이기는 기존 할 일의 마감을 바꾸지 않는다(큰 묶음 할 일의 마감이 덮이는 걸 막음, 11/4)
+      if (!(t.description || '').includes(c)) await sb.from('autolab_task').update({ description: (t.description || '') + c }).eq('id', row.task_id);
       upd.decided_task_id = row.task_id;
     } else if (p.action === 'done' && row.kind === 'progress' && row.task_id) {
       await sb.from('autolab_check').upsert({ type: 'autolab', item_key: `autolab_${row.task_id}`, checked: true, completed_date: today }, { onConflict: 'item_key' });

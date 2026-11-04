@@ -520,6 +520,12 @@ body{background:var(--bg-canvas)}
 .mp-btn:hover{border-color:var(--text-primary)}
 .mp-btn.pri{background:var(--text-primary);border-color:var(--text-primary);color:#fff}
 .mp-btn:disabled{opacity:.5;cursor:wait}
+.mp-target{margin-top:10px;padding:12px 14px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md)}
+.mp-target-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.mp-target-head b{font-size:var(--text-sm);line-height:1.4}
+.mp-target-meta{margin-top:2px;font-size:var(--text-xs);color:var(--text-secondary)}
+.mp-target ul{margin:8px 0 0;padding-left:16px;font-size:13px;color:var(--text-primary);display:grid;gap:2px}
+.mp-target-last{margin-top:6px;font-size:13px;color:var(--text-secondary)}
 .mp-memo{margin-top:12px;display:grid;gap:6px}
 .mp-memo textarea{width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font-sans);font-size:var(--text-sm);line-height:1.5;padding:8px 10px;border:1px solid var(--border-default);border-radius:var(--radius-md);background:var(--bg-surface);color:var(--text-primary)}
 .mp-memo label{font-size:var(--text-xs);color:var(--text-secondary);display:flex;align-items:center;gap:8px}
@@ -1984,6 +1990,20 @@ function mpReadHtml(info){
     '<div class="mp-panel full"><h3>세차·차량 뉴스 · 커뮤니티</h3><ul>'+news.map(function(r){return li(r,true);}).join('')+'</ul></div></div>';
   return html;
 }
+// 덧붙이기·진척 대상 할 일을 번호만이 아니라 내용으로 보여 준다(무엇에 붙일지 보고 정하게)
+var MP_PRIO={DO:'긴급+중요',DELEGATE:'긴급+안중요',SCHEDULE:'중요+안긴급',ELIMINATE:'둘다아님','':'미분류'};
+function mpTaskPreview(taskId){
+  var t=(allData._autolab||[]).find(function(i){return String(i.id)===String(taskId);});
+  if(!t) return '<div class="mp-target"><p>#'+taskId+' 할 일을 찾지 못했습니다(완료됐거나 지워짐).</p></div>';
+  var lines=(t.description||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  var body=lines.filter(function(s){return !/^\[(수동 등록|슬랙 캡처|정할 것|아침판|진척|메모)/.test(s)&&!/^\((정할 것|아침판) #/.test(s)&&!/^https?:/.test(s);}).slice(0,3);
+  var last=lines.filter(function(s){return /^\[(진척|메모)/.test(s);}).pop();
+  var meta=[MP_PRIO[t.priority]||t.priority, t.dueDate?'마감 '+t.dueDate:'', t.dateKey?'시작 '+t.dateKey:''].filter(Boolean).join(' · ');
+  return '<div class="mp-target"><div class="mp-target-head"><b>#'+t.id+' '+mpEsc(t.task)+'</b><button class="mp-link" onclick="openAutolabDetailModal(\''+t.id+'\')">할 일 열기</button></div>'+
+    '<p class="mp-target-meta">'+mpEsc(meta)+'</p>'+
+    (body.length?'<ul>'+body.map(function(s){return '<li>'+mpEsc(s.replace(/^[-•]\s*/,''))+'</li>';}).join('')+'</ul>':'')+
+    (last?'<p class="mp-target-last">최근: '+mpEsc(last)+'</p>':'')+'</div>';
+}
 function mpDetail(){
   var r=MP.rows.filter(function(x){return x.id===MP.sel;})[0];
   if(!r) return '<p>왼쪽에서 항목을 고르세요.</p>';
@@ -1996,7 +2016,7 @@ function mpDetail(){
   var note=(r.kind!=='done'&&r.note)?'<p style="margin-top:6px">'+mpEsc(r.note)+'</p>':'';
   var sug=mpSuggest(r);
   var memoBox='<div class="mp-memo"><textarea id="mp-memo" rows="2" placeholder="메모 — 할 일에 같이 남깁니다 (예: 희진님과 오프라인 논의, 월요일 확인 후 화요일 결정)"></textarea>'+
-    '<label>마감 <input type="date" id="mp-due"></label></div>';
+    '<label>마감 (새로 넣을 때만) <input type="date" id="mp-due"></label></div>';
   var acts=r.decision
     ?'<div class="mp-done"><span class="mp-pill">'+mpEsc(r.decision_label)+(r.decided_task_id?' · #'+r.decided_task_id:'')+(r.decided_via==='slack'?' · 슬랙':'')+'</span><button class="mp-link" onclick="mpUndo('+r.id+')">되돌리기</button></div>'+
       (r.memo?'<p class="mp-memo-shown">📝 '+mpEsc(r.memo).replace(/\n/g,'<br>')+'</p>':'')+
@@ -2006,7 +2026,7 @@ function mpDetail(){
     '<h2>'+mpEsc(r.hl)+'</h2><p class="src">'+mpEsc((r.who||'')+(r.when_label?' · '+r.when_label:''))+'</p>'+
     (r.quote?'<blockquote>'+mpEsc(r.quote)+'</blockquote>':'')+(r.body?'<p class="body">'+mpEsc(r.body)+'</p>':'')+
     (r.link?'<a class="orig" href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">'+mpEsc(r.link_label||'슬랙')+' 원문 열기</a>':'')+
-    '<div class="mp-verdict"><p>'+m+'</p>'+note+acts+'</div></div>'+
+    '<div class="mp-verdict"><p>'+m+'</p>'+((r.kind==='merge'||r.kind==='progress')&&r.task_id?mpTaskPreview(r.task_id):'')+note+acts+'</div></div>'+
     '<div class="mp-kv"><div><span>출처</span><span>'+mpEsc(r.source)+'</span></div><div><span>묶음</span><span>'+mpEsc(r.grp)+'</span></div><div><span>봇 제안</span><span>'+mpEsc(sug)+'</span></div><div><span>상태</span><span>'+(r.decision?'<span class="mp-pill">정함</span>':'<span class="mp-pill gray">남음</span>')+'</span></div></div>';
 }
 function mpPick(id){MP.sel=id;MP.open=true;renderMorning();}
