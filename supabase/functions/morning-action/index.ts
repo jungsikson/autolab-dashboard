@@ -108,10 +108,12 @@ serve(async (req) => {
   const fu = p.followup && typeof p.followup.task === 'string' && p.followup.task.trim()
     ? { task: p.followup.task.trim().slice(0, 80), due: isDate(p.followup.due) ? p.followup.due : null } : null;
   const fuMark = `(정할 것 #${row.id} 후속)`;
-  async function makeFollowup(): Promise<number | null> {
+  // 후속 할 일의 상위 = 이 항목으로 생긴 할 일, 없으면 덧붙인 대상 할 일(일정 뷰에서 그 밑에 보인다)
+  async function makeFollowup(parentId: number | null = null): Promise<number | null> {
     if (!fu) return null;
     const { data, error: e } = await sb.from('autolab_task').insert({
       person: row.person, task: fu.task, priority: prio, start_date: today, due_date: fu.due, created_at: today,
+      parent_id: parentId ?? row.decided_task_id ?? row.task_id ?? null,
       description: `[후속 · 정할 것 ${row.edition_date}] ${row.hl}${row.link ? `\n${row.link}` : ''}${memo ? `\n\n메모: ${memo}` : ''}\n${fuMark}`,
     }).select('id').single();
     if (e) throw new Error(`후속 할 일 실패: ${e.message}`);
@@ -187,7 +189,7 @@ serve(async (req) => {
     } else if (!['done', 'read', 'later', 'mute'].includes(p.action)) {
       return json({ ok: false, error: 'unknown action' }, 400);
     }
-    try { upd.followup_task_id = await makeFollowup(); } catch (e) { return json({ ok: false, error: String((e as Error).message) }, 500); }
+    try { upd.followup_task_id = await makeFollowup((upd.decided_task_id as number | undefined) ?? row.task_id ?? null); } catch (e) { return json({ ok: false, error: String((e as Error).message) }, 500); }
     Object.assign(upd, { decision: p.action, decision_label: p.label || p.action, decided_at: new Date().toISOString(), decided_by: p.by || row.person, decided_via: p.via || null });
   }
 

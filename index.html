@@ -526,6 +526,50 @@ body{background:var(--bg-canvas)}
 .mp-target-meta{margin-top:2px;font-size:var(--text-xs);color:var(--text-secondary)}
 .mp-target ul{margin:8px 0 0;padding-left:16px;font-size:13px;color:var(--text-primary);display:grid;gap:2px}
 .mp-target-last{margin-top:6px;font-size:13px;color:var(--text-secondary)}
+/* ---------- 일정 (큰 주제 → 하위, 시작일부터 마감일까지 막대) ---------- */
+#plan-content{padding:28px 32px 48px;word-break:keep-all;font-variant-numeric:tabular-nums}
+.pl-head h1{font-size:28px;font-weight:600;letter-spacing:-0.01em}
+.pl-head p{margin-top:6px;font-size:var(--text-base);color:var(--text-secondary)}
+.pl-head p b{color:var(--text-primary)}
+.pl-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;font-size:var(--text-xs);color:var(--text-secondary)}
+.pl-legend i{display:inline-block;width:14px;height:8px;border-radius:2px;margin-right:6px;vertical-align:0}
+.pl-scroll{margin-top:18px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);overflow-x:auto}
+.pl-grid{min-width:980px;position:relative}
+.pl-row{display:grid;grid-template-columns:320px minmax(0,1fr);min-height:36px;border-top:1px solid var(--border-subtle)}
+.pl-row.top,.pl-row.solo{border-top:1px solid var(--border-default)}
+.pl-scale{position:sticky;top:0;z-index:2;background:var(--bg-surface);border-top:0;min-height:40px}
+.pl-scale .pl-name{font-size:var(--text-xs);color:var(--text-secondary);align-self:end;padding-bottom:8px}
+.pl-name{display:flex;align-items:center;gap:6px;padding:0 12px;min-width:0;font-size:13px;color:var(--text-primary);border-right:1px solid var(--border-subtle);cursor:grab;user-select:none}
+.pl-name .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-name .t:hover{text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.pl-name .id{color:var(--text-tertiary);font-size:var(--text-xs);flex:none}
+.pl-name .n{flex:none;font-size:var(--text-xs);color:var(--text-secondary)}
+.pl-row.top .pl-name{font-weight:600}
+.pl-row.child .pl-name{padding-left:30px;color:var(--text-secondary)}
+.pl-row.child .pl-name .t{color:var(--text-primary)}
+.pl-name .pr{width:3px;align-self:stretch;margin:8px 0;border-radius:2px;flex:none;background:transparent}
+.pr-DO{background:#C8392E!important}.pr-SCHEDULE{background:#0A6FB5!important}.pr-DELEGATE{background:#C27C0E!important}.pr-ELIMINATE{background:#A6ABB3!important}
+.pl-row.drop-over .pl-name{background:var(--accent-subtle);outline:2px dashed var(--accent);outline-offset:-3px}
+.pl-row.dragging{opacity:.4}
+.pl-track{position:relative;min-width:0}
+.pl-bar{position:absolute;top:50%;height:16px;margin-top:-8px;border-radius:4px;background:var(--border-strong)}
+.pl-row.top .pl-bar{background:var(--text-secondary)}
+/* 마감 없음 = 시작점 + 가는 점선(막대가 화면을 덮지 않게) */
+.pl-bar.open{height:3px;margin-top:-1.5px;border-radius:0;background:repeating-linear-gradient(90deg,var(--border-strong) 0 4px,transparent 4px 8px)}
+.pl-row.top .pl-bar.open{background:repeating-linear-gradient(90deg,var(--text-secondary) 0 4px,transparent 4px 8px)}
+.pl-start{position:absolute;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--border-strong)}
+.pl-row.top .pl-start{background:var(--text-secondary)}
+.pl-bar.over{background:#C8392E}
+.pl-lbl{position:absolute;top:50%;transform:translateY(-50%);font-size:var(--text-xs);color:var(--text-secondary);white-space:nowrap;padding-left:6px}
+.pl-lbl.over{color:#C8392E;font-weight:600}
+.pl-layer{position:absolute;top:0;bottom:0;left:320px;right:0;pointer-events:none}
+.pl-wkend{position:absolute;top:0;bottom:0;background:rgba(47,50,56,0.035)}
+.pl-today{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--accent)}
+.pl-tick{position:absolute;bottom:8px;font-size:var(--text-xs);color:var(--text-secondary);white-space:nowrap}
+.pl-tick.today{color:var(--accent);font-weight:600}
+.pl-root{margin:0;padding:12px;text-align:center;font-size:var(--text-xs);color:var(--text-secondary);border-top:1px dashed var(--border-default)}
+.pl-root.drop-over{background:var(--accent-subtle);color:var(--text-primary)}
+@media (max-width:900px){#plan-content{padding:20px 16px 40px}.pl-head h1{font-size:22px}.pl-row{grid-template-columns:200px minmax(0,1fr)}.pl-layer{left:200px}.pl-grid{min-width:760px}}
 .mp-memo{margin-top:12px;display:grid;gap:6px}
 .mp-fu{display:flex;gap:6px}
 .mp-fu input[type=text]{flex:1;min-width:0;font-family:var(--font-sans);font-size:var(--text-sm);padding:6px 10px;border:1px solid var(--border-default);border-radius:var(--radius-md);color:var(--text-primary)}
@@ -592,6 +636,7 @@ body{background:var(--bg-canvas)}
       <div class="nav-group" id="nav-morning" style="display:none">
         <div class="nav-label">강희준</div>
         <button class="tab-btn" id="tab-morning" onclick="switchTab('morning')">아침판</button>
+        <button class="tab-btn" id="tab-plan" onclick="switchTab('plan')">일정</button>
       </div>
     </nav>
   </aside>
@@ -620,6 +665,7 @@ body{background:var(--bg-canvas)}
   <div id="view-cohort-schedule" style="display:none"><div id="cohort-schedule-content"></div></div>
   <div id="view-cells" style="display:none"><div id="cells-content"></div></div>
   <div id="view-morning" style="display:none"><div id="morning-content"></div></div>
+  <div id="view-plan" style="display:none"><div id="plan-content"></div></div>
     </main>
   </div>
 </div>
@@ -864,7 +910,7 @@ function toggleShowDone(){
 }
 function switchTab(tab){
   currentTab=tab;
-  var allTabs=['dashboard','matrix-강희준','matrix-송민호','matrix-안보람','history','cohort-schedule','cells','morning'];
+  var allTabs=['dashboard','matrix-강희준','matrix-송민호','matrix-안보람','history','cohort-schedule','cells','morning','plan'];
   allTabs.forEach(function(t){
     document.getElementById('tab-'+t).className='tab-btn'+(tab===t?' active':'');
     document.getElementById('view-'+t).style.display=tab===t?'':'none';
@@ -882,6 +928,7 @@ function switchTab(tab){
   if(tab==='cohort-schedule') renderCohortScheduleMatrix();
   if(tab==='cells') renderCellStatus();
   if(tab==='morning') loadMorning();
+  if(tab==='plan') renderPlan();
   if(tab.startsWith('matrix-')) renderMatrix(tab.replace('matrix-',''));
 }
 
@@ -918,7 +965,7 @@ async function loadData(){
     data._autolab=(taskRes.data||[]).map(function(row){
       return {id:String(row.id),dateKey:row.start_date,task:row.task,person:row.person,
         priority:row.priority||'',dueDate:row.due_date||'',createdAt:row.created_at,
-        description:row.description||'',isOverdue:row.start_date<todayKey};
+        description:row.description||'',isOverdue:row.start_date<todayKey,parentId:row.parent_id?String(row.parent_id):null};
     });
 
     var checksMap={},autolabChecksMap={};
@@ -945,6 +992,7 @@ async function loadData(){
     render();
     if(currentTab.startsWith('matrix-')) renderMatrix(currentTab.replace('matrix-',''));
     if(currentTab==='history') renderHistory();
+    if(currentTab==='plan') renderPlan();
   } catch(err){
     document.getElementById('content').innerHTML='<div class="loading" style="color:#FC5555">오류: '+(err.message||err)+'</div>';
   }
@@ -2046,6 +2094,97 @@ function mpDetail(){
     '<div class="mp-kv"><div><span>출처</span><span>'+mpEsc(r.source)+'</span></div><div><span>묶음</span><span>'+mpEsc(r.grp)+'</span></div><div><span>봇 제안</span><span>'+mpEsc(sug)+'</span></div><div><span>상태</span><span>'+(r.decision?'<span class="mp-pill">정함</span>':'<span class="mp-pill gray">남음</span>')+'</span></div></div>';
 }
 function mpPick(id){MP.sel=id;MP.open=true;renderMorning();}
+
+// =============================================
+// 일정 — 강희준 미완료 할 일을 큰 주제(상위) → 하위로, 시작일부터 마감일까지 막대로. 이름을 끌어 큰 주제를 바꾼다
+// =============================================
+var PL={person:'강희준',drag:null,daysBack:14,days:56};
+function plDay(s){return new Date(s+'T00:00:00');}
+function plDone(i){var a=autolabChecks[alKey(i)]||autolabChecks['autolab_'+alKey(i)];return !!(a&&a.checked);}
+function renderPlan(){
+  var box=document.getElementById('plan-content'); if(!box) return;
+  var items=(allData._autolab||[]).filter(function(i){return i.person===PL.person&&!plDone(i)&&Number(i.id)>=2358;});
+  var byId={}; items.forEach(function(i){byId[i.id]=i;});
+  var today=plDay(dk(new Date()));
+  var start=new Date(today); start.setDate(start.getDate()-PL.daysBack); start.setDate(start.getDate()-((start.getDay()+6)%7)); // 월요일부터
+  var DAY=86400000, span=PL.days;
+  var pos=function(d){return (d-start)/DAY/span*100;};
+  var kids={}; items.forEach(function(i){if(i.parentId&&byId[i.parentId]){(kids[i.parentId]=kids[i.parentId]||[]).push(i);}});
+  var tops=items.filter(function(i){return !(i.parentId&&byId[i.parentId]);});
+  var bySt=function(a,b){return (a.dateKey||'').localeCompare(b.dateKey||'')||Number(a.id)-Number(b.id);};
+  tops.sort(function(a,b){var ka=kids[a.id]?0:1,kb=kids[b.id]?0:1;return ka-kb||bySt(a,b);});
+  var nOver=items.filter(function(i){return i.dueDate&&plDay(i.dueDate)<today;}).length;
+  var nOpen=items.filter(function(i){return !i.dueDate;}).length;
+  var nTop=tops.filter(function(t){return kids[t.id];}).length;
+  var html='<div class="pl-head"><h1>일정 · 미완료 할 일 '+items.length+'건</h1>'+
+    '<p>큰 주제 <b>'+nTop+'개</b> 아래 묶여 있고, 마감 지난 것 <b>'+nOver+'건</b>, 마감 없는 것 '+nOpen+'건입니다. 이름을 끌어 다른 큰 주제 위에 놓으면 그 밑으로 옮겨집니다.</p>'+
+    '<div class="pl-legend"><span><i style="background:var(--text-secondary)"></i>큰 주제</span><span><i style="background:var(--border-strong)"></i>하위 할 일</span>'+
+    '<span><i style="background:repeating-linear-gradient(90deg,var(--border-strong) 0 4px,transparent 4px 7px)"></i>마감 없음</span><span><i style="background:#C8392E"></i>마감 지남</span>'+
+    '<span><i style="background:var(--accent);width:2px"></i>오늘</span></div></div>';
+  // 눈금: 매주 월요일 + 오늘
+  var ticks='', wk='';
+  for(var d=0;d<span;d++){var day=new Date(start.getTime()+d*DAY);
+    if(day.getDay()===0||day.getDay()===6) wk+='<div class="pl-wkend" style="left:'+pos(day)+'%;width:'+(100/span)+'%"></div>';
+    if(day.getDay()===1) ticks+='<span class="pl-tick" style="left:'+pos(day)+'%">'+(day.getMonth()+1)+'/'+day.getDate()+'</span>';}
+  var layer='<div class="pl-layer">'+wk+'<div class="pl-today" style="left:'+(pos(today)+50/span)+'%"></div></div>';
+  var rows='<div class="pl-row pl-scale"><div class="pl-name" style="cursor:default">할 일</div><div class="pl-track">'+ticks+
+    '<span class="pl-tick today" style="left:'+(pos(today)+50/span)+'%;bottom:22px">오늘</span></div></div>';
+  var bar=function(i){
+    var s=plDay(i.dateKey||dk(new Date())), winEnd=new Date(start.getTime()+span*DAY);
+    var l=Math.max(0,pos(s));
+    if(!i.dueDate){ return '<div class="pl-bar open" style="left:'+l+'%;width:'+Math.max(0.6,100-l)+'%"></div>'+(s>=start?'<span class="pl-start" style="left:'+l+'%"></span>':''); }
+    var e=plDay(i.dueDate), over=e<today;
+    var r=Math.min(100,pos(new Date(e.getTime()+DAY))), w=Math.max(0.6,r-l);
+    var lbl=over?Math.round((today-e)/DAY)+'일 지남 ('+(e.getMonth()+1)+'/'+e.getDate()+')':(e.getMonth()+1)+'/'+e.getDate();
+    if(e<start) return '<span class="pl-lbl over" style="left:0">← '+lbl+'</span>';
+    return '<div class="pl-bar'+(over?' over':'')+'" style="left:'+l+'%;width:'+w+'%"></div><span class="pl-lbl'+(over?' over':'')+'" style="left:'+Math.min(r,92)+'%">'+lbl+'</span>';
+  };
+  var row=function(i,cls){
+    var n=kids[i.id]?'<span class="n">'+kids[i.id].length+'</span>':'';
+    return '<div class="pl-row '+cls+'" data-id="'+i.id+'" draggable="true">'+
+      '<div class="pl-name"><span class="pr pr-'+(i.priority||'none')+'"></span><span class="id">#'+i.id+'</span><span class="t" onclick="openAutolabDetailModal(\''+i.id+'\')" title="'+mpEsc(i.task)+'">'+mpEsc(i.task)+'</span>'+n+'</div>'+
+      '<div class="pl-track">'+bar(i)+'</div></div>';
+  };
+  tops.forEach(function(t){
+    rows+=row(t,kids[t.id]?'top':'solo');
+    (kids[t.id]||[]).sort(bySt).forEach(function(c){rows+=row(c,'child');});
+  });
+  html+='<div class="pl-scroll"><div class="pl-grid" id="pl-grid">'+layer+rows+'<p class="pl-root" id="pl-root">여기에 놓으면 큰 주제에서 빼서 독립 할 일로</p></div></div>';
+  box.innerHTML=html;
+  plWireDrag(byId,kids);
+}
+function plWireDrag(byId,kids){
+  var grid=document.getElementById('pl-grid'); if(!grid) return;
+  grid.querySelectorAll('.pl-row[data-id]').forEach(function(el){
+    el.addEventListener('dragstart',function(e){PL.drag=el.dataset.id;el.classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',el.dataset.id);}catch(_){}});
+    el.addEventListener('dragend',function(){el.classList.remove('dragging');grid.querySelectorAll('.drop-over').forEach(function(x){x.classList.remove('drop-over');});});
+    el.addEventListener('dragover',function(e){if(PL.drag&&PL.drag!==el.dataset.id){e.preventDefault();el.classList.add('drop-over');}});
+    el.addEventListener('dragleave',function(){el.classList.remove('drop-over');});
+    el.addEventListener('drop',function(e){e.preventDefault();el.classList.remove('drop-over');
+      var target=byId[el.dataset.id]; if(!target) return;
+      // 한 단계만: 하위 위에 놓으면 그 하위의 큰 주제 밑으로
+      var parent=target.parentId&&byId[target.parentId]?target.parentId:target.id;
+      plMove(PL.drag,parent,byId,kids);});
+  });
+  var root=document.getElementById('pl-root');
+  root.addEventListener('dragover',function(e){if(PL.drag){e.preventDefault();root.classList.add('drop-over');}});
+  root.addEventListener('dragleave',function(){root.classList.remove('drop-over');});
+  root.addEventListener('drop',function(e){e.preventDefault();root.classList.remove('drop-over');plMove(PL.drag,null,byId,kids);});
+}
+async function plMove(id,parent,byId,kids){
+  PL.drag=null;
+  var it=byId[id]; if(!it) return;
+  if(parent===id) return;
+  if((it.parentId||null)===(parent||null)) return;
+  if(parent&&kids[id]&&kids[id].length){showToast('하위가 있는 큰 주제는 다른 주제 밑에 넣을 수 없습니다');return;}
+  var prev=it.parentId||null;
+  var res=await _sb.from('autolab_task').update({parent_id:parent?Number(parent):null}).eq('id',Number(id));
+  if(res.error){showToast('옮기기 실패: '+res.error.message);return;}
+  it.parentId=parent;
+  renderPlan();
+  showToast(parent?'#'+id+' → #'+parent+' 밑으로':'#'+id+' 독립 할 일로');
+  PL.last={id:id,prev:prev};
+}
 // 처리는 전부 Edge Function morning-action 한 곳에서 한다(슬랙 DM 카드와 같은 경로, 카드도 같이 갱신됨)
 async function mpCall(body){
   var res=await _sb.functions.invoke('morning-action',{body:body});
