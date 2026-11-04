@@ -145,16 +145,17 @@ serve(async (req) => {
     if (!row.decision) return json({ ok: true, row });
     if (row.decision === 'add' && row.decided_task_id) {
       await sb.from('autolab_task').delete().eq('id', row.decided_task_id).ilike('description', `%${mark(row)}%`);
-    } else if (row.decision === 'merge' && row.task_id) {
+    } else if (row.decision === 'merge' && (row.decided_task_id || row.task_id)) {
+      const mergedId = row.decided_task_id || row.task_id;
       // 덧붙인 단락은 "[정할 것 날짜] 제목"부터 표식까지. 나중에 붙인 메모 단락(같은 표식)도 함께 걷어 낸다
-      const { data: t } = await sb.from('autolab_task').select('description').eq('id', row.task_id).single();
+      const { data: t } = await sb.from('autolab_task').select('description').eq('id', mergedId).single();
       let d: string = t?.description || '';
       const head = `\n\n[정할 것 ${row.edition_date}] ${row.hl}`;
       const s = d.indexOf(head);
       if (s >= 0) {
         const lastMark = d.lastIndexOf(mark(row));
         if (lastMark > s) d = d.slice(0, s) + d.slice(lastMark + mark(row).length);
-        await sb.from('autolab_task').update({ description: d }).eq('id', row.task_id);
+        await sb.from('autolab_task').update({ description: d }).eq('id', mergedId);
       }
     } else if (row.decision === 'done' && row.kind === 'progress' && row.task_id) {
       await sb.from('autolab_check').upsert({ type: 'autolab', item_key: String(row.task_id), checked: false, completed_date: '' }, { onConflict: 'item_key' });
@@ -180,19 +181,14 @@ serve(async (req) => {
       upd.decided_task_id = data.id;
     } else if (p.action === 'merge') {
       // 사람이 검색창에서 다른 할 일을 고르면 그 번호로 덧붙인다(봇 제안이 틀렸을 때)
-      if (p.task_id && Number(p.task_id) !== Number(row.task_id)) {
-        const { data: pick } = await sb.from('autolab_task').select('id, task').eq('id', Number(p.task_id)).single();
-        if (!pick) return json({ ok: false, error: `#${p.task_id} 없음` }, 404);
-        row.task_id = pick.id; row.task_title = pick.task;
-        Object.assign(upd, { task_id: pick.id, task_title: pick.task });
-      }
-      if (!row.task_id) return json({ ok: false, error: '덧붙일 할 일을 고르세요' }, 400);
-      const { data: t, error: e } = await sb.from('autolab_task').select('description').eq('id', row.task_id).single();
-      if (e || !t) return json({ ok: false, error: `#${row.task_id} 없음` }, 404);
+      const target = p.task_id ? Number(p.task_id) : row.task_id;
+      if (!target) return json({ ok: false, error: '덧붙일 할 일을 고르세요' }, 400);
+      const { data: t, error: e } = await sb.from('autolab_task').select('description').eq('id', target).single();
+      if (e || !t) return json({ ok: false, error: `#${target} 없음` }, 404);
       const c = chunk(row);
       // 덧붙이기는 기존 할 일의 마감을 바꾸지 않는다(큰 묶음 할 일의 마감이 덮이는 걸 막음, 11/4)
-      if (!(t.description || '').includes(c)) await sb.from('autolab_task').update({ description: (t.description || '') + c }).eq('id', row.task_id);
-      upd.decided_task_id = row.task_id;
+      if (!(t.description || '').includes(c)) await sb.from('autolab_task').update({ description: (t.description || '') + c }).eq('id', target);
+      upd.decided_task_id = target;
     } else if (p.action === 'done' && row.kind === 'progress' && row.task_id) {
       await sb.from('autolab_check').upsert({ type: 'autolab', item_key: String(row.task_id), checked: true, completed_date: today }, { onConflict: 'item_key' });
       upd.decided_task_id = row.task_id;

@@ -638,7 +638,7 @@ body{background:var(--bg-canvas)}
 .pl-h{position:absolute;top:-2px;bottom:-2px;width:8px;cursor:ew-resize}
 .pl-h.l{left:-3px}.pl-h.r{right:-3px}
 .pl-bar:hover .pl-h{background:rgba(255,255,255,.35)}
-.pl-dia{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;transform:rotate(45deg);background:var(--bg-surface);border:2px solid var(--text-primary);cursor:pointer;z-index:1}
+.pl-dia{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;transform:rotate(45deg);background:var(--bg-surface);border:2px solid var(--text-primary);z-index:1;pointer-events:none}
 .pl-dia.over{border-color:#C8392E}.pl-dia.done{border-color:#1B8E4D;background:#1B8E4D}
 .pl-row.kid{min-height:30px}
 .pl-row.kid .pl-name{padding-left:28px;font-size:12.5px;color:var(--text-primary);cursor:grab}
@@ -2116,8 +2116,8 @@ function renderMorning(){
   var nNew=acts.filter(function(r){return r.kind==='new';}).length, nMerge=acts.filter(function(r){return r.kind==='merge';}).length;
   var nDec=acts.filter(function(r){return r.decision;}).length;
   var d=new Date(MP.date+'T00:00:00'), wd='일월화수목금토'[d.getDay()];
-  var html='<div class="mp-head"><h1>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+wd+'요일 아침, 정할 것 '+acts.length+'건</h1>'+
-    '<p>새로 넣을 건 <b>'+nNew+'건</b>, 기존 할 일에 덧붙일 건 <b>'+nMerge+'건</b>입니다. 지금까지 '+nDec+'건 정했습니다.</p></div>';
+  var html='<div class="mp-head"><h1>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+wd+'요일 아침, '+(acts.length-nDec?'남은 정할 것 '+(acts.length-nDec)+'건':'오늘 정할 것을 다 정했습니다')+'</h1>'+
+    '<p>오늘 '+acts.length+'건 중 '+nDec+'건 정함 · 새로 넣을 후보 <b>'+nNew+'건</b>, 기존 할 일에 덧붙일 후보 <b>'+nMerge+'건</b></p></div>';
   // 화면을 탭으로 나눈다: 정할 것 / 읽을거리
   MP.view=MP.view||'decide';
   html+='<div class="mp-views">'+[['decide','정할 것',(acts.length-nDec)],['read','읽을거리',info.length]].map(function(v){
@@ -2237,7 +2237,8 @@ function mpRenderPicker(){
   var scored=open.map(function(i){var hay=(i.task+' '+(i.description||'')).toLowerCase();
     var s=words.reduce(function(n,w){return n+(hay.indexOf(w)>=0?1:0);},0)+(String(i.id)===String(r.task_id)?100:0);
     return {i:i,s:s,hay:hay};});
-  if(q) scored=scored.filter(function(x){return ('#'+x.i.id+' '+x.hay).indexOf(q)>=0;});
+  if(q){ scored=scored.filter(function(x){return ('#'+x.i.id+' '+x.hay).indexOf(q)>=0;});
+    scored.forEach(function(x){ if(('#'+x.i.id+' '+x.i.task).toLowerCase().indexOf(q)>=0) x.s+=1000; }); }
   scored.sort(function(a,b){return b.s-a.s||Number(b.i.id)-Number(a.i.id);});
   MPP.list=scored.slice(0,12).map(function(x){return x.i;});
   document.getElementById('mpp-list').innerHTML=MPP.list.map(function(t,n){
