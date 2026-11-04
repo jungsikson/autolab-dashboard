@@ -3,7 +3,8 @@
 //   { id, action, label, by, via }  action = add | merge | done | read | later | mute | undo
 //   { id, action: 'post', thread_ts }  → 그 줄을 DM 카드로 보내고 위치(slack_channel/ts)를 남긴다
 // 결과: morning_item 판정 + 할 일 표 반영 + (DM 카드가 있으면) 카드를 같은 상태로 다시 그림.
-// 권한: 대시보드와 같다 — anon 이 표에 직접 쓸 수 있는 범위 안의 일만 한다.
+// 권한 (2026-11-04): 부른 쪽이 자기 열쇠로 그 줄을 읽을 수 있어야 처리한다 — 로그인한 회사 계정(RLS)·서버 키는 읽히고,
+//   공개 키만 든 요청은 0건이라 막힌다. 로그인 계정으로 부르면 처리한 사람 이름은 요청값(by)이 아니라 계정에서 정한다.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -19,6 +20,28 @@ const DM_CHANNEL: Record<string, string> = { '강희준': 'U06PSEETK54' };
 function kstToday(): string {
   return new Date(Date.now() + KST_OFFSET_MS).toISOString().slice(0, 10);
 }
+const EMAIL_PERSON: Record<string, string> = { 'june@thetrive.com': '강희준' };
+
+// 부른 쪽 열쇠로 그 줄이 읽히는지 본다. 읽히면 { ok, email }(로그인 계정이면 email, 서버 키면 null)
+async function caller(req: Request, id: unknown): Promise<{ ok: boolean; email: string | null }> {
+  const auth = req.headers.get('authorization') || '';
+  const bearer = auth.replace(/^Bearer\s+/i, '');
+  const apikey = req.headers.get('apikey') || bearer;
+  if (!apikey || id == null) return { ok: false, email: null };
+  const h: Record<string, string> = { apikey };
+  if (bearer) h.authorization = `Bearer ${bearer}`;
+  const r = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/morning_item?id=eq.${encodeURIComponent(String(id))}&select=id`, { headers: h });
+  if (!r.ok) return { ok: false, email: null };
+  const rows = await r.json();
+  if (!Array.isArray(rows) || rows.length !== 1) return { ok: false, email: null };
+  let email: string | null = null;
+  if (bearer.startsWith('eyJ')) {
+    const u = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/user`, { headers: { apikey, authorization: `Bearer ${bearer}` } });
+    if (u.ok) email = (await u.json()).email || null;
+  }
+  return { ok: true, email };
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 }
@@ -87,6 +110,9 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   let p: any;
   try { p = await req.json(); } catch { return json({ ok: false, error: 'bad json' }, 400); }
+  const who = await caller(req, p.id);
+  if (!who.ok) return json({ ok: false, error: 'unauthorized' }, 401);
+  if (who.email) { p.by = EMAIL_PERSON[who.email] || who.email.split('@')[0]; p.via = p.via || 'dashboard'; }
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   const { data: row, error } = await sb.from('morning_item').select('*').eq('id', p.id).single();
   if (error || !row) return json({ ok: false, error: 'no item' }, 404);

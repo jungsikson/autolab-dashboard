@@ -102,7 +102,8 @@ async function handleTodoButton(p: any, act: any) {
   const v = JSON.parse(act.value || '{}');
   if (v.mid) {
     await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/morning-action`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
+      // morning-action 은 11/4부터 부른 쪽 열쇠를 확인한다 → 서버 키를 붙인다
+      method: 'POST', headers: { 'content-type': 'application/json', apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}` },
       body: JSON.stringify({ id: v.mid, action: v.k, label: v.label, by: who.person, via: 'slack' }),
     });
     return;
