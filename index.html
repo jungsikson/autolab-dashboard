@@ -2130,6 +2130,8 @@ var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준'};
     if(localStorage.getItem('autolab_morning')==='1') document.getElementById('nav-morning').style.display='';
     // DM의 "정할 것 열기" 주소(?morning=1)로 들어오면 바로 그 화면을 연다(저장소가 막힌 폰 브라우저에서도)
     if(qs.get('morning')==='1'){ document.getElementById('nav-morning').style.display=''; setTimeout(function(){switchTab('morning');},0); }
+    // 주간 점검 DM의 "일정 열기"(?plan=1)
+    else if(qs.get('plan')==='1'){ localStorage.setItem('autolab_morning','1'); document.getElementById('nav-morning').style.display=''; setTimeout(function(){switchTab('plan');},0); }
   }catch(e){}
 })();
 function mpEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
