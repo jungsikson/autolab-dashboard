@@ -471,7 +471,12 @@ body{background:var(--bg-canvas)}
 .mp-head h1{font-size:28px;font-weight:600;line-height:1.25;letter-spacing:-0.01em;color:var(--text-primary)}
 .mp-head p{margin-top:8px;font-size:var(--text-base);color:var(--text-secondary)}
 .mp-head p b{color:var(--text-primary);font-weight:600}
-.mp-strip{margin-top:24px}
+.mp-views{display:flex;gap:4px;margin-top:20px;padding:4px;background:var(--bg-muted);border-radius:999px;width:max-content;max-width:100%}
+.mp-view{border:0;background:none;padding:7px 16px;border-radius:999px;cursor:pointer;font-family:var(--font-sans);font-size:var(--text-sm);color:var(--text-secondary)}
+.mp-view.on{background:var(--bg-surface);color:var(--text-primary);font-weight:600}
+.mp-view span{font-size:var(--text-xs);color:var(--text-secondary);margin-left:2px}
+.mp-strip{margin-top:20px}
+.mp-read{margin-top:20px}
 .mp-strip-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px;font-size:var(--text-xs);color:var(--text-secondary)}
 .mp-strip-head b{font-size:var(--text-sm);color:var(--text-primary);font-weight:600}
 .mp-legend{display:flex;gap:14px}
@@ -1938,6 +1943,11 @@ function renderMorning(){
   var d=new Date(MP.date+'T00:00:00'), wd='일월화수목금토'[d.getDay()];
   var html='<div class="mp-head"><h1>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+wd+'요일 아침, 정할 것 '+acts.length+'건</h1>'+
     '<p>새로 넣을 건 <b>'+nNew+'건</b>, 기존 할 일에 덧붙일 건 <b>'+nMerge+'건</b>입니다. 지금까지 '+nDec+'건 정했습니다.</p></div>';
+  // 화면을 탭으로 나눈다: 정할 것 / 읽을거리
+  MP.view=MP.view||'decide';
+  html+='<div class="mp-views">'+[['decide','정할 것',(acts.length-nDec)],['read','읽을거리',info.length]].map(function(v){
+    return '<button class="mp-view'+(MP.view===v[0]?' on':'')+'" onclick="MP.view=\''+v[0]+'\';renderMorning()">'+v[1]+' <span>'+v[2]+'</span></button>';}).join('')+'</div>';
+  if(MP.view==='read'){ html+=mpReadHtml(info); document.getElementById('morning-content').innerHTML=html; return; }
   // 판정 띠
   var prev=null, cells=acts.map(function(r){var first=r.grp!==prev;prev=r.grp;
     return '<button class="mp-cell'+(first?' first':'')+(r.decision?' done':(r.kind==='new'?' new':''))+(MP.sel===r.id?' sel':'')+'" title="'+mpEsc((r.who||'')+' · '+r.hl)+'" aria-label="'+mpEsc(r.hl)+'" onclick="mpPick('+r.id+')"></button>';}).join('');
@@ -1954,7 +1964,10 @@ function renderMorning(){
   if(!rows) rows='<p class="mp-grp" style="padding:24px 10px">'+(MP.filter==='left'?'오늘 정할 것은 다 정했습니다.':'아직 정한 것이 없습니다.')+'</p>';
   var tabs=[['left','남은 것'],['all','전체'],['done','정한 것']].map(function(t){return '<button class="mp-tab'+(MP.filter===t[0]?' on':'')+'" onclick="MP.filter=\''+t[0]+'\';renderMorning()">'+t[1]+'</button>';}).join('');
   html+='<div class="mp-work'+(MP.open?' open':'')+'"><div class="mp-list"><div class="mp-tabs">'+tabs+'</div>'+rows+'</div><article class="mp-detail">'+mpDetail()+'</article></div>';
-  // 읽을거리
+  document.getElementById('morning-content').innerHTML=html;
+}
+function mpReadHtml(info){
+  var html='';
   var by=function(g){return info.filter(function(r){return r.grp===g;});};
   var day=by('어제 하루'), ch=by('채널 요약'), news=by('뉴스');
   var li=function(r,withLink){return '<li>'+(withLink&&r.link?'<a href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">'+mpEsc(r.hl)+'</a>':'<b>'+mpEsc(r.hl)+'</b>')+'<small>'+mpEsc(r.body)+'</small></li>';};
@@ -1962,7 +1975,7 @@ function renderMorning(){
     '<div class="mp-panel"><h3>어제 하루</h3>'+(day[0]&&day[0].note?'<p class="lead">'+mpEsc(day[0].note)+'</p>':'')+'<ul>'+day.map(function(r){return li(r,false);}).join('')+'</ul></div>'+
     '<div class="mp-panel"><h3>채널 요약</h3><ul>'+ch.map(function(r){return li(r,true);}).join('')+'</ul></div>'+
     '<div class="mp-panel full"><h3>세차·차량 뉴스</h3><ul>'+news.map(function(r){return li(r,true);}).join('')+'</ul></div></div>';
-  document.getElementById('morning-content').innerHTML=html;
+  return html;
 }
 function mpDetail(){
   var r=MP.rows.filter(function(x){return x.id===MP.sel;})[0];
