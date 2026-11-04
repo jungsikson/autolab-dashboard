@@ -316,7 +316,7 @@ serve(async (req) => {
   if (error) { console.error('insert error', error); return new Response('insert error', { status: 200 }); }
 
   // 캡처 확인 답글을 원본 스레드에 남긴다 — 정리 결과를 바로 보여줘서 틀렸으면 고칠 수 있게
-  const lines = [`일감으로 담았어요 — ${person} (${cfg.label})`, `• ${title}`];
+  const lines = [`할 일로 담았어요 — ${person} (${cfg.label})`, `• ${title}`];
   if (tidy) {
     lines.push(`• 우선순위 ${PRIORITY_LABEL[priority]}${dueDate ? ` · 마감 ${dueDate}` : ''}`);
     if (tidy.done_when) lines.push(`• 완료 조건 ${tidy.done_when}`);

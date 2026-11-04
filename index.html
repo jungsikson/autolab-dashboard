@@ -820,7 +820,7 @@ body{background:var(--bg-canvas)}
 </div>
 <div class="modal-bg" id="autolab-modal-bg">
   <div class="modal">
-    <div class="modal-title">일감 수정</div>
+    <div class="modal-title">할 일 수정</div>
     <div class="modal-sub" id="autolab-modal-sub"></div>
     <div style="margin-bottom:10px">
       <label style="font-size:12px;color:var(--text-secondary);font-weight:600;display:block;margin-bottom:4px">내용</label>
@@ -869,7 +869,7 @@ body{background:var(--bg-canvas)}
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
       <div style="min-width:0;flex:1;margin-right:12px">
         <div id="dm-view-header">
-          <div class="modal-title" id="detail-modal-title">일감 상세</div>
+          <div class="modal-title" id="detail-modal-title">할 일 상세</div>
           <div class="modal-sub" id="detail-modal-sub"></div>
         </div>
         <div id="dm-edit-header" style="display:none">
@@ -2158,10 +2158,10 @@ function mpButtons(r){
 }
 async function loadMorning(quiet){
   var box=document.getElementById('morning-content');
-  if(!quiet) box.innerHTML='<div class="loading"><div class="spinner"></div>아침판 불러오는 중...</div>';
+  if(!quiet) box.innerHTML='<div class="loading"><div class="spinner"></div>정할 것 불러오는 중...</div>';
   var last=await _sb.from('morning_item').select('edition_date').eq('person',MP.person).order('edition_date',{ascending:false}).limit(1);
   if(last.error){box.innerHTML='<div class="loading">불러오기 실패: '+mpEsc(last.error.message)+'</div>';return;}
-  if(!last.data.length){box.innerHTML='<div class="loading">아직 발행된 아침판이 없습니다.</div>';return;}
+  if(!last.data.length){box.innerHTML='<div class="loading">아직 올라온 정할 것이 없습니다.</div>';return;}
   MP.date=last.data[0].edition_date;
   // 오늘 판 전부 + 지난 판에서 아직 안 정한 항목(놓치지 않게 다음 판으로 넘어온다)
   var res=await _sb.from('morning_item').select('*').eq('person',MP.person)
