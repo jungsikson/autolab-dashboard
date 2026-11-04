@@ -622,6 +622,8 @@ body{background:var(--bg-canvas)}
 .pl-guide::after{content:attr(data-label);position:absolute;top:4px;left:6px;white-space:nowrap;font-size:12px;font-weight:600;color:#fff;background:var(--accent);padding:2px 6px;border-radius:4px}
 .dmp-pick{background:none;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:4px 8px;font-family:var(--font-sans);font-size:12px;color:var(--text-primary);cursor:pointer}
 /* 일정 v2 — 큰 주제 지도 */
+.pl-row>.pl-name{position:sticky;left:0;z-index:3;background:var(--bg-surface)}
+.pl-row.drop-over>.pl-name,.pl-name.drop-over{background:var(--accent-subtle)}
 .pl-help{margin-top:4px;font-size:var(--text-xs);color:var(--text-tertiary)}
 .pl-over-t{color:#C8392E}
 .pl-row.line{border-top:1px solid var(--border-default)}
@@ -655,7 +657,7 @@ body{background:var(--bg-canvas)}
 .pl-chip.topic{font-weight:600;border-color:var(--border-strong)}
 .pl-chip .t{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;cursor:pointer}
 .pl-chip .pr{align-self:stretch;margin:2px 0}
-@media (max-width:900px){#plan-content{padding:20px 16px 40px}.pl-head h1{font-size:22px}.pl-row{grid-template-columns:200px minmax(0,1fr)}.pl-layer{left:200px}.pl-grid{min-width:760px}}
+@media (max-width:900px){#plan-content{padding:20px 16px 40px}.pl-head h1{font-size:22px}.pl-row{grid-template-columns:150px minmax(0,1fr)}.pl-layer{left:150px}.pl-name{padding:0 8px}.pl-help{display:none}.pl-prog{display:none}.pl-caret{width:14px}.pl-grid{min-width:760px}}
 .mp-btn kbd,.mp-keys kbd{font-family:var(--font-sans);font-size:10.5px;padding:0 5px;margin-left:4px;border:1px solid currentColor;border-radius:4px;opacity:.6}
 .mp-keys{margin-top:10px;font-size:var(--text-xs);color:var(--text-tertiary)}
 .mpp-bg{position:fixed;inset:0;background:var(--bg-scrim);display:none;align-items:flex-start;justify-content:center;padding:12vh 16px 0;z-index:200}
@@ -2417,8 +2419,12 @@ function renderPlan(){
     return '<div class="pl-chip'+(has?' topic':'')+'" draggable="true" data-chip="'+i.id+'" title="끌어서 일정 위에 놓으면 그 날이 마감이 됩니다"><span class="pr pr-'+(i.priority||'none')+'"></span>'+
       '<span class="t" onclick="openAutolabDetailModal(\''+i.id+'\')">'+_alEsc(i.task)+'</span>'+progress(i)+
       '<button class="pl-chip-due" data-due-for="'+i.id+'" title="마감 정하기">마감 정하기</button></div>';}).join('')+'</div></div>';
+  var keepX=(document.querySelector('.pl-scroll')||{}).scrollLeft;
   html+='<div class="pl-scroll"><div class="pl-grid" id="pl-grid">'+layer+rows+'</div></div>'+lane;
   box.innerHTML=html;
+  // 화면이 좁아 옆으로 밀리면 오늘이 보이게(다시 그릴 때는 보던 자리 유지)
+  var sc=document.querySelector('.pl-scroll'), tl=document.querySelector('.pl-today'), nm=document.querySelector('.pl-scale .pl-name');
+  if(sc&&tl&&nm&&sc.scrollWidth>sc.clientWidth){ sc.scrollLeft=(keepX!=null&&PL.scrolled)?keepX:Math.max(0,tl.getBoundingClientRect().left-sc.getBoundingClientRect().left-nm.offsetWidth-24); PL.scrolled=true; }
   plWire(byId,kidsAll);
 }
 // 화면 x좌표 → 날짜
