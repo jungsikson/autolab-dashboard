@@ -98,6 +98,16 @@ function mergeChunk(it: TodoItem, permalink: string) {
 async function handleTodoButton(p: any, act: any) {
   const who = USERS[p.user?.id];
   if (!who || who.team !== 'autolab') return;
+  // 새 카드(정할 것 표 morning_item 한 줄)는 처리 코드 한 곳(morning-action)으로 넘긴다. 카드 갱신도 거기서 한다
+  const v = JSON.parse(act.value || '{}');
+  if (v.mid) {
+    await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/morning-action`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: v.mid, action: v.k, label: v.label, by: who.person, via: 'slack' }),
+    });
+    return;
+  }
+  // 아래는 11/4 morning_item 이전 카드(value 에 항목 전체를 실은 것)용
   const token = Deno.env.get('SLACK_TOKEN')!;
   const channel = p.container?.channel_id || p.channel?.id;
   const ts = p.container?.message_ts || p.message?.ts;

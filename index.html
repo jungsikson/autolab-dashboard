@@ -515,6 +515,11 @@ body{background:var(--bg-canvas)}
 .mp-btn:hover{border-color:var(--text-primary)}
 .mp-btn.pri{background:var(--text-primary);border-color:var(--text-primary);color:#fff}
 .mp-btn:disabled{opacity:.5;cursor:wait}
+.mp-memo{margin-top:12px;display:grid;gap:6px}
+.mp-memo textarea{width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font-sans);font-size:var(--text-sm);line-height:1.5;padding:8px 10px;border:1px solid var(--border-default);border-radius:var(--radius-md);background:var(--bg-surface);color:var(--text-primary)}
+.mp-memo label{font-size:var(--text-xs);color:var(--text-secondary);display:flex;align-items:center;gap:8px}
+.mp-memo input{font-family:var(--font-sans);font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary)}
+.mp-memo-shown{margin-top:10px;padding:10px 12px;background:var(--bg-surface);border-radius:var(--radius-md);font-size:var(--text-sm);color:var(--text-primary)}
 .mp-done{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
 .mp-pill{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:var(--text-xs);font-weight:500;background:var(--status-done-bg);color:var(--status-done-fg);white-space:nowrap}
 .mp-pill.gray{background:var(--bg-muted);color:var(--text-primary)}
@@ -1970,9 +1975,13 @@ function mpDetail(){
   else m='대시보드 <b>#'+r.task_id+'</b> 진척';
   var note=(r.kind!=='done'&&r.note)?'<p style="margin-top:6px">'+mpEsc(r.note)+'</p>':'';
   var sug=mpSuggest(r);
+  var memoBox='<div class="mp-memo"><textarea id="mp-memo" rows="2" placeholder="메모 — 할 일에 같이 남깁니다 (예: 희진님과 오프라인 논의, 월요일 확인 후 화요일 결정)"></textarea>'+
+    '<label>마감 <input type="date" id="mp-due"></label></div>';
   var acts=r.decision
-    ?'<div class="mp-done"><span class="mp-pill">'+mpEsc(r.decision_label)+(r.decided_task_id?' · #'+r.decided_task_id:'')+'</span><button class="mp-link" onclick="mpUndo('+r.id+')">되돌리기</button></div>'
-    :'<div class="mp-acts">'+mpButtons(r).map(function(b){return '<button class="mp-btn'+(b[1]===sug?' pri':'')+'"'+(MP.busy?' disabled':'')+' onclick="mpDecide('+r.id+',\''+b[0]+'\',\''+mpEsc(b[1])+'\')">'+mpEsc(b[1])+'</button>';}).join('')+'</div>';
+    ?'<div class="mp-done"><span class="mp-pill">'+mpEsc(r.decision_label)+(r.decided_task_id?' · #'+r.decided_task_id:'')+(r.decided_via==='slack'?' · 슬랙':'')+'</span><button class="mp-link" onclick="mpUndo('+r.id+')">되돌리기</button></div>'+
+      (r.memo?'<p class="mp-memo-shown">📝 '+mpEsc(r.memo).replace(/\n/g,'<br>')+'</p>':'')+
+      (r.decided_task_id?memoBox+'<div class="mp-acts"><button class="mp-btn"'+(MP.busy?' disabled':'')+' onclick="mpMemo('+r.id+')">메모 덧붙이기</button></div>':'')
+    :memoBox+'<div class="mp-acts">'+mpButtons(r).map(function(b){return '<button class="mp-btn'+(b[1]===sug?' pri':'')+'"'+(MP.busy?' disabled':'')+' onclick="mpDecide('+r.id+',\''+b[0]+'\',\''+mpEsc(b[1])+'\')">'+mpEsc(b[1])+'</button>';}).join('')+'</div>';
   return '<div><button class="mp-link mp-back" onclick="MP.open=false;renderMorning()">← 목록</button>'+
     '<h2>'+mpEsc(r.hl)+'</h2><p class="src">'+mpEsc((r.who||'')+(r.when_label?' · '+r.when_label:''))+'</p>'+
     (r.quote?'<blockquote>'+mpEsc(r.quote)+'</blockquote>':'')+(r.body?'<p class="body">'+mpEsc(r.body)+'</p>':'')+
@@ -1981,59 +1990,49 @@ function mpDetail(){
     '<div class="mp-kv"><div><span>출처</span><span>'+mpEsc(r.source)+'</span></div><div><span>묶음</span><span>'+mpEsc(r.grp)+'</span></div><div><span>봇 제안</span><span>'+mpEsc(sug)+'</span></div><div><span>상태</span><span>'+(r.decision?'<span class="mp-pill">정함</span>':'<span class="mp-pill gray">남음</span>')+'</span></div></div>';
 }
 function mpPick(id){MP.sel=id;MP.open=true;renderMorning();}
-function mpChunk(r){return '\n\n[아침판 '+MP.date+'] '+r.hl+'\n'+[r.who,r.when_label].filter(Boolean).join(' · ')+(r.quote?' · "'+r.quote+'"':'')+(r.link?'\n'+r.link:'')+'\n(아침판 #'+r.id+')';}
+// 처리는 전부 Edge Function morning-action 한 곳에서 한다(슬랙 DM 카드와 같은 경로, 카드도 같이 갱신됨)
+async function mpCall(body){
+  var res=await _sb.functions.invoke('morning-action',{body:body});
+  if(res.error) throw res.error;
+  return res.data;
+}
+function mpReplace(row){for(var i=0;i<MP.rows.length;i++){if(MP.rows[i].id===row.id){MP.rows[i]=row;}}}
+function mpInputs(){
+  var m=document.getElementById('mp-memo'), d=document.getElementById('mp-due');
+  return {memo:m?m.value.trim():'', due:d&&d.value?d.value:''};
+}
 async function mpDecide(id,k,label){
-  if(MP.busy) return; MP.busy=true; renderMorning();
-  var r=MP.rows.filter(function(x){return x.id===id;})[0], today=dk(new Date()), upd={decision:k,decision_label:label,decided_at:new Date().toISOString()};
+  if(MP.busy) return;
+  var inp=mpInputs(); MP.busy=true; renderMorning();
   try{
-    // 그 사이 다른 곳(DM 카드 등)에서 정했으면 덮어쓰지 않는다
-    var cur=await _sb.from('morning_item').select('decision,decision_label').eq('id',id).single();
-    if(cur.error) throw cur.error;
-    if(cur.data.decision){showToast('이미 정한 항목: '+cur.data.decision_label);await loadMorning();return;}
-    if(k==='add'){
-      var ins=await _sb.from('autolab_task').insert({person:MP.person,task:r.hl.length>60?r.hl.slice(0,60)+'…':r.hl,priority:'',start_date:today,due_date:null,created_at:today,
-        description:'[아침판 '+MP.date+' · '+r.source+']'+(r.link?'\n'+r.link:'')+'\n\n'+[r.who,r.when_label].filter(Boolean).join(' · ')+'\n'+(r.quote?'"'+r.quote+'"':(r.body||''))+'\n(아침판 #'+r.id+')'}).select('id').single();
-      if(ins.error) throw ins.error;
-      upd.decided_task_id=ins.data.id;
-    } else if(k==='merge'){
-      var t=await _sb.from('autolab_task').select('description').eq('id',r.task_id).single();
-      if(t.error) throw t.error;
-      var chunk=mpChunk(r), desc=t.data.description||'';
-      if(desc.indexOf(chunk)<0){var u=await _sb.from('autolab_task').update({description:desc+chunk}).eq('id',r.task_id);if(u.error) throw u.error;}
-      upd.decided_task_id=r.task_id;
-    } else if(k==='done'&&r.kind==='progress'&&r.task_id){
-      await upsertCheck('autolab','autolab_'+r.task_id,true,today);
-      upd.decided_task_id=r.task_id;
-    }
-    var w=await _sb.from('morning_item').update(upd).eq('id',id);
-    if(w.error) throw w.error;
-    Object.assign(r,upd);
+    var out=await mpCall({id:id,action:k,label:label,by:MP.person,via:'dashboard',memo:inp.memo,due:inp.due});
+    if(out.already){showToast('이미 정한 항목: '+out.row.decision_label);mpReplace(out.row);return;}
+    if(!out.ok) throw new Error(out.error||'처리 실패');
+    mpReplace(out.row);
     var next=MP.rows.filter(function(x){return mpAct(x)&&!x.decision;})[0];
     if(next) MP.sel=next.id;
-    showToast(label+(upd.decided_task_id?' · #'+upd.decided_task_id:''));
+    showToast(label+(out.row.decided_task_id?' · #'+out.row.decided_task_id:''));
     if(k==='add'||k==='merge'||k==='done') loadData();
   }catch(e){showToast('실패: '+(e.message||e));}
   finally{MP.busy=false;renderMorning();}
 }
-async function mpUndo(id){
-  if(MP.busy) return; MP.busy=true;
-  var r=MP.rows.filter(function(x){return x.id===id;})[0];
+async function mpMemo(id){
+  if(MP.busy) return;
+  var inp=mpInputs(); if(!inp.memo){showToast('메모를 입력하세요');return;}
+  MP.busy=true; renderMorning();
   try{
-    if(r.decision==='add'&&r.decided_task_id){
-      // 이 항목으로 만든 할 일만 지운다
-      var del=await _sb.from('autolab_task').delete().eq('id',r.decided_task_id).ilike('description','%(아침판 #'+r.id+')%');
-      if(del.error) throw del.error;
-    } else if(r.decision==='merge'&&r.task_id){
-      var t=await _sb.from('autolab_task').select('description').eq('id',r.task_id).single();
-      var chunk=mpChunk(r);
-      if(t.data&&(t.data.description||'').indexOf(chunk)>=0){await _sb.from('autolab_task').update({description:t.data.description.replace(chunk,'')}).eq('id',r.task_id);}
-    } else if(r.decision==='done'&&r.kind==='progress'&&r.task_id){
-      await upsertCheck('autolab','autolab_'+r.task_id,false,'');
-    }
-    var upd={decision:null,decision_label:null,decided_task_id:null,decided_at:null};
-    var w=await _sb.from('morning_item').update(upd).eq('id',id);
-    if(w.error) throw w.error;
-    Object.assign(r,upd); MP.sel=id;
+    var out=await mpCall({id:id,action:'memo',memo:inp.memo,due:inp.due});
+    if(!out.ok) throw new Error(out.error||'메모 실패');
+    mpReplace(out.row); showToast('메모 덧붙임'+(out.row.decided_task_id?' · #'+out.row.decided_task_id:'')); loadData();
+  }catch(e){showToast('실패: '+(e.message||e));}
+  finally{MP.busy=false;renderMorning();}
+}
+async function mpUndo(id){
+  if(MP.busy) return; MP.busy=true; renderMorning();
+  try{
+    var out=await mpCall({id:id,action:'undo'});
+    if(!out.ok) throw new Error(out.error||'되돌리기 실패');
+    mpReplace(out.row); MP.sel=id;
     showToast('되돌림'); loadData();
   }catch(e){showToast('실패: '+(e.message||e));}
   finally{MP.busy=false;renderMorning();}

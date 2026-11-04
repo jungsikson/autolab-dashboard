@@ -1,0 +1,174 @@
+// Supabase Edge Function: 정할 것(morning_item) 처리의 단일 경로 (강희준 2026-11-04)
+// 정본은 morning_item 한 표. 슬랙 DM 카드(slack-capture 가 넘김)와 대시보드 탭(브라우저)이 모두 여기를 부른다.
+//   { id, action, label, by, via }  action = add | merge | done | read | later | mute | undo
+//   { id, action: 'post', thread_ts }  → 그 줄을 DM 카드로 보내고 위치(slack_channel/ts)를 남긴다
+// 결과: morning_item 판정 + 할 일 표 반영 + (DM 카드가 있으면) 카드를 같은 상태로 다시 그림.
+// 권한: 대시보드와 같다 — anon 이 표에 직접 쓸 수 있는 범위 안의 일만 한다.
+
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+const DM_CHANNEL: Record<string, string> = { '강희준': 'U06PSEETK54' };
+
+function kstToday(): string {
+  return new Date(Date.now() + KST_OFFSET_MS).toISOString().slice(0, 10);
+}
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+}
+
+// 항목 하나가 할 일에 남기는 표식. 되돌리기는 이 표식이 있는 것만 지운다
+function mark(row: any) { return `(정할 것 #${row.id})`; }
+function chunk(row: any) {
+  const who = [row.who, row.when_label].filter(Boolean).join(' · ');
+  return `\n\n[정할 것 ${row.edition_date}] ${row.hl}\n${who}${row.quote ? ` · "${row.quote}"` : ''}${row.link ? `\n${row.link}` : ''}${row.memo ? `\n메모: ${row.memo}` : ''}\n${mark(row)}`;
+}
+// 정한 뒤 붙이는 메모 한 단락(되돌리기 대상 아님)
+function memoChunk(row: any, memo: string, today: string) {
+  return `\n\n[메모 ${today}] ${memo}\n${mark(row)}`;
+}
+
+function suggestion(row: any) {
+  if (row.kind === 'merge') return `#${row.task_id}에 덧붙이기`;
+  if (row.kind === 'new') return '할 일에 넣기';
+  if (row.kind === 'done') return '이미 끝남';
+  if (row.kind === 'read') return '읽음';
+  return '내일 다시';
+}
+function buttons(row: any): [string, string][] {
+  if (row.kind === 'progress') return [['later', '내일 다시'], ['done', '완료'], ['mute', '그만 알림']];
+  const a: [string, string][] = [];
+  if (row.kind === 'merge') a.push(['merge', `#${row.task_id}에 덧붙이기`], ['add', '다른 일 · 새로 넣기']);
+  if (row.kind === 'new') a.push(['add', '할 일에 넣기']);
+  if (row.kind === 'done') a.push(['done', '이미 끝남'], ['add', '할 일에 넣기']);
+  if (row.kind === 'read') a.push(['read', '읽음'], ['add', '할 일에 넣기']);
+  if (row.kind !== 'done') a.push(['done', '이미 끝남']);
+  return a;
+}
+
+// DM 카드 = 할 일·근거·대조 + (남음이면 버튼 / 정함이면 결과 한 줄과 되돌리기)
+function cardBlocks(row: any) {
+  const who = [row.who, row.when_label].filter(Boolean).join(' · ');
+  const match = row.kind === 'merge' ? `🟡 이미 있는 것 같음 → *#${row.task_id} ${row.task_title || ''}*`
+    : row.kind === 'new' ? '대시보드에 없음'
+    : row.kind === 'progress' ? `대시보드 #${row.task_id} 진척` : '';
+  const text = `*${row.hl}*\n${who}${row.quote ? ` · "${row.quote}"` : ''}${row.body ? `\n${row.body}` : ''}${match ? `\n${match}` : ''}${row.memo ? `\n📝 ${row.memo}` : ''}`;
+  const section = { type: 'section', text: { type: 'mrkdwn', text } };
+  const btn = (t: string, k: string, primary = false) => ({
+    type: 'button', text: { type: 'plain_text', text: t }, action_id: `todo_${k}`,
+    value: JSON.stringify({ mid: row.id, k, label: t }), ...(primary ? { style: 'primary' } : {}),
+  });
+  if (row.decision) {
+    const res = `✅ ${row.decision_label}${row.decided_task_id ? ` · #${row.decided_task_id}` : ''}${row.decided_by ? ` · ${row.decided_by}` : ''}${row.decided_via === 'dashboard' ? ' (대시보드)' : ''}`;
+    return [section, { type: 'context', elements: [{ type: 'mrkdwn', text: res }] }, { type: 'actions', elements: [btn('되돌리기', 'undo')] }];
+  }
+  const sug = suggestion(row);
+  return [section, { type: 'actions', elements: buttons(row).map(([k, t]) => btn(t, k, t === sug)) }];
+}
+
+async function slack(method: string, body: unknown) {
+  const r = await fetch(`https://slack.com/api/${method}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8', Authorization: `Bearer ${Deno.env.get('SLACK_TOKEN')}` },
+    body: JSON.stringify(body),
+  });
+  return await r.json();
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  let p: any;
+  try { p = await req.json(); } catch { return json({ ok: false, error: 'bad json' }, 400); }
+  const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const { data: row, error } = await sb.from('morning_item').select('*').eq('id', p.id).single();
+  if (error || !row) return json({ ok: false, error: 'no item' }, 404);
+
+  if (p.action === 'post') {
+    const channel = DM_CHANNEL[row.person];
+    if (!channel) return json({ ok: false, error: 'no dm channel' }, 400);
+    const r = await slack('chat.postMessage', { channel, thread_ts: p.thread_ts, text: row.hl, blocks: cardBlocks(row), unfurl_links: false });
+    if (!r.ok) return json({ ok: false, error: r.error }, 502);
+    await sb.from('morning_item').update({ slack_channel: r.channel, slack_ts: r.ts }).eq('id', row.id);
+    return json({ ok: true, slack_ts: r.ts });
+  }
+
+  const today = kstToday();
+  const upd: Record<string, unknown> = {};
+  const memo = typeof p.memo === 'string' ? p.memo.trim() : '';
+  const due = typeof p.due === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.due) ? p.due : null;
+
+  // 이미 정한 항목에 메모만 더한다 — 연결된 할 일이 있으면 그 설명 끝에도 붙인다
+  if (p.action === 'memo') {
+    if (!memo) return json({ ok: false, error: 'empty memo' }, 400);
+    const tid = row.decided_task_id || row.task_id;
+    if (row.decision && tid && ['add', 'merge', 'done'].includes(row.decision)) {
+      const { data: t } = await sb.from('autolab_task').select('description').eq('id', tid).single();
+      if (t) await sb.from('autolab_task').update({ description: (t.description || '') + memoChunk(row, memo, today), ...(due ? { due_date: due } : {}) }).eq('id', tid);
+    }
+    const { data: saved } = await sb.from('morning_item').update({ memo: row.memo ? `${row.memo}\n${memo}` : memo }).eq('id', row.id).select('*').single();
+    return json({ ok: true, row: saved });
+  }
+
+  if (p.action === 'undo') {
+    if (!row.decision) return json({ ok: true, row });
+    if (row.decision === 'add' && row.decided_task_id) {
+      await sb.from('autolab_task').delete().eq('id', row.decided_task_id).ilike('description', `%${mark(row)}%`);
+    } else if (row.decision === 'merge' && row.task_id) {
+      // 덧붙인 단락은 "[정할 것 날짜] 제목"부터 표식까지. 나중에 붙인 메모 단락(같은 표식)도 함께 걷어 낸다
+      const { data: t } = await sb.from('autolab_task').select('description').eq('id', row.task_id).single();
+      let d: string = t?.description || '';
+      const head = `\n\n[정할 것 ${row.edition_date}] ${row.hl}`;
+      const s = d.indexOf(head);
+      if (s >= 0) {
+        const lastMark = d.lastIndexOf(mark(row));
+        if (lastMark > s) d = d.slice(0, s) + d.slice(lastMark + mark(row).length);
+        await sb.from('autolab_task').update({ description: d }).eq('id', row.task_id);
+      }
+    } else if (row.decision === 'done' && row.kind === 'progress' && row.task_id) {
+      await sb.from('autolab_check').upsert({ type: 'autolab', item_key: `autolab_${row.task_id}`, checked: false, completed_date: '' }, { onConflict: 'item_key' });
+    }
+    Object.assign(upd, { decision: null, decision_label: null, decided_task_id: null, decided_at: null, decided_by: null, decided_via: null, memo: null });
+  } else {
+    // 다른 창에서 먼저 정했으면 덮어쓰지 않는다
+    if (row.decision) {
+      if (row.slack_channel && row.slack_ts) await slack('chat.update', { channel: row.slack_channel, ts: row.slack_ts, text: row.hl, blocks: cardBlocks(row) });
+      return json({ ok: false, already: true, row });
+    }
+    if (memo) { row.memo = memo; upd.memo = memo; }
+    if (p.action === 'add') {
+      const { data, error: e } = await sb.from('autolab_task').insert({
+        person: row.person, task: row.hl.length > 60 ? row.hl.slice(0, 60) + '…' : row.hl, priority: '',
+        start_date: today, due_date: due, created_at: today,
+        description: `[정할 것 ${row.edition_date} · ${row.source}]${row.link ? `\n${row.link}` : ''}\n\n${[row.who, row.when_label].filter(Boolean).join(' · ')}\n${row.quote ? `"${row.quote}"` : (row.body || '')}${memo ? `\n\n메모: ${memo}` : ''}\n${mark(row)}`,
+      }).select('id').single();
+      if (e) return json({ ok: false, error: e.message }, 500);
+      upd.decided_task_id = data.id;
+    } else if (p.action === 'merge') {
+      const { data: t, error: e } = await sb.from('autolab_task').select('description').eq('id', row.task_id).single();
+      if (e || !t) return json({ ok: false, error: `#${row.task_id} 없음` }, 404);
+      const c = chunk(row);
+      if (!(t.description || '').includes(c)) await sb.from('autolab_task').update({ description: (t.description || '') + c, ...(due ? { due_date: due } : {}) }).eq('id', row.task_id);
+      upd.decided_task_id = row.task_id;
+    } else if (p.action === 'done' && row.kind === 'progress' && row.task_id) {
+      await sb.from('autolab_check').upsert({ type: 'autolab', item_key: `autolab_${row.task_id}`, checked: true, completed_date: today }, { onConflict: 'item_key' });
+      upd.decided_task_id = row.task_id;
+    } else if (!['done', 'read', 'later', 'mute'].includes(p.action)) {
+      return json({ ok: false, error: 'unknown action' }, 400);
+    }
+    Object.assign(upd, { decision: p.action, decision_label: p.label || p.action, decided_at: new Date().toISOString(), decided_by: p.by || row.person, decided_via: p.via || null });
+  }
+
+  const { data: saved, error: e2 } = await sb.from('morning_item').update(upd).eq('id', row.id).select('*').single();
+  if (e2) return json({ ok: false, error: e2.message }, 500);
+  // DM 카드가 있으면 어느 창에서 눌렀든 같은 상태로 다시 그린다
+  if (saved.slack_channel && saved.slack_ts) {
+    await slack('chat.update', { channel: saved.slack_channel, ts: saved.slack_ts, text: saved.hl, blocks: cardBlocks(saved) });
+  }
+  return json({ ok: true, row: saved });
+});
