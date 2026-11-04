@@ -465,6 +465,85 @@ body{background:var(--bg-canvas)}
 .ptag-DELEGATE{background:#FBEFD7;color:#92651A}
 .ptag-SCHEDULE{background:#E4F1FC;color:#0A6FB5}
 .ptag-ELIMINATE{background:#EEF0F2;color:#6D727A}
+
+/* ---------- 아침판 (봇 DM을 한 화면으로, 항목마다 바로 처리) — taste-skill editorial-greeting · 카라멜 토큰 ---------- */
+#morning-content{max-width:1100px;padding:28px 32px 48px;word-break:keep-all;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.mp-head h1{font-size:28px;font-weight:600;line-height:1.25;letter-spacing:-0.01em;color:var(--text-primary)}
+.mp-head p{margin-top:8px;font-size:var(--text-base);color:var(--text-secondary)}
+.mp-head p b{color:var(--text-primary);font-weight:600}
+.mp-strip{margin-top:24px}
+.mp-strip-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px;font-size:var(--text-xs);color:var(--text-secondary)}
+.mp-strip-head b{font-size:var(--text-sm);color:var(--text-primary);font-weight:600}
+.mp-legend{display:flex;gap:14px}
+.mp-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+.mp-cells{display:flex;gap:3px}
+.mp-cell{flex:1 1 0;min-width:0;height:26px;border:0;border-radius:4px;background:var(--border-subtle);cursor:pointer;padding:0}
+.mp-cell.first:not(:first-child){margin-left:9px}
+.mp-cell.new{background:var(--accent-subtle)}
+.mp-cell.done{background:var(--accent)}
+.mp-cell.sel{outline:2px solid var(--text-primary);outline-offset:-2px}
+.mp-groups{margin-top:8px;font-size:var(--text-xs);color:var(--text-secondary)}
+.mp-work{margin-top:24px;display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+.mp-list,.mp-detail{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);min-width:0}
+.mp-list{padding:6px;position:sticky;top:12px;max-height:calc(100vh - 120px);overflow-y:auto}
+.mp-tabs{display:flex;gap:18px;padding:8px 10px 0;border-bottom:1px solid var(--border-subtle);margin-bottom:4px}
+.mp-tab{background:none;border:0;padding:6px 0 9px;color:var(--text-secondary);cursor:pointer;position:relative;font-family:var(--font-sans);font-size:var(--text-sm)}
+.mp-tab.on{color:var(--text-primary)}
+.mp-tab.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--text-primary)}
+.mp-grp{font-size:var(--text-xs);color:var(--text-secondary);padding:12px 10px 4px}
+.mp-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto;column-gap:8px;align-items:baseline;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:9px 10px;cursor:pointer;font-family:var(--font-sans);color:var(--text-primary)}
+.mp-row:hover{outline:1px solid var(--border-default);outline-offset:-1px}
+.mp-row.cur{background:var(--bg-muted)}
+.mp-row .dot{width:6px;height:6px;border-radius:50%;background:var(--text-primary);align-self:center}
+.mp-row.decided .dot{background:transparent}
+.mp-row .who{font-weight:600;font-size:var(--text-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mp-row.decided .who{font-weight:400}
+.mp-row .when{font-size:var(--text-xs);color:var(--text-secondary);white-space:nowrap}
+.mp-row .l2{grid-column:2/4;font-size:13px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mp-row .l2 b{color:var(--text-primary);font-weight:500}
+.mp-detail{padding:24px;display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:20px 24px}
+.mp-detail h2{font-size:20px;font-weight:600;line-height:1.35}
+.mp-detail .src{margin-top:4px;color:var(--text-secondary)}
+.mp-detail blockquote{margin:16px 0 0;padding-left:12px;border-left:2px solid var(--border-strong);font-size:var(--text-base);line-height:1.6}
+.mp-detail .body{margin-top:12px;font-size:15px;line-height:1.6}
+.mp-detail .orig{display:inline-block;margin-top:12px;color:var(--text-primary)}
+.mp-verdict{margin-top:18px;padding:14px;background:var(--bg-canvas);border-radius:var(--radius-md)}
+.mp-verdict p{color:var(--text-secondary)}
+.mp-verdict p b{color:var(--text-primary)}
+.mp-acts{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.mp-btn{height:36px;padding:0 15px;border-radius:999px;border:1px solid var(--border-strong);background:var(--bg-surface);cursor:pointer;font-family:var(--font-sans);font-size:var(--text-sm);color:var(--text-primary);white-space:nowrap}
+.mp-btn:hover{border-color:var(--text-primary)}
+.mp-btn.pri{background:var(--text-primary);border-color:var(--text-primary);color:#fff}
+.mp-btn:disabled{opacity:.5;cursor:wait}
+.mp-done{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
+.mp-pill{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:var(--text-xs);font-weight:500;background:var(--status-done-bg);color:var(--status-done-fg);white-space:nowrap}
+.mp-pill.gray{background:var(--bg-muted);color:var(--text-primary)}
+.mp-link{background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px;color:var(--text-secondary);font-family:var(--font-sans);font-size:var(--text-sm)}
+.mp-kv div{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--border-subtle);font-size:13px}
+.mp-kv div span:first-child{color:var(--text-secondary)}
+.mp-read{margin-top:32px;display:grid;grid-template-columns:7fr 5fr;gap:16px;align-items:start}
+#morning-content a{color:var(--text-primary);text-underline-offset:3px;text-decoration-color:var(--border-strong)}
+.mp-panel{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:20px;min-width:0}
+.mp-panel.full{grid-column:1/-1}
+.mp-panel h3{font-size:var(--text-sm);font-weight:600;margin-bottom:10px}
+.mp-panel .lead{font-size:var(--text-base);font-weight:500;line-height:1.55;margin-bottom:10px}
+.mp-panel ul{list-style:none;margin:0;padding:0}
+.mp-panel li{padding:9px 0;border-top:1px solid var(--border-subtle)}
+.mp-panel li:first-child{border-top:0}
+.mp-panel li small{display:block;color:var(--text-secondary);font-size:13px;margin-top:2px}
+.mp-back{display:none}
+@media (max-width:900px){
+  #morning-content{padding:20px 16px 40px}
+  .mp-head h1{font-size:22px}
+  .mp-work{grid-template-columns:minmax(0,1fr)}
+  .mp-list{position:static;max-height:none}
+  .mp-work.open .mp-list{display:none}
+  .mp-work:not(.open) .mp-detail{display:none}
+  .mp-detail{grid-template-columns:minmax(0,1fr);padding:18px}
+  .mp-back{display:inline-block;margin-bottom:6px}
+  .mp-read{grid-template-columns:minmax(0,1fr)}
+  .mp-btn{height:44px}
+}
 </style>
 </head>
 <body>
@@ -486,6 +565,10 @@ body{background:var(--bg-canvas)}
         <button class="tab-btn" id="tab-matrix-강희준" onclick="switchTab('matrix-강희준')">강희준</button>
         <button class="tab-btn" id="tab-matrix-송민호" onclick="switchTab('matrix-송민호')">송민호</button>
         <button class="tab-btn" id="tab-matrix-안보람" onclick="switchTab('matrix-안보람')">안보람</button>
+      </div>
+      <div class="nav-group" id="nav-morning" style="display:none">
+        <div class="nav-label">강희준</div>
+        <button class="tab-btn" id="tab-morning" onclick="switchTab('morning')">아침판</button>
       </div>
     </nav>
   </aside>
@@ -513,6 +596,7 @@ body{background:var(--bg-canvas)}
   <div id="view-history" style="display:none"><div id="history-content"><div class="loading"><div class="spinner"></div>불러오는 중...</div></div></div>
   <div id="view-cohort-schedule" style="display:none"><div id="cohort-schedule-content"></div></div>
   <div id="view-cells" style="display:none"><div id="cells-content"></div></div>
+  <div id="view-morning" style="display:none"><div id="morning-content"></div></div>
     </main>
   </div>
 </div>
@@ -757,7 +841,7 @@ function toggleShowDone(){
 }
 function switchTab(tab){
   currentTab=tab;
-  var allTabs=['dashboard','matrix-강희준','matrix-송민호','matrix-안보람','history','cohort-schedule','cells'];
+  var allTabs=['dashboard','matrix-강희준','matrix-송민호','matrix-안보람','history','cohort-schedule','cells','morning'];
   allTabs.forEach(function(t){
     document.getElementById('tab-'+t).className='tab-btn'+(tab===t?' active':'');
     document.getElementById('view-'+t).style.display=tab===t?'':'none';
@@ -774,6 +858,7 @@ function switchTab(tab){
   if(tab==='history') renderHistory();
   if(tab==='cohort-schedule') renderCohortScheduleMatrix();
   if(tab==='cells') renderCellStatus();
+  if(tab==='morning') loadMorning();
   if(tab.startsWith('matrix-')) renderMatrix(tab.replace('matrix-',''));
 }
 
@@ -1793,6 +1878,166 @@ document.getElementById('detail-modal-desc').addEventListener('keydown',function
 });
 
 loadData();
+</script>
+
+<script>
+// =============================================
+// 아침판 — 봇 DM(통화 할 일·슬랙 점검·하루 요약)을 한 화면으로. 표 morning_item, 누르면 바로 할 일에 반영
+// 탭은 ?morning=1 로 한 번 열면 이 브라우저에서만 보인다(강희준 개인용)
+// =============================================
+var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준'};
+(function(){
+  try{
+    if(new URLSearchParams(location.search).get('morning')==='1') localStorage.setItem('autolab_morning','1');
+    if(localStorage.getItem('autolab_morning')==='1') document.getElementById('nav-morning').style.display='';
+  }catch(e){}
+})();
+function mpEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function mpAct(r){return r.kind!=='info';}
+function mpSuggest(r){
+  if(r.kind==='merge') return '#'+r.task_id+'에 덧붙이기';
+  if(r.kind==='new') return '할 일에 넣기';
+  if(r.kind==='done') return '이미 끝남';
+  if(r.kind==='read') return '읽음';
+  return '내일 다시';
+}
+function mpButtons(r){
+  if(r.kind==='progress') return [['later','내일 다시'],['done','완료'],['mute','그만 알림']];
+  var a=[];
+  if(r.kind==='merge') a.push(['merge','#'+r.task_id+'에 덧붙이기'],['add','다른 일 · 새로 넣기']);
+  if(r.kind==='new') a.push(['add','할 일에 넣기']);
+  if(r.kind==='done') a.push(['done','이미 끝남'],['add','할 일에 넣기']);
+  if(r.kind==='read') a.push(['read','읽음'],['add','할 일에 넣기']);
+  if(r.kind!=='done') a.push(['done','이미 끝남']);
+  a.push(['later','내일 다시'],['mute','그만 알림']);
+  return a;
+}
+async function loadMorning(){
+  var box=document.getElementById('morning-content');
+  box.innerHTML='<div class="loading"><div class="spinner"></div>아침판 불러오는 중...</div>';
+  var last=await _sb.from('morning_item').select('edition_date').eq('person',MP.person).order('edition_date',{ascending:false}).limit(1);
+  if(last.error){box.innerHTML='<div class="loading">불러오기 실패: '+mpEsc(last.error.message)+'</div>';return;}
+  if(!last.data.length){box.innerHTML='<div class="loading">아직 발행된 아침판이 없습니다.</div>';return;}
+  MP.date=last.data[0].edition_date;
+  var res=await _sb.from('morning_item').select('*').eq('person',MP.person).eq('edition_date',MP.date).order('sort');
+  if(res.error){box.innerHTML='<div class="loading">불러오기 실패: '+mpEsc(res.error.message)+'</div>';return;}
+  MP.rows=res.data;
+  var acts=MP.rows.filter(mpAct);
+  if(!MP.sel||!acts.some(function(r){return r.id===MP.sel;})){var f=acts.filter(function(r){return !r.decision;})[0]||acts[0];MP.sel=f?f.id:null;}
+  renderMorning();
+}
+function renderMorning(){
+  var acts=MP.rows.filter(mpAct), info=MP.rows.filter(function(r){return !mpAct(r);});
+  var nNew=acts.filter(function(r){return r.kind==='new';}).length, nMerge=acts.filter(function(r){return r.kind==='merge';}).length;
+  var nDec=acts.filter(function(r){return r.decision;}).length;
+  var d=new Date(MP.date+'T00:00:00'), wd='일월화수목금토'[d.getDay()];
+  var html='<div class="mp-head"><h1>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+wd+'요일 아침, 정할 것 '+acts.length+'건</h1>'+
+    '<p>새로 넣을 건 <b>'+nNew+'건</b>, 기존 할 일에 덧붙일 건 <b>'+nMerge+'건</b>입니다. 지금까지 '+nDec+'건 정했습니다.</p></div>';
+  // 판정 띠
+  var prev=null, cells=acts.map(function(r){var first=r.grp!==prev;prev=r.grp;
+    return '<button class="mp-cell'+(first?' first':'')+(r.decision?' done':(r.kind==='new'?' new':''))+(MP.sel===r.id?' sel':'')+'" title="'+mpEsc((r.who||'')+' · '+r.hl)+'" aria-label="'+mpEsc(r.hl)+'" onclick="mpPick('+r.id+')"></button>';}).join('');
+  var gs=[],last=null; acts.forEach(function(r){if(r.grp!==last){gs.push([r.grp,0]);last=r.grp;}gs[gs.length-1][1]++;});
+  html+='<div class="mp-strip"><div class="mp-strip-head"><b>오늘 항목 판정</b><div class="mp-legend"><span><i style="background:var(--accent)"></i>정함 '+nDec+'</span><span><i style="background:var(--accent-subtle)"></i>새로 넣을 후보</span><span><i style="background:var(--border-subtle)"></i>남음 '+(acts.length-nDec)+'</span></div></div>'+
+    '<div class="mp-cells">'+cells+'</div><div class="mp-groups">'+gs.map(function(g){return mpEsc(g[0])+' '+g[1];}).join(' · ')+'</div></div>';
+  // 목록
+  var list=acts.filter(function(r){return MP.filter==='all'||(MP.filter==='left'?!r.decision:!!r.decision);});
+  var rows='',lg=null;
+  list.forEach(function(r){
+    if(r.grp!==lg){rows+='<div class="mp-grp">'+mpEsc(r.grp)+'</div>';lg=r.grp;}
+    rows+='<button class="mp-row'+(r.decision?' decided':'')+(MP.sel===r.id?' cur':'')+'" onclick="mpPick('+r.id+')"><span class="dot"></span><span class="who">'+mpEsc((r.who?r.who+' · ':'')+r.hl)+'</span><span class="when">'+mpEsc(r.when_label||'')+'</span><span class="l2">'+(r.decision?'정함: '+mpEsc(r.decision_label):'→ <b>'+mpEsc(mpSuggest(r))+'</b>')+'</span></button>';
+  });
+  if(!rows) rows='<p class="mp-grp" style="padding:24px 10px">'+(MP.filter==='left'?'오늘 정할 것은 다 정했습니다.':'아직 정한 것이 없습니다.')+'</p>';
+  var tabs=[['left','남은 것'],['all','전체'],['done','정한 것']].map(function(t){return '<button class="mp-tab'+(MP.filter===t[0]?' on':'')+'" onclick="MP.filter=\''+t[0]+'\';renderMorning()">'+t[1]+'</button>';}).join('');
+  html+='<div class="mp-work'+(MP.open?' open':'')+'"><div class="mp-list"><div class="mp-tabs">'+tabs+'</div>'+rows+'</div><article class="mp-detail">'+mpDetail()+'</article></div>';
+  // 읽을거리
+  var by=function(g){return info.filter(function(r){return r.grp===g;});};
+  var day=by('어제 하루'), ch=by('채널 요약'), news=by('뉴스');
+  var li=function(r,withLink){return '<li>'+(withLink&&r.link?'<a href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">'+mpEsc(r.hl)+'</a>':'<b>'+mpEsc(r.hl)+'</b>')+'<small>'+mpEsc(r.body)+'</small></li>';};
+  html+='<div class="mp-read">'+
+    '<div class="mp-panel"><h3>어제 하루</h3>'+(day[0]&&day[0].note?'<p class="lead">'+mpEsc(day[0].note)+'</p>':'')+'<ul>'+day.map(function(r){return li(r,false);}).join('')+'</ul></div>'+
+    '<div class="mp-panel"><h3>채널 요약</h3><ul>'+ch.map(function(r){return li(r,true);}).join('')+'</ul></div>'+
+    '<div class="mp-panel full"><h3>세차·차량 뉴스</h3><ul>'+news.map(function(r){return li(r,true);}).join('')+'</ul></div></div>';
+  document.getElementById('morning-content').innerHTML=html;
+}
+function mpDetail(){
+  var r=MP.rows.filter(function(x){return x.id===MP.sel;})[0];
+  if(!r) return '<p>왼쪽에서 항목을 고르세요.</p>';
+  var m='';
+  if(r.kind==='merge') m='이미 있는 것 같음: <b>#'+r.task_id+' '+mpEsc(r.task_title)+'</b>';
+  else if(r.kind==='done') m='끝난 것 같음: <b>'+mpEsc(r.note)+'</b>';
+  else if(r.kind==='new') m='대시보드에 <b>같은 할 일 없음</b>';
+  else if(r.kind==='read') m='<b>읽고 넘길 것</b>으로 봄';
+  else m='대시보드 <b>#'+r.task_id+'</b> 진척';
+  var note=(r.kind!=='done'&&r.note)?'<p style="margin-top:6px">'+mpEsc(r.note)+'</p>':'';
+  var sug=mpSuggest(r);
+  var acts=r.decision
+    ?'<div class="mp-done"><span class="mp-pill">'+mpEsc(r.decision_label)+(r.decided_task_id?' · #'+r.decided_task_id:'')+'</span><button class="mp-link" onclick="mpUndo('+r.id+')">되돌리기</button></div>'
+    :'<div class="mp-acts">'+mpButtons(r).map(function(b){return '<button class="mp-btn'+(b[1]===sug?' pri':'')+'"'+(MP.busy?' disabled':'')+' onclick="mpDecide('+r.id+',\''+b[0]+'\',\''+mpEsc(b[1])+'\')">'+mpEsc(b[1])+'</button>';}).join('')+'</div>';
+  return '<div><button class="mp-link mp-back" onclick="MP.open=false;renderMorning()">← 목록</button>'+
+    '<h2>'+mpEsc(r.hl)+'</h2><p class="src">'+mpEsc((r.who||'')+(r.when_label?' · '+r.when_label:''))+'</p>'+
+    (r.quote?'<blockquote>'+mpEsc(r.quote)+'</blockquote>':'')+(r.body?'<p class="body">'+mpEsc(r.body)+'</p>':'')+
+    (r.link?'<a class="orig" href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">'+mpEsc(r.link_label||'슬랙')+' 원문 열기</a>':'')+
+    '<div class="mp-verdict"><p>'+m+'</p>'+note+acts+'</div></div>'+
+    '<div class="mp-kv"><div><span>출처</span><span>'+mpEsc(r.source)+'</span></div><div><span>묶음</span><span>'+mpEsc(r.grp)+'</span></div><div><span>봇 제안</span><span>'+mpEsc(sug)+'</span></div><div><span>상태</span><span>'+(r.decision?'<span class="mp-pill">정함</span>':'<span class="mp-pill gray">남음</span>')+'</span></div></div>';
+}
+function mpPick(id){MP.sel=id;MP.open=true;renderMorning();}
+function mpChunk(r){return '\n\n[아침판 '+MP.date+'] '+r.hl+'\n'+[r.who,r.when_label].filter(Boolean).join(' · ')+(r.quote?' · "'+r.quote+'"':'')+(r.link?'\n'+r.link:'')+'\n(아침판 #'+r.id+')';}
+async function mpDecide(id,k,label){
+  if(MP.busy) return; MP.busy=true; renderMorning();
+  var r=MP.rows.filter(function(x){return x.id===id;})[0], today=dk(new Date()), upd={decision:k,decision_label:label,decided_at:new Date().toISOString()};
+  try{
+    // 그 사이 다른 곳(DM 카드 등)에서 정했으면 덮어쓰지 않는다
+    var cur=await _sb.from('morning_item').select('decision,decision_label').eq('id',id).single();
+    if(cur.error) throw cur.error;
+    if(cur.data.decision){showToast('이미 정한 항목: '+cur.data.decision_label);await loadMorning();return;}
+    if(k==='add'){
+      var ins=await _sb.from('autolab_task').insert({person:MP.person,task:r.hl.length>60?r.hl.slice(0,60)+'…':r.hl,priority:'',start_date:today,due_date:null,created_at:today,
+        description:'[아침판 '+MP.date+' · '+r.source+']'+(r.link?'\n'+r.link:'')+'\n\n'+[r.who,r.when_label].filter(Boolean).join(' · ')+'\n'+(r.quote?'"'+r.quote+'"':(r.body||''))+'\n(아침판 #'+r.id+')'}).select('id').single();
+      if(ins.error) throw ins.error;
+      upd.decided_task_id=ins.data.id;
+    } else if(k==='merge'){
+      var t=await _sb.from('autolab_task').select('description').eq('id',r.task_id).single();
+      if(t.error) throw t.error;
+      var chunk=mpChunk(r), desc=t.data.description||'';
+      if(desc.indexOf(chunk)<0){var u=await _sb.from('autolab_task').update({description:desc+chunk}).eq('id',r.task_id);if(u.error) throw u.error;}
+      upd.decided_task_id=r.task_id;
+    } else if(k==='done'&&r.kind==='progress'&&r.task_id){
+      await upsertCheck('autolab','autolab_'+r.task_id,true,today);
+      upd.decided_task_id=r.task_id;
+    }
+    var w=await _sb.from('morning_item').update(upd).eq('id',id);
+    if(w.error) throw w.error;
+    Object.assign(r,upd);
+    var next=MP.rows.filter(function(x){return mpAct(x)&&!x.decision;})[0];
+    if(next) MP.sel=next.id;
+    showToast(label+(upd.decided_task_id?' · #'+upd.decided_task_id:''));
+    if(k==='add'||k==='merge'||k==='done') loadData();
+  }catch(e){showToast('실패: '+(e.message||e));}
+  finally{MP.busy=false;renderMorning();}
+}
+async function mpUndo(id){
+  if(MP.busy) return; MP.busy=true;
+  var r=MP.rows.filter(function(x){return x.id===id;})[0];
+  try{
+    if(r.decision==='add'&&r.decided_task_id){
+      // 이 항목으로 만든 할 일만 지운다
+      var del=await _sb.from('autolab_task').delete().eq('id',r.decided_task_id).ilike('description','%(아침판 #'+r.id+')%');
+      if(del.error) throw del.error;
+    } else if(r.decision==='merge'&&r.task_id){
+      var t=await _sb.from('autolab_task').select('description').eq('id',r.task_id).single();
+      var chunk=mpChunk(r);
+      if(t.data&&(t.data.description||'').indexOf(chunk)>=0){await _sb.from('autolab_task').update({description:t.data.description.replace(chunk,'')}).eq('id',r.task_id);}
+    } else if(r.decision==='done'&&r.kind==='progress'&&r.task_id){
+      await upsertCheck('autolab','autolab_'+r.task_id,false,'');
+    }
+    var upd={decision:null,decision_label:null,decided_task_id:null,decided_at:null};
+    var w=await _sb.from('morning_item').update(upd).eq('id',id);
+    if(w.error) throw w.error;
+    Object.assign(r,upd); MP.sel=id;
+    showToast('되돌림'); loadData();
+  }catch(e){showToast('실패: '+(e.message||e));}
+  finally{MP.busy=false;renderMorning();}
+}
 </script>
 </body>
 </html>

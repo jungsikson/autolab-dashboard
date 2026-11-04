@@ -19,7 +19,6 @@ const USERS: Record<string, { person: string; team: Team }> = {
   // 경영지원팀
   'U0AJUTRFDBR': { person: '정희진', team: 'biz' },
   'U0ADTQN40UF': { person: '박현아', team: 'biz' },
-  'U06HMUNA26Q': { person: '전윤정', team: 'biz' },
   'U0BSVTE98LF': { person: '강라영', team: 'biz' },
 };
 
@@ -37,22 +36,6 @@ const TEAM_CONFIG: Record<Team, { table: string; dashboard: string; label: strin
 };
 
 const TRIGGER = 'pushpin'; // 📌
-const APPROVE_TRIGGER = 'white_check_mark'; // ✅ — 근무 밖 예약 차단 해제 (슬롯 열기)
-// 👌 — "확인했고 정상이다". 무반응을 '정상'으로 흡수하지 않기 위해 별도 반응으로 받는다.
-// ☑️·✔️ 는 쓰지 않는다 — ✅ 와 시각적으로 가까운데 ✅ 는 실제로 차단을 지운다.
-const KEEP_TRIGGER = 'ok_hand';
-const RECHECK_LEAD_DAYS = 3; // 정상 확인은 영구 면제가 아니다 — 차단일 D-3에 한 번 더 묻는다
-// 점검 카드에 반응할 수 있는 사람. 📌 캡처(USERS)와 별개로 둔다 — 여기 오는 사람은
-// 팀·테이블 라우팅이 필요 없고, 반대로 USERS 에 없어도 점검에는 참여해야 한다.
-const AUDIT_PEOPLE: Record<string, string> = {
-  'U06PSEETK54': '강희준',
-  'U0AJUTQR84X': '심형석',
-};
-// ✅ 슬롯 열기 = 운영 데이터(차단)를 지우는 행위 → 강희준 단독.
-const RELEASE_APPROVERS = new Set(['U06PSEETK54']);
-// 👌 정상 확인 = 아무것도 지우지 않는다 → 점검 멘션을 받는 사람 전원.
-// 멘션은 받는데 반응은 못 하는 상태면 그 사람 몫의 확인이 영구 미확인으로 남는다.
-const KEEP_CONFIRMERS = new Set(Object.keys(AUDIT_PEOPLE));
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 const PRIORITY_LABEL: Record<string, string> = {
@@ -91,136 +74,97 @@ async function slackGet(token: string, method: string, params: Record<string, st
   return await r.json();
 }
 
-// ✅ 승인 처리 — block-audit 이 올린 "차단 해제 후보" 메시지에만 반응한다.
-// 📌 캡처 경로와 완전히 분리돼 있어 이 함수가 실패해도 일감 캡처에는 영향이 없다.
-// 실제 삭제는 여기서 하지 않는다. MySQL 은 원격에서 못 닿으므로 승인만 기록하고,
-// 로컬 잡(block-audit.py apply)이 다시 검증한 뒤 지운다.
-async function slackReply(channel: string, ts: string, text: string) {
-  const token = Deno.env.get('SLACK_TOKEN');
-  if (!token) return;
-  await fetch('https://slack.com/api/chat.postMessage', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ channel, thread_ts: ts, text }),
+// ---------------------------------------------------------------- 통화 할 일 카드 버튼
+// 카드 = section(할 일·근거·대조) + actions. 버튼 value 에 항목 전체를 실어 보내므로 DB 에 따로 상태를 두지 않는다.
+// add   → autolab_task 새 행, merge → 기존 할 일 description 끝에 근거 한 단락, done → 기록 없이 카드만
+// undo  → add 는 그 행 삭제, merge 는 덧붙인 단락 제거. 되돌리면 원래 버튼으로 돌아간다
+
+type TodoItem = { todo: string; src: string; quote: string; kind: 'merge' | 'add'; task?: number; title?: string };
+
+function todoButtons(it: TodoItem) {
+  const b = (text: string, k: string, primary = false) => ({
+    type: 'button', text: { type: 'plain_text', text }, action_id: `todo_${k}`,
+    value: JSON.stringify({ k, it }), ...(primary ? { style: 'primary' } : {}),
   });
+  return it.kind === 'merge'
+    ? [b(`#${it.task}에 덧붙이기`, 'merge', true), b('다른 일 · 새로 넣기', 'add'), b('이미 끝남', 'done')]
+    : [b('할 일에 넣기', 'add', true), b('이미 끝남', 'done')];
 }
 
-async function handleReleaseApproval(ev: any): Promise<Response> {
-  const person = AUDIT_PEOPLE[ev.user];
-  if (!person) return new Response('unknown user', { status: 200 });
-  if (!ev.item || ev.item.type !== 'message') return new Response('not a message', { status: 200 });
-
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
-
-  const release = ev.reaction === APPROVE_TRIGGER;
-
-  // 그 메시지가 점검 카드인지 slack_ts 로 확인 (아무 메시지에나 달아도 무시)
-  const { data: rows } = await supabase
-    .from('block_release_approval')
-    .select('id, holiday_id, detailer_name, block_day, block_window, decision')
-    .eq('slack_ts', ev.item.ts)
-    .is('applied_at', null);
-
-  // 차단 해제 카드가 아니면 '차단 필요' 카드인지 본다
-  if (!rows || !rows.length) return await handleGapAck(supabase, ev, person, release);
-
-  // 권한은 방향별로 다르다 — 지우는 쪽만 좁힌다.
-  // 🔴 조용히 무시하지 않는다. 멘션받은 사람이 ✅ 를 눌렀는데 아무 일도 안 일어나면
-  //    "반응했다"고 믿고 넘어가 그 건이 영구 미확인으로 남는다.
-  if (release && !RELEASE_APPROVERS.has(ev.user)) {
-    await slackReply(ev.item.channel, ev.item.ts,
-      `${person}님, 슬롯 열기(차단 해제)는 강희준만 실행할 수 있습니다.\n`
-      + `• 그대로 둬도 되는 건이면 👌 를 달아주세요 — 그건 누구나 가능합니다`);
-    return new Response('not a release approver', { status: 200 });
-  }
-  if (!release && !KEEP_CONFIRMERS.has(ev.user)) {
-    return new Response('not a confirmer', { status: 200 });
-  }
-
-  const r = rows[0];
-  const who = { person };
-  const now = new Date().toISOString();
-
-  // 👌 뒤에 ✅ 가 달리면 ✅ 가 이긴다. 반대로 이미 해제 결정된 건을 👌 로 되돌리지는 않는다.
-  if (!release && r.decision === 'released') {
-    return new Response('already released', { status: 200 });
-  }
-
-  const patch: Record<string, unknown> = release
-    ? { decision: 'released', decided_by: who.person, decided_at: now,
-        approved_by: who.person, approved_at: now }
-    : { decision: 'kept', decided_by: who.person, decided_at: now,
-        recheck_at: recheckDate(r.block_day) };
-
-  await supabase.from('block_release_approval').update(patch)
-    .in('id', rows.map((x: any) => x.id));
-
-  const token = Deno.env.get('SLACK_TOKEN');
-  if (token) {
-    await fetch('https://slack.com/api/chat.postMessage', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        channel: ev.item.channel,
-        thread_ts: ev.item.ts,
-        text: release
-          ? `승인 접수: ${r.detailer_name} ${r.block_day} ${r.block_window} 차단 해제\n`
-            + `• 승인자 ${who.person}\n`
-            + `• 다음 점검에서 조건을 다시 확인한 뒤 해제하고, 결과를 이 스레드에 남깁니다`
-          : `정상 확인: ${r.detailer_name} ${r.block_day} ${r.block_window} 차단 유지\n`
-            + `• 확인자 ${who.person}\n`
-            + `• 차단일 D-${RECHECK_LEAD_DAYS}(${recheckDate(r.block_day)})에 한 번만 다시 확인 요청드립니다`,
-      }),
-    });
-  }
-  return new Response(release ? 'approved' : 'kept', { status: 200 });
+function mergeChunk(it: TodoItem, permalink: string) {
+  return `\n\n[통화 할 일] ${it.todo}\n${it.src} · "${it.quote}"\n${permalink}`;
 }
 
-// '차단 필요' 카드 — 창 밖 예약은 있는데 보상 차단이 없는 건.
-// 지울 차단이 없으니 holiday_id 가 없다 → block_gap_ack 테이블에 따로 기록한다.
-// ✅(자동 차단 등록)는 주지 않는다: 앞을 막을지 뒤를 막을지, 몇 시간 막을지가 예약 시각마다
-// 달라 규칙이 자명하지 않고, 차단 INSERT 는 /block-hours 절차 안에서만 하기로 돼 있다.
-// 실제로 차단을 걸면 다음 점검에서 이 건은 저절로 사라진다. 👌 는 "걸 필요 없다"는 확인이다.
-async function handleGapAck(
-  supabase: any, ev: any, person: string, release: boolean,
-): Promise<Response> {
-  const { data: gaps } = await supabase
-    .from('block_gap_ack')
-    .select('id, detailer_name, gap_day, slots, work_window, decision')
-    .eq('slack_ts', ev.item.ts);
+async function handleTodoButton(p: any, act: any) {
+  const who = USERS[p.user?.id];
+  if (!who || who.team !== 'autolab') return;
+  const token = Deno.env.get('SLACK_TOKEN')!;
+  const channel = p.container?.channel_id || p.channel?.id;
+  const ts = p.container?.message_ts || p.message?.ts;
+  const section = p.message?.blocks?.[0];
+  if (!channel || !ts || !section) return;
+  const { k, it, id, op } = JSON.parse(act.value || '{}');
+  if (!it) return;
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+  const permRes = await slackGet(token, 'chat.getPermalink', { channel, message_ts: ts });
+  const permalink = permRes.ok ? permRes.permalink : '';
+  const today = kstToday();
 
-  if (!gaps || !gaps.length) return new Response('not an audit card', { status: 200 });
-  const g = gaps[0];
-
-  if (release) {
-    await slackReply(ev.item.channel, ev.item.ts,
-      `${person}님, 이 카드는 차단을 자동으로 걸지 않습니다.\n`
-      + `• 차단이 필요하면 직접 등록해주세요 — 등록되면 다음 점검에서 이 건은 사라집니다\n`
-      + `• 걸 필요가 없는 건이면 👌 를 달아주세요`);
-    return new Response('no auto-insert', { status: 200 });
+  let result = '';
+  let undo: any = null;
+  if (k === 'add') {
+    // 같은 카드로 이미 넣은 행이 있으면 새로 만들지 않는다(두 번 누름·재시도)
+    const { data: dup } = permalink
+      ? await supabase.from('autolab_task').select('id').ilike('description', `%${permalink}%`).limit(1)
+      : { data: null };
+    let newId = dup?.[0]?.id;
+    if (!newId) {
+      const { data, error } = await supabase.from('autolab_task').insert({
+        person: who.person, task: it.todo.length > 60 ? it.todo.slice(0, 60) + '…' : it.todo, priority: '',
+        start_date: today, due_date: null, created_at: today,
+        description: `[통화 할 일]\n${permalink}\n\n${it.src} · "${it.quote}"`,
+      }).select('id').single();
+      if (error) { result = `⚠️ 넣기 실패: ${error.message}`; } else newId = data.id;
+    }
+    if (newId) { result = `✅ 할 일에 넣음 · #${newId}`; undo = { k: 'undo', it, op: 'add', id: newId }; }
+  } else if (k === 'merge') {
+    const { data: row, error } = await supabase.from('autolab_task').select('id, description').eq('id', it.task).single();
+    if (error || !row) { result = `⚠️ #${it.task}를 찾지 못함`; } else {
+      const chunk = mergeChunk(it, permalink);
+      const desc = row.description || '';
+      if (!desc.includes(chunk)) {
+        const { error: e2 } = await supabase.from('autolab_task').update({ description: desc + chunk }).eq('id', it.task);
+        if (e2) result = `⚠️ 덧붙이기 실패: ${e2.message}`;
+      }
+      if (!result) { result = `✅ #${it.task}에 덧붙임`; undo = { k: 'undo', it, op: 'merge', id: it.task }; }
+    }
+  } else if (k === 'done') {
+    result = '✅ 이미 끝남으로 표시';
+    undo = { k: 'undo', it, op: 'done' };
+  } else if (k === 'undo') {
+    if (op === 'add' && id && permalink) {
+      // 이 카드로 만든 행만 지운다(설명에 카드 링크가 있는지 확인)
+      await supabase.from('autolab_task').delete().eq('id', id).ilike('description', `%${permalink}%`);
+    } else if (op === 'merge' && id) {
+      const { data: row } = await supabase.from('autolab_task').select('description').eq('id', id).single();
+      const chunk = mergeChunk(it, permalink);
+      if (row?.description?.includes(chunk)) {
+        await supabase.from('autolab_task').update({ description: row.description.replace(chunk, '') }).eq('id', id);
+      }
+    }
   }
-  if (!KEEP_CONFIRMERS.has(ev.user)) return new Response('not a confirmer', { status: 200 });
 
-  await supabase.from('block_gap_ack').update({
-    decision: 'kept', decided_by: person, decided_at: new Date().toISOString(),
-    recheck_at: recheckDate(g.gap_day),
-  }).eq('id', g.id);
-
-  await slackReply(ev.item.channel, ev.item.ts,
-    `정상 확인: ${g.detailer_name} ${g.gap_day} ${g.slots} 예약 — 보상 차단 불필요\n`
-    + `• 확인자 ${person}\n`
-    + `• 예약일 D-${RECHECK_LEAD_DAYS}(${recheckDate(g.gap_day)})에 한 번만 다시 확인 요청드립니다`);
-  return new Response('gap acked', { status: 200 });
-}
-
-/** 차단일 D-3. 정상 확인이 영구 면제가 되지 않게 재확인 시점을 박아둔다. */
-function recheckDate(blockDay: string): string {
-  const d = new Date(`${blockDay}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - RECHECK_LEAD_DAYS);
-  return d.toISOString().slice(0, 10);
+  const blocks = undo
+    ? [section, { type: 'context', elements: [{ type: 'mrkdwn', text: `${result} · ${who.person}` }] },
+       { type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: '되돌리기' }, action_id: 'todo_undo', value: JSON.stringify(undo) }] }]
+    : result
+      ? [section, { type: 'context', elements: [{ type: 'mrkdwn', text: result }] }, { type: 'actions', elements: todoButtons(it) }]
+      : [section, { type: 'actions', elements: todoButtons(it) }];
+  await fetch('https://slack.com/api/chat.update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ channel, ts, text: it.todo, blocks }),
+  });
 }
 
 // ---------------------------------------------------------------- 핸들러
@@ -229,6 +173,32 @@ serve(async (req) => {
   const raw = await req.text();
 
   if (!(await verifySlack(req, raw))) return new Response('bad signature', { status: 401 });
+
+  // 카드 버튼(Interactivity) — 폼 인코딩 payload=... 로 온다. 운영 데이터를 바꾸는 경로라
+  // 서명 비밀값이 없으면 받지 않는다(이모지 경로와 달리 '초기 셋업용 스킵'을 허용하지 않는다)
+  if (raw.startsWith('payload=')) {
+    if (!Deno.env.get('SLACK_SIGNING_SECRET')) return new Response('signing secret not set', { status: 401 });
+    let p: any;
+    try { p = JSON.parse(new URLSearchParams(raw).get('payload') || ''); } catch { return new Response('bad payload', { status: 200 }); }
+    const act = p?.actions?.[0];
+    // 통화 할 일 DM 카드 버튼(todo_*) — 누르면 바로 대시보드에 반영하고 카드를 결과 한 줄로 바꾼다 (강희준 2026-11-04)
+    if (p?.type === 'block_actions' && act && String(act.action_id).startsWith('todo_')) {
+      // @ts-ignore EdgeRuntime 은 Supabase 런타임 전역
+      EdgeRuntime.waitUntil(handleTodoButton(p, act).catch((e) => console.error('todo button failed', e)));
+      return new Response('', { status: 200 });
+    }
+    if (p?.type !== 'block_actions' || !act || !['ops_ok', 'ops_not'].includes(act.action_id)) return new Response('', { status: 200 });
+    // 처리(재검증·삭제·이관)는 3초를 넘길 수 있어 먼저 응답하고 뒤에서 돈다. 결과는 ops-audit 이 카드를 고쳐 쓴다
+    const job = fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/ops-audit`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-audit-secret': Deno.env.get('AUDIT_SHARED_SECRET') || '' },
+      body: JSON.stringify({ action: 'button', user: p.user?.id, choice: act.value,
+        channel: p.container?.channel_id || p.channel?.id, ts: p.container?.message_ts || p.message?.ts }),
+    }).catch((e) => console.error('ops-audit button forward failed', e));
+    // @ts-ignore EdgeRuntime 은 Supabase 런타임 전역
+    EdgeRuntime.waitUntil(job);
+    return new Response('', { status: 200 });
+  }
 
   let body: any;
   try { body = JSON.parse(raw); } catch { return new Response('bad json', { status: 200 }); }
@@ -243,9 +213,8 @@ serve(async (req) => {
   const ev = body.event || {};
   if (ev.type !== 'reaction_added') return new Response('ignored', { status: 200 });
 
-  // ✅ 는 차단 해제 승인 경로로 빠진다 (📌 경로는 아래로 그대로 흐른다)
-  if (ev.reaction === APPROVE_TRIGGER || ev.reaction === KEEP_TRIGGER) return await handleReleaseApproval(ev);
-
+  // 점검 카드의 ✅·👌·❌ 반응 처리는 없앴다 — 카드 버튼으로만 답한다 (강희준 2026-10-30).
+  // 이제 반응으로 받는 건 📌 캡처 하나뿐이다.
   if (ev.reaction !== TRIGGER) return new Response('ignored', { status: 200 });
   if (!ev.item || ev.item.type !== 'message') return new Response('not a message', { status: 200 });
 
