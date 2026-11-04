@@ -579,6 +579,33 @@ body{background:var(--bg-canvas)}
 .pl-tick.today{color:var(--accent);font-weight:600}
 .pl-root{margin:0;padding:12px;text-align:center;font-size:var(--text-xs);color:var(--text-secondary);border-top:1px dashed var(--border-default)}
 .pl-root.drop-over{background:var(--accent-subtle);color:var(--text-primary)}
+/* 상세 창 그 자리에서 고치기 */
+.dmp-title{width:100%;box-sizing:border-box;border:0;border-bottom:1px solid transparent;padding:2px 0;font-family:var(--font-sans);font-size:17px;font-weight:600;color:var(--text-primary);background:transparent;outline:none}
+.dmp-title:hover{border-bottom-color:var(--border-default)}.dmp-title:focus{border-bottom-color:var(--accent)}
+.dmp{display:grid;gap:2px;margin:6px 0 4px}
+.dmp-row{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:8px;min-height:34px;font-size:13px}
+.dmp-row>span{color:var(--text-secondary);font-size:12px}
+.dmp-row select,.dmp-dates input{font-family:var(--font-sans);font-size:12.5px;padding:5px 8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--text-primary);max-width:100%}
+.dmp-dates{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dmp-x{background:none;border:0;color:var(--text-tertiary);font-size:12px;cursor:pointer;text-decoration:underline}
+.dmp-done{display:flex;align-items:center;gap:6px;cursor:pointer}
+.dmp-chips{display:flex;flex-wrap:wrap;gap:4px}
+.dmp-chip{padding:3px 9px;border:1px solid var(--border-default);border-radius:999px;background:var(--bg-surface);font-family:var(--font-sans);font-size:12px;color:var(--text-secondary);cursor:pointer}
+.dmp-chip.on{color:#fff;border-color:transparent}
+.dmp-chip.on.p-none{background:var(--text-secondary)}.dmp-chip.on.p-DO{background:#C8392E}.dmp-chip.on.p-SCHEDULE{background:#0A6FB5}.dmp-chip.on.p-DELEGATE{background:#C27C0E}.dmp-chip.on.p-ELIMINATE{background:#8A8F96}
+.dmp-up{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+.dmp-sub{margin:10px 0;padding:10px 12px;background:var(--bg-subtle);border:1px solid var(--border-subtle);border-radius:var(--radius-sm)}
+.dmp-sub-h{font-size:12px;color:var(--text-secondary);margin-bottom:6px}
+.dmp-kid{display:flex;align-items:center;gap:6px;min-height:26px}
+.dmp-kid .family-link{flex:1;min-width:0}
+.dmp-kid.done .family-link{color:var(--text-tertiary);text-decoration:line-through}
+.dmp-kdue{font-size:11.5px;color:var(--text-secondary);flex:none}
+.dmp-input{width:100%;box-sizing:border-box;margin-top:6px;font-family:var(--font-sans);font-size:12.5px;padding:7px 10px;border:1px dashed var(--border-default);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--text-primary)}
+.dmp-input:focus{border-style:solid;border-color:var(--accent);outline:none}
+.dmp-desc{cursor:text;border-radius:var(--radius-sm);padding:6px 8px;margin-left:-8px;margin-right:-8px}
+.dmp-desc:hover{background:var(--bg-subtle)}
+.dmp-desc-ta{width:100%;box-sizing:border-box;font-family:var(--font-sans);font-size:13px;line-height:1.6;padding:10px 12px;border:1px solid var(--accent);border-radius:var(--radius-sm);resize:vertical;color:var(--text-primary)}
+.dmp-desc-acts{display:flex;justify-content:flex-end;gap:6px;margin-top:6px}
 /* 일정 v2 — 큰 주제 지도 */
 .pl-help{margin-top:4px;font-size:var(--text-xs);color:var(--text-tertiary)}
 .pl-over-t{color:#C8392E}
@@ -2441,6 +2468,117 @@ async function plReparent(it,parentId,kidsAll){
   if(res.error){showToast('옮기기 실패: '+res.error.message);return;}
   it.parentId=String(parentId); PL.open[parentId]=true; renderPlan(); showToast('#'+it.id+' → #'+parentId+' 밑으로');
 }
+// =============================================
+// 상세 창을 그 자리에서 고치기(Linear 이슈 화면처럼) — [수정]을 누르지 않아도 바꾸면 바로 저장
+// 제목·완료·우선순위·기간·큰 주제·담당, 하위 할 일 체크·추가, 진척 한 줄, 설명은 눌러서 고치기
+// =============================================
+var DMP_PRIO=[['','미분류'],['DO','긴급+중요'],['SCHEDULE','중요+안긴급'],['DELEGATE','긴급+안중요'],['ELIMINATE','둘다아님']];
+var _openDetailOrig=openAutolabDetailModal;
+openAutolabDetailModal=function(id){ _openDetailOrig(id); dmEnhance(id); };
+function dmItem(id){return _alFind(id);}
+function dmIsDone(i){var a=autolabChecks[alKey(i)]||{};return !!a.checked;}
+function dmEnhance(id){
+  var item=dmItem(id); if(!item) return;
+  var edit=document.getElementById('dm-edit-btn'); if(edit) edit.style.display='none';
+  // 제목: 눌러서 바로 고치기
+  var t=document.getElementById('detail-modal-title');
+  t.innerHTML='<input id="dmp-title" class="dmp-title" value="'+_alEsc(item.task)+'" aria-label="할 일 제목">';
+  var ti=document.getElementById('dmp-title');
+  ti.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();ti.blur();}});
+  ti.addEventListener('blur',function(){var v=ti.value.trim(); if(v&&v!==item.task) dmSave(item,{task:v},'제목');});
+  document.getElementById('detail-modal-sub').innerHTML='#'+item.id+' · 등록 '+(item.createdAt||'').slice(0,10);
+  // 속성
+  var cands=(allData._autolab||[]).filter(function(i){return i.person===item.person&&String(i.id)!==String(item.id)&&!i.parentId&&!dmIsDone(i)&&Number(i.id)>=2358;})
+    .sort(function(a,b){return Number(b.id)-Number(a.id);});
+  var hasKids=(allData._autolab||[]).some(function(i){return String(i.parentId)===String(item.id);});
+  var props='<div class="dmp">'+
+    '<div class="dmp-row"><span>상태</span><label class="dmp-done"><input type="checkbox" id="dmp-done"'+(dmIsDone(item)?' checked':'')+'> 완료</label></div>'+
+    '<div class="dmp-row"><span>우선순위</span><div class="dmp-chips">'+DMP_PRIO.map(function(p){return '<button class="dmp-chip p-'+(p[0]||'none')+((item.priority||'')===p[0]?' on':'')+'" data-prio="'+p[0]+'">'+p[1]+'</button>';}).join('')+'</div></div>'+
+    '<div class="dmp-row"><span>기간</span><div class="dmp-dates"><input type="date" id="dmp-start" value="'+(item.dateKey||'')+'" aria-label="시작일"><span>→</span><input type="date" id="dmp-due" value="'+(item.dueDate||'')+'" aria-label="마감일">'+(item.dueDate?'<button class="dmp-x" id="dmp-due-clear" title="마감 지우기">지우기</button>':'')+'</div></div>'+
+    '<div class="dmp-row"><span>큰 주제</span><select id="dmp-parent"'+(hasKids?' disabled title="하위가 있는 큰 주제는 다른 주제 밑에 넣을 수 없습니다"':'')+'><option value="">없음</option>'+
+      cands.map(function(c){return '<option value="'+c.id+'"'+(String(item.parentId)===String(c.id)?' selected':'')+'>#'+c.id+' '+_alEsc(c.task.length>30?c.task.slice(0,30)+'…':c.task)+'</option>';}).join('')+'</select></div>'+
+    '<div class="dmp-row"><span>담당</span><select id="dmp-person">'+['강희준','송민호','안보람'].map(function(p){return '<option'+(item.person===p?' selected':'')+'>'+p+'</option>';}).join('')+'</select></div>'+
+  '</div>';
+  // 하위 할 일
+  var kids=(allData._autolab||[]).filter(function(i){return String(i.parentId)===String(item.id);});
+  var dn=kids.filter(dmIsDone).length;
+  var sub='<div class="dmp-sub"><div class="dmp-sub-h">하위 할 일 '+(kids.length?dn+'/'+kids.length+' 완료':'')+'</div>'+
+    kids.map(function(k){return '<div class="dmp-kid'+(dmIsDone(k)?' done':'')+'"><input type="checkbox" data-kid="'+k.id+'"'+(dmIsDone(k)?' checked':'')+' aria-label="완료">'+
+      '<button class="family-link" onclick="openAutolabDetailModal(\''+k.id+'\')">#'+k.id+' '+_alEsc(k.task)+'</button>'+(k.dueDate?'<span class="dmp-kdue">'+k.dueDate.slice(5).replace('-','/')+'</span>':'')+'</div>';}).join('')+
+    (item.parentId?'':'<input id="dmp-addkid" class="dmp-input" placeholder="+ 하위 할 일 추가 (Enter)">')+'</div>';
+  var parent=item.parentId?dmItem(item.parentId):null;
+  var up=parent?'<div class="dmp-up">↳ 큰 주제 <button class="family-link" onclick="openAutolabDetailModal(\''+parent.id+'\')">#'+parent.id+' '+_alEsc(parent.task)+'</button></div>':'';
+  document.getElementById('detail-modal-info').innerHTML=up+props+sub+
+    '<input id="dmp-prog" class="dmp-input" placeholder="+ 진척 한 줄 남기기 (Enter) — 설명 끝에 날짜와 함께 붙습니다">';
+  // 설명: 눌러서 고치기
+  var dv=document.getElementById('dm-desc-view');
+  dv.classList.add('dmp-desc'); dv.title='눌러서 고치기';
+  if(!(item.description||'').trim()) dv.textContent='설명 없음 — 눌러서 쓰기';
+  dv.onclick=function(){dmEditDesc(item);};
+  // 이벤트
+  document.getElementById('dmp-done').onchange=function(e){dmSetDone(item,e.target.checked);};
+  document.querySelectorAll('.dmp-chip').forEach(function(b){b.onclick=function(){dmSave(item,{priority:b.dataset.prio},'우선순위');};});
+  document.getElementById('dmp-start').onchange=function(e){if(e.target.value) dmSave(item,{start_date:e.target.value},'시작일');};
+  document.getElementById('dmp-due').onchange=function(e){dmSave(item,{due_date:e.target.value||null},'마감');};
+  var dc=document.getElementById('dmp-due-clear'); if(dc) dc.onclick=function(){dmSave(item,{due_date:null},'마감');};
+  document.getElementById('dmp-parent').onchange=function(e){dmSave(item,{parent_id:e.target.value?Number(e.target.value):null},'큰 주제');};
+  document.getElementById('dmp-person').onchange=function(e){dmSave(item,{person:e.target.value},'담당');};
+  document.querySelectorAll('[data-kid]').forEach(function(c){c.onchange=function(){var k=dmItem(c.dataset.kid); if(k) dmSetDone(k,c.checked,item.id);};});
+  var ak=document.getElementById('dmp-addkid'); if(ak) ak.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing&&ak.value.trim()){e.preventDefault();dmAddKid(item,ak.value.trim());}});
+  var pg=document.getElementById('dmp-prog'); pg.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing&&pg.value.trim()){e.preventDefault();dmAddProgress(item,pg.value.trim());}});
+}
+function dmRefresh(reopenId){
+  render();
+  if(currentTab.startsWith('matrix-')) renderMatrix(currentTab.replace('matrix-',''));
+  if(currentTab==='history') renderHistory();
+  if(currentTab==='plan') renderPlan();
+  if(reopenId&&document.getElementById('detail-modal-bg').classList.contains('open')) openAutolabDetailModal(reopenId);
+}
+// DB 칸 → 화면 칸
+var DMP_MAP={task:'task',priority:'priority',start_date:'dateKey',due_date:'dueDate',parent_id:'parentId',person:'person',description:'description'};
+async function dmSave(item,upd,label){
+  var res=await _sb.from('autolab_task').update(upd).eq('id',parseInt(item.id));
+  if(res.error){showToast(label+' 저장 실패: '+res.error.message);return;}
+  Object.keys(upd).forEach(function(k){var v=upd[k]; item[DMP_MAP[k]]=(k==='parent_id'?(v?String(v):null):(v==null?'':v));});
+  showToast(label+' 저장됨'); dmRefresh(item.id);
+}
+async function dmSetDone(item,checked,reopenId){
+  var cd=checked?dk(new Date()):'';
+  autolabChecks[alKey(item)]={checked:checked,completedDate:cd};
+  await upsertCheck('autolab',String(item.id),checked,cd);
+  showToast(checked?'#'+item.id+' 완료':'#'+item.id+' 완료 취소');
+  // 하위가 모두 끝나면 큰 주제도 완료할지 묻는다(Linear식 자동 완료 — 우선은 묻고 하기)
+  var p=item.parentId?dmItem(item.parentId):null;
+  if(checked&&p&&!dmIsDone(p)){
+    var kids=(allData._autolab||[]).filter(function(i){return String(i.parentId)===String(p.id);});
+    if(kids.length&&kids.every(dmIsDone)) showToast('#'+p.id+' 하위가 모두 끝났습니다. 큰 주제도 완료하려면 그 창에서 체크하세요');
+  }
+  dmRefresh(reopenId||item.id);
+}
+async function dmAddKid(item,title){
+  var today=dk(new Date());
+  var res=await _sb.from('autolab_task').insert({person:item.person,task:title,priority:item.priority||'',start_date:today,due_date:null,created_at:today,
+    description:'[수동 등록 · '+today+'] 하위 할 일 (상위 #'+item.id+')',parent_id:Number(item.id)}).select().single();
+  if(res.error){showToast('하위 추가 실패: '+res.error.message);return;}
+  var r=res.data;
+  allData._autolab.push({id:String(r.id),dateKey:r.start_date,task:r.task,person:r.person,priority:r.priority||'',dueDate:'',createdAt:r.created_at,description:r.description||'',isOverdue:false,parentId:String(item.id)});
+  showToast('하위 #'+r.id+' 추가'); dmRefresh(item.id);
+}
+async function dmAddProgress(item,text){
+  var d=new Date(), line='\n[진척 '+(d.getMonth()+1)+'/'+d.getDate()+' 희준님] '+text;
+  var cur=await _sb.from('autolab_task').select('description').eq('id',parseInt(item.id)).single();
+  var desc=((cur.data&&cur.data.description)||item.description||'').replace(/\s+$/,'')+line;
+  await dmSave(item,{description:desc},'진척');
+}
+function dmEditDesc(item){
+  var dv=document.getElementById('dm-desc-view');
+  dv.onclick=null;
+  dv.innerHTML='<textarea id="dmp-desc" class="dmp-desc-ta" rows="10"></textarea><div class="dmp-desc-acts"><button class="btn-cancel" id="dmp-desc-cancel">취소</button><button class="btn-save" id="dmp-desc-save">저장</button></div>';
+  var ta=document.getElementById('dmp-desc'); ta.value=item.description||''; ta.focus();
+  document.getElementById('dmp-desc-cancel').onclick=function(){openAutolabDetailModal(item.id);};
+  document.getElementById('dmp-desc-save').onclick=function(){dmSave(item,{description:ta.value},'설명');};
+}
+
 // 처리는 전부 Edge Function morning-action 한 곳에서 한다(슬랙 DM 카드와 같은 경로, 카드도 같이 갱신됨)
 async function mpCall(body){
   var res=await _sb.functions.invoke('morning-action',{body:body});
