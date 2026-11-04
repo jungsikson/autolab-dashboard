@@ -2284,7 +2284,7 @@ function mpRenderPicker(){
   var q=(document.getElementById('mpp-q').value||'').trim().toLowerCase();
   // 항목 글에 나온 두 글자 이상 낱말이 할 일 제목·설명에 몇 개 겹치나로 먼저 보여 준다
   var words=((r.hl||'')+' '+(r.body||'')+' '+(r.who||'')).toLowerCase().split(/[^0-9a-z가-힣]+/).filter(function(w){return w.length>=2;});
-  var open=(allData._autolab||[]).filter(function(i){return i.person===MP.person&&Number(i.id)>=2358&&!(autolabChecks[alKey(i)]||{}).checked;});
+  var open=(allData._autolab||[]).filter(function(i){return i.person===MP.person&&!(autolabChecks[alKey(i)]||{}).checked;});
   var scored=open.map(function(i){var hay=(i.task+' '+(i.description||'')).toLowerCase();
     var s=words.reduce(function(n,w){return n+(hay.indexOf(w)>=0?1:0);},0)+(String(i.id)===String(r.task_id)?100:0);
     return {i:i,s:s,hay:hay};});
@@ -2338,7 +2338,7 @@ function fillParentSelect(item){
   // 한 단계만: 큰 주제는 다른 큰 주제 밑에 못 들어가고, 하위 할 일은 큰 주제 후보가 될 수 없다
   var cands=(allData._autolab||[]).filter(function(i){
     var a=autolabChecks[alKey(i)]||{};
-    return i.person===item.person&&String(i.id)!==String(item.id)&&!i.parentId&&!a.checked&&Number(i.id)>=2358;
+    return i.person===item.person&&String(i.id)!==String(item.id)&&!i.parentId&&!a.checked;
   }).sort(function(a,b){return Number(b.id)-Number(a.id);});
   sel.innerHTML='<option value="">큰 주제 없음</option>'+(hasKids?'':cands.map(function(c){return '<option value="'+c.id+'">↳ #'+c.id+' '+_alEsc(c.task.length>28?c.task.slice(0,28)+'…':c.task)+'</option>';}).join(''));
   sel.value=item.parentId||'';
@@ -2390,7 +2390,7 @@ function plDone(i){var a=autolabChecks[alKey(i)]||autolabChecks['autolab_'+alKey
 function plMD(d){return (d.getMonth()+1)+'/'+d.getDate();}
 function renderPlan(){
   var box=document.getElementById('plan-content'); if(!box) return;
-  var all=(allData._autolab||[]).filter(function(i){return i.person===PL.person&&Number(i.id)>=2358;});
+  var all=(allData._autolab||[]).filter(function(i){return i.person===PL.person;});
   var open=all.filter(function(i){return !plDone(i);});
   var byId={}; all.forEach(function(i){byId[i.id]=i;});
   var kidsAll={}; all.forEach(function(i){if(i.parentId&&byId[i.parentId])(kidsAll[i.parentId]=kidsAll[i.parentId]||[]).push(i);});
@@ -2598,7 +2598,7 @@ function dmEnhance(id){
   ti.addEventListener('blur',function(){var v=ti.value.trim(); if(v&&v!==item.task) dmSave(item,{task:v},'제목');});
   document.getElementById('detail-modal-sub').innerHTML='#'+item.id+' · 등록 '+(item.createdAt||'').slice(0,10);
   // 속성
-  var cands=(allData._autolab||[]).filter(function(i){return i.person===item.person&&String(i.id)!==String(item.id)&&!i.parentId&&!dmIsDone(i)&&Number(i.id)>=2358;})
+  var cands=(allData._autolab||[]).filter(function(i){return i.person===item.person&&String(i.id)!==String(item.id)&&!i.parentId&&!dmIsDone(i);})
     .sort(function(a,b){return Number(b.id)-Number(a.id);});
   var hasKids=(allData._autolab||[]).some(function(i){return String(i.parentId)===String(item.id);});
   var props='<div class="dmp">'+
