@@ -634,7 +634,7 @@ body{background:var(--bg-canvas)}
 .mp-wait-t{flex:1;min-width:200px;text-align:left;color:var(--text-primary);text-decoration:none;font-weight:500}
 .mp-wait-who{font-size:12.5px;color:#7A5A12}
 .mp-wait .mp-btn{height:30px;padding:0 12px;font-size:12.5px}
-/* 외장 모니터 반쪽 창(약 1,000px) 기준 — 희준님 실제 사용 폭(11/4) */
+/* 좁은 창(901–1320px) 배치 — 희준님 실제 창은 외장 모니터 반쪽 약 1,720px라 평소엔 넓은 배치(11/4) */
 @media (min-width:901px) and (max-width:1320px){
   #morning-content{padding:24px 24px 40px}
   .mp-work{grid-template-columns:320px minmax(0,1fr)}
@@ -2358,7 +2358,11 @@ function fillParentSelect(item){
     clearTimeout(timer);
     timer=setTimeout(function(){
       if(editing()){soon();return;}
-      loadData(true);
+      // 다시 읽은 뒤 열려 있는 상세 창도 새 데이터로 다시 그린다(저장 직후 옛 데이터로 덮이는 경우 방지)
+      Promise.resolve(loadData(true)).then(function(){
+        var bg=document.getElementById('detail-modal-bg');
+        if(bg&&bg.classList.contains('open')&&detailModalId&&!editing()) openAutolabDetailModal(detailModalId);
+      });
       if(currentTab==='morning') loadMorning(true);
     },800);
   }
