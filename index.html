@@ -624,6 +624,14 @@ body{background:var(--bg-canvas)}
 /* 기다림 */
 .wait-tag{margin-top:3px;font-size:11.5px;color:#8A6D00}
 .wait-tag.due{color:#C8392E;font-weight:600}
+.area-pill{flex:none;display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;line-height:1.5;white-space:nowrap}
+.area-pill.k{background:var(--accent-subtle);color:var(--accent)}
+.area-pill.base{background:var(--bg-muted,#F1F1EF);color:var(--text-secondary)}
+.area-pill.out{background:transparent;color:var(--text-tertiary);box-shadow:inset 0 0 0 1px var(--border-subtle)}
+.pl-areas{font-size:var(--text-xs);color:var(--text-secondary);display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+.pl-muted,.dmp-muted{color:var(--text-tertiary);font-size:12px}
+.topic-meta{margin-bottom:12px}
+.dmp-next{display:flex;align-items:center;gap:6px;min-width:0;flex-wrap:wrap}
 .wait-pill{flex:none;font-size:11px;font-weight:500;padding:1px 7px;border-radius:999px;background:#FBEFD7;color:#7A5A12}
 .dmp-wait{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12.5px;color:var(--text-secondary)}
 .dmp-wait input{flex:1;min-width:140px;font-family:var(--font-sans);font-size:12.5px;padding:5px 8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary)}
@@ -2410,6 +2418,11 @@ function renderPlan(){
 
   var html='<div class="pl-head"><h1>일정</h1>'+
     '<p>큰 주제 <b>'+topics.length+'개</b> · 독립 할 일 '+solos.length+'건 · 날짜가 잡힌 것 <b>'+dated.length+'</b> · 날짜 없음 <b>'+undated.length+'</b>'+(nOver?' · <b class="pl-over-t">마감 지남 '+nOver+'</b>':'')+'</p>'+
+    (function(){var cnt={},none=0; topics.forEach(function(t){var a=topicMeta(t).area; if(a) cnt[a]=(cnt[a]||0)+1; else none++;});
+      var parts=TOPIC_AREAS.filter(function(a){return cnt[a];}).map(function(a){return areaPill(a)+' '+cnt[a];});
+      Object.keys(cnt).forEach(function(a){if(TOPIC_AREAS.indexOf(a)<0) parts.push(areaPill(a)+' '+cnt[a]);});
+      if(none) parts.push('<span class="pl-muted">영역 없음 '+none+'</span>');
+      return parts.length?'<p class="pl-areas">책임 영역 '+parts.join(' · ')+'</p>':'';})()+
     '<p class="pl-help">막대를 끌면 날짜가 옮겨지고, 막대 양 끝을 끌면 시작·마감이 바뀝니다. 아래 \'날짜 없음\'에서 끌어 올리면 그 날을 마감으로 잡습니다. 큰 주제 이름을 누르면 하위가 펼쳐집니다.</p></div>';
   var ticks='', wk='';
   for(var d=0;d<span;d++){var day=new Date(start.getTime()+d*DAY);
@@ -2435,10 +2448,11 @@ function renderPlan(){
       '<button class="pl-lbl pl-lbl-btn'+(over?' over':'')+'" style="left:'+Math.min(rc,90)+'%" data-due-for="'+i.id+'" title="마감 바꾸기">'+lab+'</button>';
   };
   var nameHtml=function(i){
-    var has=!!kidsAll[i.id], isOpen=!!PL.open[i.id];
+    var has=!!kidsAll[i.id], isOpen=!!PL.open[i.id], tm=topicMeta(i), nx=has?topicNext(i,kidsAll[i.id]):null;
+    var tip='#'+i.id+' '+i.task+(tm.goal?'\n끝난 모습: '+tm.goal:'')+(nx?'\n다음 할 일: #'+nx.id+' '+nx.task:'');
     return '<div class="pl-name'+(has?' topic':'')+'" data-drop="'+i.id+'">'+
       (has?'<button class="pl-caret" onclick="PL.open[\''+i.id+'\']=!PL.open[\''+i.id+'\'];renderPlan()" aria-label="하위 펼치기">'+(isOpen?'▾':'▸')+'</button>':'<span class="pl-caret-sp"></span>')+
-      '<span class="pr pr-'+(i.priority||'none')+'"></span><span class="t" onclick="openAutolabDetailModal(\''+i.id+'\')" title="#'+i.id+' '+_alEsc(i.task)+'">'+_alEsc(i.task)+'</span>'+(i.waitingOn?'<span class="wait-pill" title="'+_alEsc(i.waitingOn)+' 답 기다림">기다림</span>':'')+progress(i)+'</div>';
+      '<span class="pr pr-'+(i.priority||'none')+'"></span><span class="t" onclick="openAutolabDetailModal(\''+i.id+'\')" title="'+_alEsc(tip)+'">'+_alEsc(i.task.replace(/\s*\(과제 [567]\)$/,''))+'</span>'+areaPill(tm.area)+(i.waitingOn?'<span class="wait-pill" title="'+_alEsc(i.waitingOn)+' 답 기다림">기다림</span>':'')+progress(i)+'</div>';
   };
   var kidsList=function(i){
     if(!kidsAll[i.id]||!PL.open[i.id]) return '';
@@ -2587,6 +2601,33 @@ var _openDetailOrig=openAutolabDetailModal;
 openAutolabDetailModal=function(id){ _openDetailOrig(id); dmEnhance(id); };
 function dmItem(id){return _alFind(id);}
 function dmIsDone(i){var a=autolabChecks[alKey(i)]||{};return !!a.checked;}
+// =============================================
+// 큰 주제 머리말 — 설명 맨 위 두 줄 "책임 영역: …" "끝난 모습: …"을 읽고 고친다. 다음 할 일은 하위에서 계산한다.
+// =============================================
+var TOPIC_AREAS=['과제 5','과제 6','과제 7','운영 기반','영토 밖(상품)'];
+function topicMeta(item){
+  var d=(item&&item.description)||'', a=d.match(/^책임 영역:[ \t]*(.*)$/m), g=d.match(/^끝난 모습:[ \t]*(.*)$/m);
+  return {area:a?a[1].trim():'',goal:g?g[1].trim():''};
+}
+function topicSetLine(desc,key,val){
+  desc=desc||''; var re=new RegExp('^'+key+':[ \\t]*.*(\\n|$)','m');
+  if(re.test(desc)) return val?desc.replace(re,function(m,nl){return key+': '+val+nl;}):desc.replace(re,'');
+  if(!val) return desc;
+  if(key==='끝난 모습'&&/^책임 영역:/m.test(desc)) return desc.replace(/^(책임 영역:.*)$/m,function(m){return m+'\n끝난 모습: '+val;});
+  var hasHead=/^(책임 영역|끝난 모습):/m.test(desc);
+  return key+': '+val+'\n'+(hasHead?'':'\n')+desc;
+}
+function topicNext(item,kids){
+  var open=(kids||[]).filter(function(k){return !dmIsDone(k);});
+  if(!open.length) return null;
+  var key=function(k){return (k.waitingOn?'1':'0')+(k.dueDate||'9999');};
+  return open.slice().sort(function(a,b){return key(a).localeCompare(key(b));})[0];
+}
+function areaPill(area){
+  if(!area) return '';
+  var c=/^과제/.test(area)?'k':(/밖/.test(area)?'out':'base');
+  return '<span class="area-pill '+c+'" title="책임 영역">'+_alEsc(area.replace('(상품)',''))+'</span>';
+}
 function dmEnhance(id){
   var item=dmItem(id); if(!item) return;
   var edit=document.getElementById('dm-edit-btn'); if(edit) edit.style.display='none';
@@ -2619,6 +2660,17 @@ function dmEnhance(id){
     kids.map(function(k){return '<div class="dmp-kid'+(dmIsDone(k)?' done':'')+'"><input type="checkbox" data-kid="'+k.id+'"'+(dmIsDone(k)?' checked':'')+' aria-label="완료">'+
       '<button class="family-link" onclick="openAutolabDetailModal(\''+k.id+'\')">#'+k.id+' '+_alEsc(k.task)+'</button>'+(k.dueDate?'<span class="dmp-kdue">'+k.dueDate.slice(5).replace('-','/')+'</span>':'')+'</div>';}).join('')+
     (item.parentId?'':'<input id="dmp-addkid" class="dmp-input" placeholder="+ 하위 할 일 추가 (Enter)">')+'</div>';
+  // 큰 주제면 책임 영역·끝난 모습·다음 할 일
+  if(!item.parentId&&(kids.length||topicMeta(item).area)){
+    var tm=topicMeta(item), nx=topicNext(item,kids);
+    sub='<div class="dmp topic-meta">'+
+      '<div class="dmp-row"><span>책임 영역</span><select id="dmp-area"><option value="">정하지 않음</option>'+TOPIC_AREAS.map(function(a){return '<option'+(tm.area===a?' selected':'')+'>'+a+'</option>';}).join('')+
+        (tm.area&&TOPIC_AREAS.indexOf(tm.area)<0?'<option selected>'+_alEsc(tm.area)+'</option>':'')+'</select></div>'+
+      '<div class="dmp-row"><span>끝난 모습</span><input id="dmp-goal" class="dmp-input" value="'+_alEsc(tm.goal)+'" placeholder="이 주제가 끝나면 어떤 상태인가요? 한 줄 — 쓰고 Enter"></div>'+
+      '<div class="dmp-row"><span>다음 할 일</span><div class="dmp-next">'+(nx?'<button class="family-link" onclick="openAutolabDetailModal(\''+nx.id+'\')">#'+nx.id+' '+_alEsc(nx.task)+'</button>'+
+        (nx.dueDate?'<span class="dmp-kdue">'+nx.dueDate.slice(5).replace('-','/')+'</span>':'')+(nx.waitingOn?'<span class="wait-pill">기다림</span>':''):'<span class="dmp-muted">열린 하위가 없습니다 — 아래에 하나 추가하거나 주제를 완료하세요</span>')+'</div></div>'+
+    '</div>'+sub;
+  }
   var parent=item.parentId?dmItem(item.parentId):null;
   var up=parent?'<div class="dmp-up">↳ 큰 주제 <button class="family-link" onclick="openAutolabDetailModal(\''+parent.id+'\')">#'+parent.id+' '+_alEsc(parent.task)+'</button></div>':'';
   document.getElementById('detail-modal-info').innerHTML=up+props+sub+
@@ -2649,6 +2701,10 @@ function dmEnhance(id){
   var we=document.getElementById('dmp-wait-end'); if(we) we.onclick=function(){dmSave(item,{waiting_on:null,waiting_since:null,recheck_date:null},'기다림 끝');};
   document.querySelectorAll('[data-kid]').forEach(function(c){c.onchange=function(){var k=dmItem(c.dataset.kid); if(k) dmSetDone(k,c.checked,item.id);};});
   var ak=document.getElementById('dmp-addkid'); if(ak) ak.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing&&ak.value.trim()){e.preventDefault();dmAddKid(item,ak.value.trim());}});
+  var ar=document.getElementById('dmp-area'); if(ar) ar.onchange=function(){dmSave(item,{description:topicSetLine(item.description,'책임 영역',ar.value)},'책임 영역');};
+  var gl=document.getElementById('dmp-goal');
+  if(gl){ gl.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing){e.preventDefault();gl.blur();}});
+    gl.addEventListener('blur',function(){var v=gl.value.trim(); if(v!==topicMeta(item).goal) dmSave(item,{description:topicSetLine(item.description,'끝난 모습',v)},'끝난 모습');}); }
   var pg=document.getElementById('dmp-prog'); pg.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.isComposing&&pg.value.trim()){e.preventDefault();dmAddProgress(item,pg.value.trim());}});
 }
 function dmRefresh(reopenId){
