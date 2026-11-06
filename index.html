@@ -605,6 +605,18 @@ body{background:var(--bg-canvas)}
 .dmp-desc{border-radius:var(--radius-sm);padding:6px 8px;margin-left:-8px;margin-right:-8px}
 .dmp-desc a{color:var(--accent);word-break:break-all}
 .dmp-desc-top{margin:0 0 4px}
+.dd-meta{font-size:12px;color:var(--text-tertiary);margin-bottom:4px}
+.dd-h{font-size:13px;font-weight:600;color:var(--text-primary);margin:14px 0 4px}
+.dd-h:first-child{margin-top:0}
+.dd-gap{height:6px}
+.dd-p{margin:0}
+.dd-lb{font-weight:600;color:var(--text-secondary);margin-right:4px}
+.dd-li{position:relative;padding-left:14px}
+.dd-li::before{content:'';position:absolute;left:3px;top:.75em;width:4px;height:4px;border-radius:50%;background:var(--text-tertiary)}
+.dd-ol{display:flex;gap:6px}.dd-ol>b{font-weight:500;color:var(--text-tertiary);min-width:12px;font-variant-numeric:tabular-nums}
+.dd-log{font-size:12px;color:var(--text-secondary);background:var(--bg-subtle);border-radius:8px;padding:8px 10px;margin-top:6px}
+.dd-log .dd-tag{display:block;color:var(--text-tertiary);font-weight:500;margin-bottom:2px}
+.dd-log .dd-li::before{top:.7em}
 .dmp-desc-top .btn-ghost{padding:3px 10px}
 .dmp-desc-ta{width:100%;box-sizing:border-box;font-family:var(--font-sans);font-size:13px;line-height:1.6;padding:10px 12px;border:1px solid var(--accent);border-radius:var(--radius-sm);resize:vertical;color:var(--text-primary)}
 .dmp-desc-acts{display:flex;justify-content:flex-end;gap:6px;margin-top:6px}
@@ -903,7 +915,7 @@ body{background:var(--bg-canvas)}
       </div>
     </div>
     <div id="detail-modal-info" style="margin-bottom:10px"></div>
-    <div id="dm-desc-view" style="min-height:36px;font-size:13px;color:var(--text-primary);line-height:1.7;margin-bottom:16px;white-space:pre-wrap"></div>
+    <div id="dm-desc-view" style="min-height:36px;font-size:13px;color:var(--text-primary);line-height:1.7;margin-bottom:16px;word-break:keep-all;overflow-wrap:anywhere"></div>
     <div id="dm-desc-edit" style="display:none;margin-bottom:16px">
       <textarea id="detail-modal-desc" rows="4" style="width:100%;font-size:13px;border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:10px 12px;resize:vertical;font-family:var(--font-sans);line-height:1.6;box-sizing:border-box;color:var(--text-primary)" placeholder="자세한 내용을 적어주세요..."></textarea>
     </div>
@@ -1899,7 +1911,7 @@ function openAutolabDetailModal(id){
   badges+='</div>'+familyHtml(item);
   document.getElementById('detail-modal-info').innerHTML=badges;
   var descEl=document.getElementById('dm-desc-view');
-  if(descEl) descEl.textContent=item.description||'';
+  if(descEl) descEl.innerHTML=dmDescHtml(item.description);
   document.getElementById('detail-modal-desc').value=item.description||'';
   document.getElementById('detail-modal-bg').classList.add('open');
   var cachedComments=(allData._autolabComments||{})[String(id)]||[];
@@ -2089,7 +2101,7 @@ async function saveDetailEdit(){
     badges+='</div>'+(item?familyHtml(item):'');
     document.getElementById('detail-modal-info').innerHTML=badges;
     var descEl=document.getElementById('dm-desc-view');
-    if(descEl) descEl.textContent=desc;
+    if(descEl) descEl.innerHTML=dmDescHtml(desc);
     render();
     if(currentTab==='plan') renderPlan();
     if(currentTab.startsWith('matrix-')) renderMatrix(currentTab.replace('matrix-',''));
@@ -2357,6 +2369,34 @@ function mpPickTask(taskId){
 // =============================================
 function _alFind(id){return (allData._autolab||[]).find(function(i){return String(i.id)===String(id);});}
 function _alEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+// 할 일 설명 보기용: 저장된 글은 그대로 두고 줄 모양만 알아봐서 그린다
+// ■ 제목 → 소제목 / 첫 줄 [수동 등록 …] → 흐린 메타 / [진척·완료 …] 줄과 이어지는 줄 → 흐린 진척 묶음 / "라벨:" → 라벨 굵게 / "- "·"1." → 목록
+function dmDescHtml(text){
+  var link=function(h){return h.replace(/(https?:\/\/[^\s<>]+?)(?=&gt;|\s|$)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');};
+  var line=function(raw){
+    var t=raw.trim(), m;
+    if(/^[-•·]\s+/.test(t)) return '<div class="dd-li">'+link(_alEsc(t.replace(/^[-•·]\s+/,'')))+'</div>';
+    if((m=t.match(/^(\d{1,2})[.)]\s+(.*)$/))) return '<div class="dd-ol"><b>'+m[1]+'</b><span>'+link(_alEsc(m[2]))+'</span></div>';
+    if((m=t.match(/^([^\s:：\[\(<]{1,8})[:：]\s*(.*)$/))&&!/^https?$/.test(m[1])) return '<div class="dd-p"><span class="dd-lb">'+_alEsc(m[1])+'</span>'+link(_alEsc(m[2]))+'</div>';
+    return '<div class="dd-p">'+link(_alEsc(t))+'</div>';
+  };
+  var lines=String(text||'').replace(/\s+$/,'').split('\n'), out=[], log=null, first=true;
+  var close=function(){ if(log){ out.push('<div class="dd-log">'+log.join('')+'</div>'); log=null; } };
+  var isItem=function(x){return /^([-•·]\s+|\d{1,2}[.)]\s+)/.test((x||'').trim());};
+  lines.forEach(function(raw,i){
+    var t=raw.trim(), m;
+    if(!t){ close(); if(out.length&&out[out.length-1]!=='<div class="dd-gap"></div>') out.push('<div class="dd-gap"></div>'); first=false; return; }
+    if(first&&/^\[[^\]]+\]/.test(t)){ m=t.match(/^(\[[^\]]*\])\s*(.*)$/); out.push('<div class="dd-meta">'+_alEsc(m[1].slice(1,-1))+'</div>'); if(m[2]) out.push(line(m[2])); first=false; return; }
+    first=false;
+    if((m=t.match(/^■\s*(.*)$/))){ close(); out.push('<div class="dd-h">'+link(_alEsc(m[1]))+'</div>'); return; }
+    if((m=t.match(/^\[((?:진척|완료|종료|처리|정할|정리됨|남은|파킹)[^\]]*)\]\s*(.*)$/))){ close(); log=['<span class="dd-tag">'+_alEsc(m[1])+'</span>']; if(m[2]) log.push(line(m[2])); return; }
+    // 바로 아래가 목록인 짧은 줄(목표, 남은 것 …)은 소제목으로
+    if(!log&&!isItem(t)&&t.length<=24&&!/[:：]\s*\S/.test(t)&&isItem(lines[i+1])){ out.push('<div class="dd-h">'+link(_alEsc(t))+'</div>'); return; }
+    (log||out).push(line(t));
+  });
+  close();
+  return out.join('');
+}
 function parentTagHtml(item){
   if(!item.parentId) return '';
   var p=_alFind(item.parentId); if(!p) return '';
@@ -2721,7 +2761,7 @@ function dmEnhance(id){
   dv.classList.add('dmp-desc'); dv.removeAttribute('title'); dv.onclick=null;
   var dtxt=(item.description||'').trim();
   dv.innerHTML='<div class="dmp-desc-acts dmp-desc-top"><button class="btn-ghost" id="dmp-desc-edit">'+(dtxt?'고치기':'설명 쓰기')+'</button></div>'+
-    (dtxt?_alEsc(item.description).replace(/(https?:\/\/[^\s<>]+?)(?=&gt;|\s|$)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>'):'<span class="dmp-muted">설명 없음</span>');
+    (dtxt?dmDescHtml(item.description):'<span class="dmp-muted">설명 없음</span>');
   document.getElementById('dmp-desc-edit').onclick=function(){dmEditDesc(item);};
   // 이벤트
   document.getElementById('dmp-done').onchange=function(e){dmSetDone(item,e.target.checked);};
