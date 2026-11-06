@@ -468,66 +468,70 @@ body{background:var(--bg-canvas)}
 
 /* ---------- 아침판 (봇 DM을 한 화면으로, 항목마다 바로 처리) — taste-skill editorial-greeting · 카라멜 토큰 ---------- */
 #morning-content{max-width:1480px;padding:28px 32px 48px;word-break:keep-all;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
-.mp-head h1{font-size:28px;font-weight:600;line-height:1.25;letter-spacing:-0.01em;color:var(--text-primary)}
-.mp-head p{margin-top:8px;font-size:var(--text-base);color:var(--text-secondary)}
-.mp-head p b{color:var(--text-primary);font-weight:600}
-.mp-views{display:flex;gap:4px;margin-top:20px;padding:4px;background:var(--bg-muted);border-radius:999px;width:max-content;max-width:100%}
-.mp-view{border:0;background:none;padding:7px 16px;border-radius:999px;cursor:pointer;font-family:var(--font-sans);font-size:var(--text-sm);color:var(--text-secondary)}
-.mp-view.on{background:var(--bg-surface);color:var(--text-primary);font-weight:600}
-.mp-view span{font-size:var(--text-xs);color:var(--text-secondary);margin-left:2px}
-.mp-strip{margin-top:20px}
-.mp-read{margin-top:20px}
-.mp-strip-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px;font-size:var(--text-xs);color:var(--text-secondary)}
-.mp-strip-head b{font-size:var(--text-sm);color:var(--text-primary);font-weight:600}
-.mp-legend{display:flex;gap:14px}
-.mp-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
-.mp-cells{display:flex;gap:3px}
-.mp-cell{flex:1 1 0;min-width:0;height:26px;border:0;border-radius:4px;background:var(--border-subtle);cursor:pointer;padding:0}
-.mp-cell.first:not(:first-child){margin-left:9px}
-.mp-cell.new{background:var(--accent-subtle)}
-.mp-cell.done{background:var(--accent)}
-.mp-cell.sel{outline:2px solid var(--text-primary);outline-offset:-2px}
-.mp-groups{margin-top:8px;font-size:var(--text-xs);color:var(--text-secondary)}
+.mp-head h1{font-size:20px;font-weight:600;line-height:1.3;letter-spacing:-0.01em;color:var(--text-primary)}
+.mp-nums{display:flex;gap:32px;margin-top:12px}
+.mp-nums div{display:flex;align-items:baseline;gap:8px}
+.mp-nums b{font-size:28px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--text-primary)}
+.mp-nums span{font-size:var(--text-sm);color:var(--text-secondary)}
+.mp-nums .hot b{color:var(--accent)}
+.mp-head p{margin-top:8px;font-size:var(--text-sm);color:var(--text-secondary)}
 .mp-work{margin-top:24px;display:grid;grid-template-columns:400px minmax(0,1fr);gap:16px;align-items:start}
+.mp-part{padding:0 4px 12px}
+.mp-part+.mp-part{margin-top:8px;padding-top:12px;border-top:1px solid var(--border-subtle)}
+.mp-part h2{display:flex;align-items:baseline;gap:8px;padding:12px 8px 0;font-size:var(--text-base);font-weight:600;color:var(--text-primary)}
+.mp-part h2 span{font-size:var(--text-sm);font-weight:500;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.mp-empty{padding:8px 8px 4px;font-size:var(--text-sm);color:var(--text-secondary)}
 .mp-list,.mp-detail{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);min-width:0}
 .mp-list{padding:6px;position:sticky;top:12px;max-height:calc(100vh - 120px);overflow-y:auto}
 .mp-tabs{display:flex;gap:18px;padding:8px 10px 0;border-bottom:1px solid var(--border-subtle);margin-bottom:4px}
 .mp-tab{background:none;border:0;padding:6px 0 9px;color:var(--text-secondary);cursor:pointer;position:relative;font-family:var(--font-sans);font-size:var(--text-sm)}
 .mp-tab.on{color:var(--text-primary)}
 .mp-tab.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--text-primary)}
-.mp-grp{font-size:var(--text-xs);color:var(--text-secondary);padding:12px 10px 4px}
-.mp-row{display:grid;grid-template-columns:10px minmax(0,1fr) auto;column-gap:8px;align-items:baseline;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:9px 10px;cursor:pointer;font-family:var(--font-sans);color:var(--text-primary)}
-.mp-row:hover{outline:1px solid var(--border-default);outline-offset:-1px}
+.mp-grp{font-size:var(--text-xs);color:var(--text-secondary);padding:12px 8px 4px}
+.mp-row{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;row-gap:2px;align-items:baseline;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;border-radius:0 8px 8px 0;padding:8px 8px 8px 9px;cursor:pointer;font-family:var(--font-sans);color:var(--text-primary);transition:background-color .15s}
+.mp-row:hover{background:var(--bg-canvas)}
+.mp-row:focus-visible{outline:2px solid var(--text-primary);outline-offset:-2px}
+.mp-row.p-do{border-left-color:#FC5555}.mp-row.p-sch{border-left-color:var(--accent)}.mp-row.p-del{border-left-color:#F2A60C}.mp-row.p-elim{border-left-color:var(--border-default)}
 .mp-row.cur{background:var(--bg-muted)}
-.mp-row .dot{width:6px;height:6px;border-radius:50%;background:var(--text-primary);align-self:center}
-.mp-row.decided .dot{background:transparent}
-.mp-row .who{font-weight:600;font-size:var(--text-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mp-row.decided .who{font-weight:400}
-.mp-row .when{font-size:var(--text-xs);color:var(--text-secondary);white-space:nowrap}
-.mp-row .l2{grid-column:2/4;font-size:13px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mp-row .l2 b{color:var(--text-primary);font-weight:500}
-.mp-detail{padding:24px;display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:20px 24px}
+.mp-row .t{font-size:var(--text-sm);font-weight:500;line-height:1.45;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.mp-row.decided .t{font-weight:400;color:var(--text-secondary)}
+.mp-row .m{grid-column:1/-1;font-size:var(--text-xs);color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mp-row .when{font-size:var(--text-xs);color:var(--text-secondary);white-space:nowrap;font-variant-numeric:tabular-nums}
+.mp-detail{padding:24px 28px}
 .mp-detail h2{font-size:20px;font-weight:600;line-height:1.35}
-.mp-detail .src{margin-top:4px;color:var(--text-secondary)}
+.mp-detail .src{margin-top:4px;font-size:var(--text-sm);color:var(--text-secondary)}
+.mp-detail .src a{color:var(--text-primary)}
 .mp-detail blockquote{margin:16px 0 0;padding-left:12px;border-left:2px solid var(--border-strong);font-size:var(--text-base);line-height:1.6}
-.mp-detail .body{margin-top:12px;font-size:15px;line-height:1.6}
-.mp-detail .orig{display:inline-block;margin-top:12px;color:var(--text-primary)}
-.mp-verdict{margin-top:18px;padding:14px;background:var(--bg-canvas);border-radius:var(--radius-md)}
-.mp-verdict p{color:var(--text-secondary)}
-.mp-verdict p b{color:var(--text-primary)}
+.mp-detail .body{margin-top:12px;font-size:var(--text-base);line-height:1.6}
+.mp-verdict{margin-top:20px;padding:16px;background:var(--bg-canvas);border-radius:var(--radius-md)}
+.mp-lead{font-size:var(--text-sm);font-weight:600;color:var(--text-primary)!important}
+.mp-note{margin-top:8px;font-size:var(--text-sm);color:var(--text-secondary)}
+.mp-note b{color:var(--text-primary);font-weight:500}
 .mp-acts{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
 .mp-btn{height:36px;padding:0 15px;border-radius:999px;border:1px solid var(--border-strong);background:var(--bg-surface);cursor:pointer;font-family:var(--font-sans);font-size:var(--text-sm);color:var(--text-primary);white-space:nowrap}
 .mp-btn:hover{border-color:var(--text-primary)}
+.mp-btn.on{border-color:var(--text-primary);background:var(--bg-muted)}
+.mp-btn:active{transform:scale(.98)}
 .mp-btn.pri{background:var(--text-primary);border-color:var(--text-primary);color:#fff}
-.mp-btn:disabled{opacity:.5;cursor:wait}
+.mp-btn:disabled{opacity:.45;cursor:not-allowed}
 .mp-target{margin-top:10px;padding:12px 14px;background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-md)}
 .mp-target-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
 .mp-target-head b{font-size:var(--text-sm);line-height:1.4}
 .mp-target-meta{margin-top:2px;font-size:var(--text-xs);color:var(--text-secondary)}
-.mp-help{margin:10px 0 0;padding:0;list-style:none;font-size:var(--text-xs);color:var(--text-secondary);display:grid;gap:3px}
-.mp-help b{color:var(--text-primary);font-weight:600}
-.mp-target ul{margin:8px 0 0;padding-left:16px;font-size:13px;color:var(--text-primary);display:grid;gap:2px}
-.mp-target-last{margin-top:6px;font-size:13px;color:var(--text-secondary)}
+.mp-target ul{margin:8px 0 0;padding-left:16px;font-size:var(--text-sm);color:var(--text-primary);display:grid;gap:2px}
+.mp-target-last{margin-top:6px;font-size:var(--text-xs);color:var(--text-secondary)}
+.mp-lines{list-style:none;margin:16px 0 0;padding:0}
+.mp-lines li{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:12px;padding:10px 0;align-items:baseline;font-size:var(--text-sm)}
+.mp-lines li+li{border-top:1px solid var(--border-subtle)}
+.mp-lines .d{font-size:var(--text-xs);color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.mp-lines small{display:block;margin-top:2px;font-size:var(--text-xs);color:var(--text-secondary)}
+.mp-lines .a{display:flex;gap:12px;font-size:var(--text-xs);white-space:nowrap}
+.mp-lines .a a{color:var(--text-primary)}
+.mp-form{margin-top:12px;padding-top:12px;display:grid;gap:8px;border-top:1px solid var(--border-default)}
+.mp-form .mp-note{margin-top:0}
+.mp-more summary{cursor:pointer;font-size:var(--text-sm);color:var(--text-secondary)}
+.mp-more[open]{display:grid;gap:8px}
+.mp-res{font-size:var(--text-sm);font-weight:500;color:var(--status-done-fg)}
 /* ---------- 큰 주제 표시 (목록·매트릭스·상세 창) ---------- */
 .parent-tag{margin-top:3px;font-size:11.5px;color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .parent-tag:hover{color:var(--text-primary);text-decoration:underline;text-underline-offset:3px}
@@ -651,20 +655,11 @@ body{background:var(--bg-canvas)}
 .wait-pill{flex:none;font-size:11px;font-weight:500;padding:1px 7px;border-radius:999px;background:#FBEFD7;color:#7A5A12}
 .dmp-wait{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12.5px;color:var(--text-secondary)}
 .dmp-wait input{flex:1;min-width:140px;font-family:var(--font-sans);font-size:12.5px;padding:5px 8px;border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary)}
-.mp-wait{margin-top:20px;padding:14px 16px;background:#FFF8E8;border:1px solid #F3DFAE;border-radius:var(--radius-lg)}
-.mp-wait-h{font-size:var(--text-sm);font-weight:600;color:#7A5A12;margin-bottom:8px}
-.mp-wait-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #F3DFAE}
-.mp-wait-row:first-of-type{border-top:0}
-.mp-wait-t{flex:1;min-width:200px;text-align:left;color:var(--text-primary);text-decoration:none;font-weight:500}
-.mp-wait-who{font-size:12.5px;color:#7A5A12}
-.mp-wait .mp-btn{height:30px;padding:0 12px;font-size:12.5px}
 /* 좁은 창(901–1320px) 배치 — 희준님 실제 창은 외장 모니터 반쪽 약 1,720px라 평소엔 넓은 배치(11/4) */
 @media (min-width:901px) and (max-width:1320px){
   #morning-content{padding:24px 24px 40px}
   .mp-work{grid-template-columns:320px minmax(0,1fr)}
   .mp-detail{grid-template-columns:minmax(0,1fr);padding:20px}
-  .mp-kv{display:grid;grid-template-columns:repeat(4,auto);gap:0 16px;justify-content:start}
-  .mp-kv div{border-bottom:0;padding:2px 0;gap:6px}
   #plan-content{padding:24px 24px 40px}
   .pl-row{grid-template-columns:240px minmax(0,1fr)}
   .pl-layer{left:240px}
@@ -707,8 +702,6 @@ body{background:var(--bg-canvas)}
 .pl-chip .t{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px;cursor:pointer}
 .pl-chip .pr{align-self:stretch;margin:2px 0}
 @media (max-width:900px){#plan-content{padding:20px 16px 40px}.pl-head h1{font-size:22px}.pl-row{grid-template-columns:150px minmax(0,1fr)}.pl-layer{left:150px}.pl-name{padding:0 8px}.pl-help{display:none}.pl-prog{display:none}.pl-caret{width:14px}.pl-grid{min-width:760px}}
-.mp-btn kbd,.mp-keys kbd{font-family:var(--font-sans);font-size:10.5px;padding:0 5px;margin-left:4px;border:1px solid currentColor;border-radius:4px;opacity:.6}
-.mp-keys{margin-top:10px;font-size:var(--text-xs);color:var(--text-tertiary)}
 .mpp-bg{position:fixed;inset:0;background:var(--bg-scrim);display:none;align-items:flex-start;justify-content:center;padding:12vh 16px 0;z-index:200}
 .mpp-bg.open{display:flex}
 .mpp{width:min(620px,100%);background:var(--bg-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-sheet);overflow:hidden}
@@ -716,49 +709,35 @@ body{background:var(--bg-canvas)}
 .mpp-list{max-height:52vh;overflow-y:auto;padding:6px}
 .mpp-item{display:grid;gap:2px;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:9px 12px;cursor:pointer;font-family:var(--font-sans);color:var(--text-primary)}
 .mpp-item b{font-size:var(--text-sm);font-weight:600}
-.mpp-item small{font-size:12px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mpp-item small{font-size:var(--text-xs);color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mpp-item.on,.mpp-item:hover{background:var(--bg-muted)}
-.mpp-bot{font-size:11px;font-weight:500;color:var(--accent)}
+.mpp-bot{font-size:var(--text-xs);font-weight:500;color:var(--accent)}
 .mpp-hint{margin:0;padding:10px 18px;font-size:var(--text-xs);color:var(--text-tertiary)}
-.mp-memo{margin-top:12px;display:grid;gap:6px}
-.mp-fu{display:flex;gap:6px}
-.mp-fu input[type=text]{flex:1;min-width:0;font-family:var(--font-sans);font-size:var(--text-sm);padding:6px 10px;border:1px solid var(--border-default);border-radius:var(--radius-md);color:var(--text-primary)}
+.mp-fu{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.mp-fu select,.mp-fu input,.mp-more textarea{height:36px;box-sizing:border-box;font-family:var(--font-sans);font-size:var(--text-sm);padding:0 10px;border:1px solid var(--border-default);border-radius:var(--radius-md);background:var(--bg-surface);color:var(--text-primary)}
+.mp-more textarea{height:auto;padding:8px 10px;line-height:1.5;resize:vertical;width:100%}
+.mp-fu label{display:flex;align-items:center;gap:8px;font-size:var(--text-sm);color:var(--text-secondary)}
+.mp-fu input[type=text]{flex:1;min-width:0}
 .mp-chips{display:flex;flex-wrap:wrap;gap:6px}
 .mp-chip input{position:absolute;opacity:0;pointer-events:none}
-.mp-chip span{display:inline-block;padding:4px 10px;border:1px solid var(--border-default);border-radius:999px;font-size:var(--text-xs);color:var(--text-secondary);cursor:pointer}
+.mp-chip span{display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid var(--border-default);border-radius:999px;font-size:var(--text-sm);color:var(--text-secondary);cursor:pointer}
 .mp-chip input:checked+span{background:var(--text-primary);border-color:var(--text-primary);color:#fff}
 .mp-chip input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
-.mp-memo textarea{width:100%;box-sizing:border-box;resize:vertical;font-family:var(--font-sans);font-size:var(--text-sm);line-height:1.5;padding:8px 10px;border:1px solid var(--border-default);border-radius:var(--radius-md);background:var(--bg-surface);color:var(--text-primary)}
-.mp-memo label{font-size:var(--text-xs);color:var(--text-secondary);display:flex;align-items:center;gap:8px}
-.mp-memo input{font-family:var(--font-sans);font-size:var(--text-xs);padding:4px 6px;border:1px solid var(--border-default);border-radius:var(--radius-sm);color:var(--text-primary)}
 .mp-memo-shown{margin-top:10px;padding:10px 12px;background:var(--bg-surface);border-radius:var(--radius-md);font-size:var(--text-sm);color:var(--text-primary)}
 .mp-done{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
-.mp-pill{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-size:var(--text-xs);font-weight:500;background:var(--status-done-bg);color:var(--status-done-fg);white-space:nowrap}
-.mp-pill.gray{background:var(--bg-muted);color:var(--text-primary)}
 .mp-link{background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px;color:var(--text-secondary);font-family:var(--font-sans);font-size:var(--text-sm)}
-.mp-kv div{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--border-subtle);font-size:13px}
-.mp-kv div span:first-child{color:var(--text-secondary)}
-.mp-read{margin-top:32px;display:grid;grid-template-columns:7fr 5fr;gap:16px;align-items:start}
 #morning-content a{color:var(--text-primary);text-underline-offset:3px;text-decoration-color:var(--border-strong)}
-.mp-panel{background:var(--bg-surface);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);padding:20px;min-width:0}
-.mp-panel.full{grid-column:1/-1}
-.mp-panel h3{font-size:var(--text-sm);font-weight:600;margin-bottom:10px}
-.mp-panel .lead{font-size:var(--text-base);font-weight:500;line-height:1.55;margin-bottom:10px}
-.mp-panel ul{list-style:none;margin:0;padding:0}
-.mp-panel li{padding:9px 0;border-top:1px solid var(--border-subtle)}
-.mp-panel li:first-child{border-top:0}
-.mp-panel li small{display:block;color:var(--text-secondary);font-size:13px;margin-top:2px}
 .mp-back{display:none}
 @media (max-width:900px){
   #morning-content{padding:20px 16px 40px}
-  .mp-head h1{font-size:22px}
   .mp-work{grid-template-columns:minmax(0,1fr)}
   .mp-list{position:static;max-height:none}
   .mp-work.open .mp-list{display:none}
   .mp-work:not(.open) .mp-detail{display:none}
   .mp-detail{grid-template-columns:minmax(0,1fr);padding:18px}
   .mp-back{display:inline-block;margin-bottom:6px}
-  .mp-read{grid-template-columns:minmax(0,1fr)}
+  .mp-lines li{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
+  .mp-lines .d{grid-column:1/-1}
   .mp-btn{height:44px}
 }
 </style>
@@ -2138,7 +2117,7 @@ AUTH_READY.then(function(){loadData();});
 // 아침판 — 봇 DM(통화 할 일·슬랙 점검·하루 요약)을 한 화면으로. 표 morning_item, 누르면 바로 할 일에 반영
 // 탭은 ?morning=1 로 한 번 열면 이 브라우저에서만 보인다(강희준 개인용)
 // =============================================
-var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준'};
+var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준',pick:null};
 (function(){
   try{
     var qs=new URLSearchParams(location.search);
@@ -2152,7 +2131,8 @@ var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준'};
 })();
 function mpEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function mpAct(r){return r.kind!=='info';}
-// 카드 종류별 버튼(11/6 희준님 확정) — morning-action 의 ctype·buttons 와 같다. 누르면 상대에게 보이는 흔적·날짜 붙은 할 일·사유 남는 닫힘 중 하나가 남는다
+// 11/6 희준님 두 질문으로 나눈다: ① 지금 해야 하는 일(답할 것·할 일·다시 볼 기다림) / ② 등록 못 한 놓친 일(할 일에 안 붙은 줄)
+// 할 일에 붙은 줄(답 안 한 것 제외)은 할 일 하나에 카드 한 장 — 처리는 morning-action task_* (DM 할 일 카드와 같은 경로)
 // 넘길 사람 명단 — morning-action PEOPLE·slack-capture PEOPLE_GROUPS 와 같게(스케줄 봇에 users:read 가 없어 직접 둠)
 var MP_PEOPLE=[['팀장',['이승원','이수민','김희헌','조준호','장태훈','이순행','황석찬','이형준']],['운영·제품',['송민호','안보람','전승엽','맹주성','노진우','성지원','심형석']],['경영지원',['정희진','박현아']]];
 var MP_REASONS=['남이 처리함','내 일 아님','알아두기만','요청 취소'];
@@ -2164,11 +2144,12 @@ function mpType(r){
   if(/놓친 것$/.test(r.grp)) return 'missed';
   return 'todo';
 }
+function mpGroupable(r){return !!r.task_id&&mpType(r)!=='reply';}
 function mpButtons(r){
   switch(mpType(r)){
     case 'reply': return [['done_self','답함'],['date','날짜 잡기'],['handoff','넘기기'],['done_none','답할 필요 없음']];
     case 'follow': return [['done_self','끝남'],['add','마감 잡기'],['handoff','넘기기'],['wait','기다림']];
-    case 'missed': return [['read','알아둠'],['add','내 일로']];
+    case 'missed': return [['add','내 일로'],['read','알아둠']];
     case 'progress': return [['done','완료 확인'],['read','아직']];
     default: return [['add','할 일로'],['handoff','넘기기'],['done_self','처리함'],['done_none','필요 없음']];
   }
@@ -2180,84 +2161,105 @@ function mpSuggest(r){
   if(r.evidence==='other') return f('done_none');
   return '';
 }
-// 각 버튼이 누르면 하는 일 — 화면에 한 줄로 보여 준다(버튼만 보고는 무엇이 되는지 몰랐다, 11/6)
-var MP_HELP={done_self:'할 일을 만들고 오늘 완료로 기록, 슬랙 원문에 ✅(답글 칸을 쓰면 답글도)',
-  date:'원문에 "M/D까지 확인해서 답드릴게요" 답글 + 그 마감으로 할 일',
-  add:'마감 있는 할 일로(대상이 큰 주제면 그 밑 하위, 하위 없는 할 일이면 그 설명에 덧붙임)',
-  handoff:'원문에 그 사람 태그 + "수락 대기" 할 일. 수락이 보이면 닫음(내 약속이 있으면 약속 결과만 그날 확인)',
-  wait:'할 일로 두고 그 사람을 기다림. 다시 볼 날에 "다시 볼 기다림"에 올라옴',
-  done_none:'할 일 없이 닫음. 사유가 남음',read:'닫음',done:'연결된 할 일을 완료로'};
+// 각 버튼이 누르면 하는 일 — 고른 버튼 아래에 한 줄로 보여 준다
+var MP_HELP={done_self:'할 일을 만들어 오늘 완료로 기록하고, 슬랙 원문에 체크 반응을 답니다(답글 칸을 쓰면 답글도)',
+  date:'원문에 "M/D까지 확인해서 답드릴게요" 답글을 달고, 그 마감으로 할 일을 만듭니다',
+  add:'마감 있는 할 일로 넣습니다(대상이 큰 주제면 그 밑 하위로, 하위 없는 할 일이면 그 설명에 덧붙임)',
+  handoff:'원문에 그 사람을 태그하고 "수락 대기" 할 일을 만듭니다. 수락이 보이면 닫힙니다(내 약속이 있으면 그 결과만 그날 확인)',
+  wait:'할 일로 두고 그 사람을 기다립니다. 다시 볼 날에 "다시 볼 기다림"에 올라옵니다',
+  done_none:'할 일 없이 닫습니다. 사유가 남습니다',read:'닫습니다',done:'연결된 할 일을 완료로 바꿉니다',
+  task_done:'이 할 일을 완료로 바꾸고, 새 내용 줄은 설명에 덧붙입니다',
+  task_due:'마감(과 중요도)을 바꾸고, 새 내용 줄은 설명에 덧붙입니다',
+  task_ok:'마감 그대로 둡니다. 새 내용 줄은 설명에 덧붙입니다'};
+// 입력 칸이 필요한 버튼은 누르면 칸을 펼치고 [확정]으로 처리한다(칸이 처음부터 다 보이면 무엇을 할지 흐려진다, 11/6)
+function mpNeedsForm(k,r){return ['add','date','handoff','wait','done_none','task_due','D_due'].indexOf(k)>=0||(k==='done_self'&&/slack\.com\/archives\//.test((r&&r.link)||''));}
+var MP_PRIO_CLS={DO:'p-do',SCHEDULE:'p-sch',DELEGATE:'p-del',ELIMINATE:'p-elim'};
+function mpMd(d){return d?(d.slice(5,7)*1)+'/'+(d.slice(8,10)*1):'';}
+function mpDueState(t){var today=dk(new Date()),d=t&&t.dueDate;return !d?'마감 없음':d<today?'마감 '+mpMd(d)+' 지남':d===today?'오늘 마감':'마감 '+mpMd(d);}
+function mpCanKeep(t){return !!(t&&t.dueDate&&t.dueDate>=dk(new Date()));}
+function mpTaskOpen(tid){var t=_alFind(tid);return !!t&&!(autolabChecks[alKey(t)]||{}).checked;}
+function mpAge(r){
+  if(r.edition_date===MP.date) return r.when_label||'';
+  var n=Math.round((new Date(MP.date+'T00:00:00')-new Date(r.edition_date+'T00:00:00'))/86400000);
+  return n>0?n+'일째':(r.when_label||'');
+}
 async function loadMorning(quiet){
   var box=document.getElementById('morning-content');
   if(!quiet) box.innerHTML='<div class="loading"><div class="spinner"></div>정할 것 불러오는 중...</div>';
   var last=await _sb.from('morning_item').select('edition_date').eq('person',MP.person).order('edition_date',{ascending:false}).limit(1);
   if(last.error){box.innerHTML='<div class="loading">불러오기 실패: '+mpEsc(last.error.message)+'</div>';return;}
-  if(!last.data.length){box.innerHTML='<div class="loading">아직 올라온 정할 것이 없습니다.</div>';return;}
-  MP.date=last.data[0].edition_date;
-  // 오늘 판 전부 + 지난 판에서 아직 안 정한 항목(놓치지 않게 다음 판으로 넘어온다)
+  MP.date=last.data.length?last.data[0].edition_date:dk(new Date());
+  // 오늘 판 전부 + 지난 판에서 아직 안 정한 줄(놓치지 않게 계속 넘어온다)
   var res=await _sb.from('morning_item').select('*').eq('person',MP.person)
     .or('edition_date.eq.'+MP.date+',and(decision.is.null,kind.neq.info)')
-    .order('edition_date',{ascending:false}).order('sort');
+    .order('edition_date',{ascending:true}).order('sort');
   if(res.error){box.innerHTML='<div class="loading">불러오기 실패: '+mpEsc(res.error.message)+'</div>';return;}
-  // 지난 판에서 넘어온 항목은 묶음 이름에 날짜를 붙여 맨 뒤로
-  MP.rows=res.data.map(function(r){
-    if(r.edition_date!==MP.date){var d=new Date(r.edition_date+'T00:00:00');r=Object.assign({},r,{grp:'지난 판 '+(d.getMonth()+1)+'/'+d.getDate()+' · '+r.grp,sort:10000+r.sort});}
-    return r;
-  }).sort(function(a,b){return a.sort-b.sort;});
-  var acts=MP.rows.filter(mpAct);
-  if(!MP.sel||!acts.some(function(r){return r.id===MP.sel;})){var f=acts.filter(function(r){return !r.decision;})[0]||acts[0];MP.sel=f?f.id:null;}
+  MP.rows=res.data.filter(mpAct);
+  // 할 일 표가 아직 안 읽혔으면 기다린다 — 없으면 할 일 카드·마감 줄이 빠져 보인다(11/6)
+  if(!(allData._autolab||[]).length){ try{ await loadData(true); }catch(e){} }
   renderMorning();
 }
-function renderMorning(){
-  var acts=MP.rows.filter(mpAct), info=MP.rows.filter(function(r){return !mpAct(r);});
-  var nDec=acts.filter(function(r){return r.decision;}).length;
-  var left=acts.filter(function(r){return !r.decision;});
-  var byT=[['reply','답 안 한 것'],['follow','팔로업'],['todo','새 할 일'],['missed','놓친 것'],['progress','끝난 것 같음']].map(function(t){
-    var n=left.filter(function(r){return mpType(r)===t[0];}).length; return n?t[1]+' <b>'+n+'건</b>':'';}).filter(Boolean).join(' · ');
-  var d=new Date(MP.date+'T00:00:00'), wd='일월화수목금토'[d.getDay()];
-  var html='<div class="mp-head"><h1>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+wd+'요일 아침, '+(acts.length-nDec?'남은 정할 것 '+(acts.length-nDec)+'건':'오늘 정할 것을 다 정했습니다')+'</h1>'+
-    '<p>오늘 '+acts.length+'건 중 '+nDec+'건 정함'+(byT?' · 남은 것: '+byT:'')+'</p></div>';
-  // 화면을 탭으로 나눈다: 정할 것 / 읽을거리
-  MP.view=MP.view||'decide';
-  html+='<div class="mp-views">'+[['decide','정할 것',(acts.length-nDec)],['read','읽을거리',info.length]].map(function(v){
-    return '<button class="mp-view'+(MP.view===v[0]?' on':'')+'" onclick="MP.view=\''+v[0]+'\';renderMorning()">'+v[1]+' <span>'+v[2]+'</span></button>';}).join('')+'</div>';
-  if(MP.view==='read'){ html+=mpReadHtml(info); document.getElementById('morning-content').innerHTML=html; return; }
-  html+=mpWaitHtml();
-  // 판정 띠
-  var prev=null, cells=acts.map(function(r){var first=r.grp!==prev;prev=r.grp;
-    return '<button class="mp-cell'+(first?' first':'')+(r.decision?' done':(r.kind==='new'?' new':''))+(MP.sel===r.id?' sel':'')+'" title="'+mpEsc((r.who||'')+' · '+r.hl)+'" aria-label="'+mpEsc(r.hl)+'" onclick="mpPick('+r.id+')"></button>';}).join('');
-  var gs=[],last=null; acts.forEach(function(r){if(r.grp!==last){gs.push([r.grp,0]);last=r.grp;}gs[gs.length-1][1]++;});
-  html+='<div class="mp-strip"><div class="mp-strip-head"><b>오늘 항목 판정</b><div class="mp-legend"><span><i style="background:var(--accent)"></i>정함 '+nDec+'</span><span><i style="background:var(--accent-subtle)"></i>대시보드에 없던 일</span><span><i style="background:var(--border-subtle)"></i>남음 '+(acts.length-nDec)+'</span></div></div>'+
-    '<div class="mp-cells">'+cells+'</div><div class="mp-groups">'+gs.map(function(g){return mpEsc(g[0])+' '+g[1];}).join(' · ')+'</div></div>';
-  // 목록
-  var list=acts.filter(function(r){return MP.filter==='all'||(MP.filter==='left'?!r.decision:!!r.decision);});
-  var rows='',lg=null;
-  list.forEach(function(r){
-    if(r.grp!==lg){rows+='<div class="mp-grp">'+mpEsc(r.grp)+'</div>';lg=r.grp;}
-    rows+='<button class="mp-row'+(r.decision?' decided':'')+(MP.sel===r.id?' cur':'')+'" onclick="mpPick('+r.id+')"><span class="dot"></span><span class="who">'+mpEsc((r.who?r.who+' · ':'')+r.hl)+'</span><span class="when">'+mpEsc(r.when_label||'')+'</span><span class="l2">'+(r.decision?'정함: '+mpEsc(r.decision_label):'→ <b>'+mpEsc(mpSuggest(r)||'직접 고르기')+'</b>')+'</span></button>';
+// 화면 항목 = 답할 것(r) · 할 일 카드(T) · 마감 된 할 일(D) · 다시 볼 기다림(W) · 놓친 일(r)
+function mpBoard(){
+  var done=MP.filter==='done', today=dk(new Date());
+  var rows=MP.rows.filter(function(r){
+    if(done?!r.decision||r.decision==='auto_done':!!r.decision) return false;
+    // 할 일이 끝났거나 지워졌으면 그 줄은 이미 끝난 것(봇이 닫기 전이라도 화면에선 뺀다)
+    return !(mpGroupable(r)&&!done&&!mpTaskOpen(r.task_id));
   });
-  if(!rows) rows='<p class="mp-grp" style="padding:24px 10px">'+(MP.filter==='left'?'오늘 정할 것은 다 정했습니다.':'아직 정한 것이 없습니다.')+'</p>';
-  var tabs=[['left','남은 것'],['all','전체'],['done','정한 것']].map(function(t){return '<button class="mp-tab'+(MP.filter===t[0]?' on':'')+'" onclick="MP.filter=\''+t[0]+'\';renderMorning()">'+t[1]+'</button>';}).join('');
-  html+='<div class="mp-work'+(MP.open?' open':'')+'"><div class="mp-list"><div class="mp-tabs">'+tabs+'</div>'+rows+'</div><article class="mp-detail">'+mpDetail()+'</article></div>';
+  var g={},order=[];
+  rows.forEach(function(r){if(mpGroupable(r)){if(!g[r.task_id]){g[r.task_id]=[];order.push(r.task_id);}g[r.task_id].push(r);}});
+  var groups=order.map(function(t){return {tid:t,rows:g[t],task:_alFind(t)};});
+  var mine=function(i){return i.person===MP.person&&!(autolabChecks[alKey(i)]||{}).checked;};
+  var due=done?[]:(allData._autolab||[]).filter(function(i){return mine(i)&&i.dueDate&&i.dueDate<=today&&!i.waitingOn&&!g[i.id];})
+    .sort(function(a,b){return a.dueDate.localeCompare(b.dueDate);});
+  var waits=done?[]:mpWaitDue().filter(function(i){return !g[i.id];});
+  // 할 일 줄 순서: 마감 지난 것 → 오늘 마감 → 나머지
+  var tasks=groups.map(function(x){return {key:'T'+x.tid,g:x,due:(x.task&&x.task.dueDate)||'9999'};})
+    .concat(due.map(function(t){return {key:'D'+t.id,t:t,due:t.dueDate};})).sort(function(a,b){return a.due.localeCompare(b.due);});
+  return {replies:rows.filter(function(r){return mpType(r)==='reply';}),tasks:tasks,waits:waits,
+    loose:rows.filter(function(r){return !mpGroupable(r)&&mpType(r)!=='reply';}),groups:g};
+}
+function mpRowHtml(key,title,meta,when,cls){
+  return '<button class="mp-row'+(cls?' '+cls:'')+(MP.sel===key?' cur':'')+'" onclick="mpPick(\''+key+'\')"><span class="t">'+title+'</span>'+
+    '<span class="when">'+mpEsc(when||'')+'</span>'+(meta?'<span class="m">'+meta+'</span>':'')+'</button>';
+}
+function renderMorning(){
+  var B=mpBoard(), keys=[];
+  var n1=B.replies.length+B.tasks.length+B.waits.length, n2=B.loose.length;
+  var d=new Date(MP.date+'T00:00:00'), wd='일월화수목금토'[d.getDay()];
+  var html='<div class="mp-head"><h1>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+wd+'요일 아침</h1>'+
+    (MP.filter==='done'?'<p>오늘 정한 것을 보는 중입니다</p>':'<div class="mp-nums"><div><b>'+n1+'</b><span>지금 해야 하는 일</span></div><div'+(n2?' class="hot"':'')+'><b>'+n2+'</b><span>등록 못 한 놓친 일</span></div></div>')+'</div>';
+  var list='';
+  var msgRow=function(r){var k='r'+r.id;keys.push(k);var sug=mpSuggest(r);
+    return mpRowHtml(k,mpEsc(r.hl),mpEsc([sug?'제안: '+sug:'',r.who].filter(Boolean).join(' · ')),r.decision?'':mpAge(r),r.decision?'decided':'');};
+  var sub=function(t,n){return n?'<div class="mp-grp">'+t+'</div>':'';};
+  list+='<section class="mp-part"><h2>지금 해야 하는 일<span>'+n1+'</span></h2>';
+  list+=sub('답할 것 — 상대가 내 답을 기다림',B.replies.length)+B.replies.map(msgRow).join('');
+  list+=sub('할 일',B.tasks.length)+B.tasks.map(function(x){
+    keys.push(x.key);
+    if(x.g){var t=x.g.task, rs=x.g.rows, prog=rs.some(function(r){return mpType(r)==='progress';}), nNew=rs.filter(function(r){return r.kind!=='progress';}).length;
+      return mpRowHtml(x.key,'#'+x.g.tid+' '+mpEsc(t?t.task:(rs[0].task_title||'')),
+        mpEsc([prog?'끝난 것 같음':'',nNew?'새 내용 '+nNew+'줄':''].filter(Boolean).join(' · ')),t?mpDueState(t):'',t?MP_PRIO_CLS[t.priority]||'':'');}
+    return mpRowHtml(x.key,'#'+x.t.id+' '+mpEsc(x.t.task),'',mpDueState(x.t),MP_PRIO_CLS[x.t.priority]||'');
+  }).join('');
+  list+=sub('다시 볼 기다림 — 답이 왔는지 확인',B.waits.length)+B.waits.map(function(i){var k='W'+i.id;keys.push(k);
+    return mpRowHtml(k,'#'+i.id+' '+mpEsc(i.task),mpEsc((mpIsHandoff(i)?'넘김 · ':'')+i.waitingOn),i.waitingSince?Math.round((new Date(dk(new Date())+'T00:00:00')-new Date(i.waitingSince+'T00:00:00'))/86400000)+'일째':'');}).join('');
+  if(!n1) list+='<p class="mp-empty">'+(MP.filter==='done'?'없음':'지금 할 일이 없습니다')+'</p>';
+  list+='</section><section class="mp-part"><h2>등록 못 한 놓친 일<span>'+n2+'</span></h2>'+B.loose.map(msgRow).join('')+
+    (n2?'':'<p class="mp-empty">'+(MP.filter==='done'?'없음':'다 비웠습니다')+'</p>')+'</section>';
+  if(keys.indexOf(MP.sel)<0) MP.sel=keys[0]||null;
+  var tabs=[['left','남은 것'],['done','오늘 정한 것']].map(function(t){return '<button class="mp-tab'+(MP.filter===t[0]?' on':'')+'" onclick="MP.filter=\''+t[0]+'\';MP.sel=null;MP.pick=null;renderMorning()">'+t[1]+'</button>';}).join('');
+  html+='<div class="mp-work'+(MP.open?' open':'')+'"><div class="mp-list"><div class="mp-tabs">'+tabs+'</div>'+list+'</div><article class="mp-detail">'+mpDetail(B)+'</article></div>';
   document.getElementById('morning-content').innerHTML=html;
+  // 앞서 그린 목록이 다시 그려진 뒤에도 고른 줄 자리를 유지(상세 패널만 바뀐 것처럼)
+  var cur=document.querySelector('.mp-row.cur'); if(cur&&cur.scrollIntoView&&MP.scrollSel){cur.scrollIntoView({block:'nearest'});MP.scrollSel=false;}
 }
 // 기다림 중 다시 볼 날이 된 할 일 — 봇 없이 할 일 표에서 바로 계산
 function mpWaitDue(){
   var today=dk(new Date());
   return (allData._autolab||[]).filter(function(i){return i.person===MP.person&&i.waitingOn&&i.recheckDate&&i.recheckDate<=today&&!(autolabChecks[alKey(i)]||{}).checked;})
     .sort(function(a,b){return a.recheckDate.localeCompare(b.recheckDate);});
-}
-function mpWaitHtml(){
-  var list=mpWaitDue(); if(!list.length) return '';
-  var today=new Date(); today.setHours(0,0,0,0);
-  return '<div class="mp-wait"><div class="mp-wait-h">다시 볼 기다림 '+list.length+'건 — 답이 왔는지 확인하세요</div>'+list.map(function(i){
-    var days=i.waitingSince?Math.round((today-new Date(i.waitingSince+'T00:00:00'))/86400000):null;
-    var ho=mpIsHandoff(i);
-    return '<div class="mp-wait-row"><button class="mp-link mp-wait-t" onclick="openAutolabDetailModal(\''+i.id+'\')">#'+i.id+' '+_alEsc(i.task)+'</button>'+
-      '<span class="mp-wait-who">'+(ho?'넘김 · ':'')+_alEsc(i.waitingOn)+(days!=null?' · '+days+'일째':'')+'</span>'+
-      '<button class="mp-btn" onclick="mpWaitAct(\''+i.id+'\',\'got\')">'+(ho?'수락 받음':'답 받음')+'</button>'+
-      '<button class="mp-btn" onclick="mpWaitAct(\''+i.id+'\',\'more\',this)">더 기다리기…</button>'+
-      '<button class="mp-btn" onclick="mpWaitAct(\''+i.id+'\',\'done\')">완료</button></div>';}).join('')+'</div>';
 }
 async function mpWaitAct(id,k,btn){
   var it=_alFind(id); if(!it) return;
@@ -2276,20 +2278,9 @@ async function mpWaitAct(id,k,btn){
     it.waitingOn='';it.waitingSince='';it.recheckDate=''; showToast('#'+id+' 기다림 끝 — 이제 내 할 일'); renderMorning(); return; }
   if(k==='done'){ var cd=dk(new Date()); autolabChecks[alKey(it)]={checked:true,completedDate:cd}; await upsertCheck('autolab',String(id),true,cd); showToast('#'+id+' 완료'); renderMorning(); }
 }
-function mpReadHtml(info){
-  var html='';
-  var by=function(g){return info.filter(function(r){return r.grp===g;});};
-  var day=by('어제 하루'), ch=by('채널 요약'), news=by('뉴스').concat(by('커뮤니티'));
-  var li=function(r,withLink){return '<li>'+(withLink&&r.link?'<a href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">'+mpEsc(r.hl)+'</a>':'<b>'+mpEsc(r.hl)+'</b>')+'<small>'+mpEsc(r.body)+'</small></li>';};
-  html+='<div class="mp-read">'+
-    '<div class="mp-panel"><h3>어제 하루</h3>'+(day[0]&&day[0].note?'<p class="lead">'+mpEsc(day[0].note)+'</p>':'')+'<ul>'+day.map(function(r){return li(r,false);}).join('')+'</ul></div>'+
-    '<div class="mp-panel"><h3>채널 요약</h3><ul>'+ch.map(function(r){return li(r,true);}).join('')+'</ul></div>'+
-    '<div class="mp-panel full"><h3>세차·차량 뉴스 · 커뮤니티</h3><ul>'+news.map(function(r){return li(r,true);}).join('')+'</ul></div></div>';
-  return html;
-}
 // 덧붙이기·진척 대상 할 일을 번호만이 아니라 내용으로 보여 준다(무엇에 붙일지 보고 정하게)
 var MP_PRIO={DO:'긴급+중요',DELEGATE:'긴급+안중요',SCHEDULE:'중요+안긴급',ELIMINATE:'둘다아님','':'미분류'};
-function mpTaskPreview(taskId){
+function mpTaskPreview(taskId,full){
   var t=(allData._autolab||[]).find(function(i){return String(i.id)===String(taskId);});
   if(!t) return '<div class="mp-target"><p>#'+taskId+' 할 일을 찾지 못했습니다(완료됐거나 지워짐).</p></div>';
   var lines=(t.description||'').split('\n').map(function(s){return s.trim();}).filter(Boolean);
@@ -2303,55 +2294,101 @@ function mpTaskPreview(taskId){
     (body.length?'<ul>'+body.map(function(s){return '<li>'+mpEsc(s.replace(/^[-•]\s*/,''))+'</li>';}).join('')+'</ul>':'')+
     (last?'<p class="mp-target-last">최근: '+mpEsc(last)+'</p>':'')+'</div>';
 }
-function mpDetail(){
-  var r=MP.rows.filter(function(x){return x.id===MP.sel;})[0];
-  if(!r) return '<p>왼쪽에서 항목을 고르세요.</p>';
+// 버튼 줄 — 칸이 필요한 버튼은 고르면(MP.pick) 칸이 펼쳐지고, 아니면 바로 처리
+function mpBtnRow(bs,sug,onclick){
+  return '<div class="mp-acts">'+bs.map(function(b){
+    var on=MP.pick===b[0];
+    return '<button class="mp-btn'+(b[1]===sug&&!MP.pick?' pri':'')+(on?' on':'')+'"'+(MP.busy||b[2]?' disabled':'')+(b[2]?' title="'+mpEsc(b[2])+'"':'')+' onclick="'+onclick(b)+'">'+mpEsc(b[1])+'</button>';}).join('')+'</div>';
+}
+function mpDueFields(due,prio,why){
+  var chips=[['DO','지금 하기'],['SCHEDULE','일정 잡기'],['DELEGATE','맡기기'],['ELIMINATE','안 함']].map(function(p){
+    return '<label class="mp-chip"><input type="radio" name="mp-prio" value="'+p[0]+'"'+(prio===p[0]?' checked':'')+'><span>'+p[1]+'</span></label>';}).join('');
+  return '<div class="mp-fu"><label>마감 <input type="date" id="mp-due" value="'+mpEsc(due||'')+'"></label><div class="mp-chips" role="radiogroup" aria-label="중요도">'+chips+'</div></div>'+
+    (why!=null?'<p class="mp-note">'+(why||'마감·중요도를 골라야 할 일로 들어갑니다')+'</p>':'');
+}
+function mpForm(k,r,confirmJs,label){
+  var people='<option value="">사람 고르기</option>'+MP_PEOPLE.map(function(g){return '<optgroup label="'+g[0]+'">'+g[1].map(function(n){return '<option>'+n+'</option>';}).join('')+'</optgroup>';}).join('');
+  var f='';
+  if(k==='add'||k==='date') f+=mpDueFields(r.sug_due,r.sug_priority,r.sug_due||r.sug_priority?'봇 제안'+(r.sug_why?' ('+mpEsc(r.sug_why)+')':'')+' — 맞지 않으면 바꾸세요':'');
+  if(k==='handoff'||k==='wait') f+='<div class="mp-fu"><select id="mp-person" aria-label="사람">'+people+'</select>'+(k==='wait'?'<label>다시 볼 날 <input type="date" id="mp-recheck"></label>':'')+'</div>';
+  if(k==='handoff') f+='<div class="mp-fu"><input type="text" id="mp-promise" placeholder="내가 고객·외부에 직접 한 약속 (없으면 비움)"><input type="date" id="mp-pdue" aria-label="약속 결과 확인할 날"></div>';
+  if(k==='done_none') f+='<div class="mp-fu"><select id="mp-reason" aria-label="사유"><option value="">사유 고르기</option>'+MP_REASONS.map(function(x){return '<option>'+x+'</option>';}).join('')+'</select></div>';
+  if(k==='done_self') f+='<div class="mp-fu"><input type="text" id="mp-reply" placeholder="원문 답글 (비우면 체크 반응만)"></div>';
+  if(k==='task_due'||k==='D_due') f+=mpDueFields(r.due,r.prio,null);
+  var extra=k.indexOf('_due')<0&&k!=='done_none'?'<details class="mp-more"><summary>메모·후속 할 일</summary><textarea id="mp-memo" rows="2" placeholder="메모 — 할 일에 같이 남깁니다"></textarea>'+
+    '<div class="mp-fu"><input type="text" id="mp-fu" placeholder="후속 할 일"><input type="date" id="mp-fu-due" aria-label="후속 할 일 마감"></div></details>':'';
+  return '<div class="mp-form"><p class="mp-note">'+mpEsc(MP_HELP[k]||'')+'</p>'+f+extra+
+    '<div class="mp-acts"><button class="mp-btn pri"'+(MP.busy?' disabled':'')+' onclick="'+confirmJs+'">'+mpEsc(label)+' 확정</button><button class="mp-btn" onclick="MP.pick=null;renderMorning()">취소</button></div></div>';
+}
+function mpDetail(B){
+  var k=MP.sel; if(!k) return '<p class="mp-note">고를 항목이 없습니다.</p>';
+  var back='<button class="mp-link mp-back" onclick="MP.open=false;renderMorning()">← 목록</button>';
+  if(k[0]==='T') return back+mpTaskDetail((B.groups[k.slice(1)]||[]),k.slice(1));
+  if(k[0]==='D'||k[0]==='W'){
+    var t=_alFind(k.slice(1)); if(!t) return back+'<p class="mp-note">할 일을 찾지 못했습니다.</p>';
+    var head='<h2>#'+t.id+' '+mpEsc(t.task)+'</h2><p class="src">'+(k[0]==='W'?'다시 볼 기다림 · '+mpEsc(t.waitingOn):mpDueState(t)+(t.priority?' · '+mpEsc(MP_PRIO[t.priority]||''):''))+'</p>'+mpTaskPreview(t.id);
+    if(k[0]==='W'){var ho=mpIsHandoff(t);
+      return back+head+'<div class="mp-acts"><button class="mp-btn pri" onclick="mpWaitAct(\''+t.id+'\',\'got\')">'+(ho?'수락 받음':'답 받음')+'</button><button class="mp-btn" onclick="mpWaitAct(\''+t.id+'\',\'more\',this)">더 기다리기</button><button class="mp-btn" onclick="mpWaitAct(\''+t.id+'\',\'done\')">완료</button></div>'+
+        '<p class="mp-note">'+(ho?'수락 받음 — 내 약속이 없으면 바로 완료, 있으면 약속 결과만 그날 확인':'답 받음 — 기다림을 풀고 내 할 일로 돌아옵니다')+'</p>';}
+    return back+head+(MP.pick==='D_due'?mpForm('D_due',{due:t.dueDate,prio:t.priority},'mpDueAct(\''+t.id+'\',\'due\')','마감 바꾸기')
+      :mpBtnRow([['D_done','완료'],['D_due','마감 바꾸기']],'',function(b){return b[0]==='D_done'?'mpDueAct(\''+t.id+'\',\'done\')':'MP.pick=\'D_due\';renderMorning()';}));
+  }
+  var r=MP.rows.filter(function(x){return 'r'+x.id===k;})[0];
+  if(!r) return back+'<p class="mp-note">항목을 찾지 못했습니다.</p>';
   // 대상 할 일: 봇 제안(task_id) → [대상 바꾸기]로 고른 번호(MP.tgt) → [대상 없이]는 -1
   var T=mpType(r), ov=(MP.tgt||{})[r.id], tgt=ov===-1?null:(ov||r.task_id), tgtT=tgt?_alFind(tgt):null;
-  var m={reply:'<b>누가 내 답을 기다리는 중</b> — 지금 답하거나, 언제까지 답할지 말하거나, 넘기세요',
-    follow:'<b>하겠다고 했는데 끝난 게 안 보임</b> — 끝났으면 닫고, 아니면 마감·넘기기·기다림',
-    todo:'<b>새로 생긴 일</b> — 할 일로 넣거나, 넘기거나, 이미 했으면 기록만',
-    missed:'<b>내가 없던 대화</b> — 알아두기만 하거나 내 일로',progress:'<b>#'+r.task_id+' 끝난 것 같음</b> — 맞으면 완료'}[T]||'';
-  if(tgt&&T!=='progress') m+='<p style="margin-top:6px">대상: <b>#'+tgt+' '+mpEsc(tgtT?tgtT.task:(r.task_title||''))+'</b>'+(tgtT&&(allData._autolab||[]).some(function(i){return String(i.parentId)===String(tgt);})?' (큰 주제 — 할 일로 하면 그 밑 하위로)':' (할 일로 하면 그 설명에 덧붙임)')+
-    ' <button class="mp-link" onclick="mpOpenPicker('+r.id+')">대상 바꾸기</button> <button class="mp-link" onclick="MP.tgt=MP.tgt||{};MP.tgt['+r.id+']=-1;renderMorning()">대상 없이</button></p>';
-  else if(T!=='progress'&&!r.decision) m+='<p style="margin-top:6px">대상 없음 — 새 할 일로 <button class="mp-link" onclick="mpOpenPicker('+r.id+')">기존 할 일 고르기</button></p>';
-  var note=r.note?'<p style="margin-top:6px">'+mpEsc(r.note)+'</p>':'';
-  if(r.evidence) note+='<p style="margin-top:6px">🔎 '+(r.evidence==='self'?'내가 처리한 흔적':'다른 사람이 처리한 흔적')+(r.evidence_note?': '+mpEsc(r.evidence_note):'')+'</p>';
-  var sug=mpSuggest(r), bs=mpButtons(r), has=function(k){return bs.some(function(b){return b[0]===k;});};
-  var prioChips=[['DO','지금 하기'],['SCHEDULE','일정 잡기'],['DELEGATE','맡기기'],['ELIMINATE','안 함']].map(function(p){
-    return '<label class="mp-chip"><input type="radio" name="mp-prio" value="'+p[0]+'"'+(r.sug_priority===p[0]?' checked':'')+'><span>'+p[1]+'</span></label>';}).join('');
-  var people='<option value="">사람 고르기</option>'+MP_PEOPLE.map(function(g){return '<optgroup label="'+g[0]+'">'+g[1].map(function(n){return '<option>'+n+'</option>';}).join('')+'</optgroup>';}).join('');
-  var slackSrc=/slack\.com\/archives\//.test(r.link||'');
-  // 버튼마다 쓰는 칸만 보인다. 마감·중요도는 날짜 붙은 할 일을 만드는 버튼용(봇 제안이 있으면 미리 골라 둠)
-  var memoBox='<div class="mp-memo">'+
-    (!r.decision&&(has('add')||has('date'))?'<div class="mp-fu"><label>마감 <input type="date" id="mp-due" value="'+mpEsc(r.sug_due||'')+'"></label></div>'+
-      '<div class="mp-chips" role="radiogroup" aria-label="중요도">'+prioChips+'</div>'+
-      (r.sug_due||r.sug_priority?'<p class="mp-target-meta">마감·중요도는 봇 제안'+(r.sug_why?' ('+mpEsc(r.sug_why)+')':'')+' — 맞지 않으면 바꾸고 누르세요</p>':'<p class="mp-target-meta">마감·중요도를 골라야 할 일로 들어갑니다</p>'):'')+
-    (!r.decision&&(has('handoff')||has('wait'))?'<div class="mp-fu"><select id="mp-person" aria-label="넘길·기다릴 사람">'+people+'</select>'+
-      (has('wait')?'<label>다시 볼 날 <input type="date" id="mp-recheck"></label>':'')+'</div>'+
-      (has('handoff')?'<div class="mp-fu"><input type="text" id="mp-promise" placeholder="넘길 때: 내가 고객·외부에 직접 한 약속 (없으면 비움, 예: 30만 원 입금·7회 예약)"><input type="date" id="mp-pdue" aria-label="약속 결과 확인할 날"></div>':''):'')+
-    (!r.decision&&has('done_none')?'<div class="mp-fu"><select id="mp-reason" aria-label="필요 없는 사유"><option value="">필요 없는 사유 고르기</option>'+MP_REASONS.map(function(x){return '<option>'+x+'</option>';}).join('')+'</select></div>':'')+
-    (!r.decision&&has('done_self')&&slackSrc?'<div class="mp-fu"><input type="text" id="mp-reply" placeholder="원문 답글 — '+mpEsc(bs.filter(function(b){return b[0]==='done_self';})[0][1])+'일 때 원문 스레드에 내 이름으로 (비우면 ✅만)"></div>':'')+
-    '<textarea id="mp-memo" rows="2" placeholder="메모 — 할 일에 같이 남깁니다"></textarea>'+
-    '<div class="mp-fu"><input type="text" id="mp-fu" placeholder="후속 할 일 (예: 이수민 팀장 블랙박스 확인 결과 받기)"><input type="date" id="mp-fu-due" aria-label="후속 할 일 마감"></div></div>';
-  var help=!r.decision?'<ul class="mp-help">'+bs.map(function(b){return '<li><b>'+mpEsc(b[1])+'</b> — '+mpEsc(MP_HELP[b[0]]||'')+'</li>';}).join('')+'</ul>':'';
-  var acts=r.decision
-    ?'<div class="mp-done"><span class="mp-pill">'+mpEsc(r.decision_label)+(r.decided_task_id&&String(r.decision_label||'').indexOf('#')<0?' · #'+r.decided_task_id:'')+(r.decided_via==='slack'?' · 슬랙':'')+'</span>'+
+  var lead={reply:'누가 내 답을 기다리는 중입니다',follow:'하겠다고 했는데 끝난 게 안 보입니다',todo:'대시보드에 없는 새 일입니다',missed:'내가 없던 대화입니다. 내 일이면 할 일로 넣으세요',progress:'끝난 것 같습니다'}[T]||'';
+  var tg='';
+  if(!r.decision&&T!=='progress'){
+    tg=tgt?'<p class="mp-note">대상: <b>#'+tgt+' '+mpEsc(tgtT?tgtT.task:(r.task_title||''))+'</b>'+((allData._autolab||[]).some(function(i){return String(i.parentId)===String(tgt);})?' — 큰 주제라 할 일로 하면 그 밑 하위로':' — 할 일로 하면 그 설명에 덧붙임')+
+      ' <button class="mp-link" onclick="mpOpenPicker('+r.id+')">대상 바꾸기</button> <button class="mp-link" onclick="MP.tgt=MP.tgt||{};MP.tgt['+r.id+']=-1;renderMorning()">대상 없이</button></p>'+mpTaskPreview(tgt)
+      :'<p class="mp-note">대상 없음 — 새 할 일로 들어갑니다 <button class="mp-link" onclick="mpOpenPicker('+r.id+')">기존 할 일 고르기</button></p>';
+  }
+  var ev=r.evidence?'<p class="mp-note">'+(r.evidence==='self'?'내가 처리한 흔적':'다른 사람이 처리한 흔적')+(r.evidence_note?': '+mpEsc(r.evidence_note):'')+'</p>':'';
+  var sug=mpSuggest(r), bs=mpButtons(r), act;
+  if(r.decision){
+    act='<div class="mp-done"><span class="mp-res">'+mpEsc(r.decision_label)+(r.decided_task_id&&String(r.decision_label||'').indexOf('#')<0?' · #'+r.decided_task_id:'')+(r.decided_via==='slack'?' · 슬랙에서':'')+'</span>'+
       (r.decided_task_id?'<button class="mp-link" onclick="openAutolabDetailModal(\''+r.decided_task_id+'\')">할 일 열기</button>':'')+
-      (r.followup_task_id?'<span class="mp-pill gray">후속 #'+r.followup_task_id+'</span><button class="mp-link" onclick="openAutolabDetailModal(\''+r.followup_task_id+'\')">후속 열기</button>':'')+
-      '<button class="mp-link" onclick="mpUndo('+r.id+')">되돌리기</button></div>'+
-      (r.memo?'<p class="mp-memo-shown">📝 '+mpEsc(r.memo).replace(/\n/g,'<br>')+'</p>':'')+
-      (r.decided_task_id?memoBox+'<div class="mp-acts"><button class="mp-btn"'+(MP.busy?' disabled':'')+' onclick="mpMemo('+r.id+')">메모 덧붙이기</button></div>':'')
-    :memoBox+'<div class="mp-acts">'+bs.map(function(b){
-        return '<button class="mp-btn'+(b[1]===sug?' pri':'')+'"'+(MP.busy?' disabled':'')+' onclick="mpDecide('+r.id+',\''+b[0]+'\',\''+mpEsc(b[1])+'\','+(tgt||0)+')">'+mpEsc(b[1])+'</button>';}).join('')+'</div>'+help;
-  return '<div><button class="mp-link mp-back" onclick="MP.open=false;renderMorning()">← 목록</button>'+
-    '<h2>'+mpEsc(r.hl)+'</h2><p class="src">'+mpEsc((r.who||'')+(r.when_label?' · '+r.when_label:''))+'</p>'+
+      (r.followup_task_id?'<button class="mp-link" onclick="openAutolabDetailModal(\''+r.followup_task_id+'\')">후속 #'+r.followup_task_id+'</button>':'')+
+      '<button class="mp-link" onclick="mpUndo('+r.id+')">되돌리기</button></div>'+(r.memo?'<p class="mp-memo-shown">'+mpEsc(r.memo).replace(/\n/g,'<br>')+'</p>':'')+
+      (r.decided_task_id?'<details class="mp-more"><summary>메모 덧붙이기</summary><textarea id="mp-memo" rows="2"></textarea><div class="mp-fu"><input type="text" id="mp-fu" placeholder="후속 할 일"><input type="date" id="mp-fu-due" aria-label="후속 할 일 마감"></div><div class="mp-acts"><button class="mp-btn" onclick="mpMemo('+r.id+')">덧붙이기</button></div></details>':'');
+  } else {
+    var picked=MP.pick&&bs.filter(function(b){return b[0]===MP.pick;})[0];
+    act=mpBtnRow(bs,sug,function(b){return mpNeedsForm(b[0],r)?'MP.pick=\''+b[0]+'\';renderMorning()':'mpDecide('+r.id+',\''+b[0]+'\',\''+mpEsc(b[1])+'\','+(tgt||0)+')';})+
+      (picked?mpForm(picked[0],r,'mpDecide('+r.id+',\''+picked[0]+'\',\''+mpEsc(picked[1])+'\','+(tgt||0)+')',picked[1]):'');
+  }
+  return back+'<h2>'+mpEsc(r.hl)+'</h2><p class="src">'+mpEsc([r.who,r.when_label,r.source].filter(Boolean).join(' · '))+
+    (r.link?' · <a href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">'+mpEsc(r.link_label||'원문')+' 열기</a>':'')+'</p>'+
     (r.quote?'<blockquote>'+mpEsc(r.quote)+'</blockquote>':'')+(r.body?'<p class="body">'+mpEsc(r.body)+'</p>':'')+
-    (r.link?'<a class="orig" href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">'+mpEsc(r.link_label||'슬랙')+' 원문 열기</a>':'')+
-    '<div class="mp-verdict"><div>'+m+'</div>'+(tgt&&!r.decision?mpTaskPreview(tgt):'')+note+acts+'</div></div>'+
-    '<div class="mp-kv"><div><span>출처</span><span>'+mpEsc(r.source)+'</span></div><div><span>묶음</span><span>'+mpEsc(r.grp)+'</span></div><div><span>봇 제안</span><span>'+mpEsc(sug||'직접 고르기')+'</span></div><div><span>상태</span><span>'+(r.decision?'<span class="mp-pill">정함</span>':'<span class="mp-pill gray">남음</span>')+'</span></div></div>';
+    '<div class="mp-verdict"><p class="mp-lead">'+lead+'</p>'+ev+tg+act+'</div>';
 }
-function mpPick(id){MP.sel=id;MP.open=true;renderMorning();}
+// 진척 줄: "[진척 M/D 자동] 내용 <주소>" → 날짜·내용(짧게)·원문 링크
+function mpProgHtml(line){
+  var url=(line.match(/https?:\/\/[^\s<>|]+/)||[])[0], m=line.match(/^\[진척 ([^\]]*)\]\s*(.*)$/);
+  var txt=(m?m[2]:line).replace(/<?https?:\/\/[^\s>]+>?/g,'').replace(/\s+/g,' ').trim();
+  if(txt.length>110) txt=txt.slice(0,110)+'…';
+  return '<p class="mp-note">최근 진척'+(m?' '+mpEsc(m[1].replace(/\s*자동$/,'')):'')+': '+mpEsc(txt)+(url?' <a href="'+mpEsc(url)+'" target="_blank" rel="noopener">원문</a>':'')+'</p>';
+}
+// 할 일 카드 — 할 일 머리 + 붙은 줄 목록 + [완료][마감 바꾸기][확인함]
+function mpTaskDetail(rows,tid){
+  var t=_alFind(tid), open=rows.filter(function(r){return !r.decision;});
+  var prog=t?(t.description||'').split('\n').map(function(s){return s.trim();}).filter(function(s){return /^\[진척 /.test(s);}).pop():'';
+  var lines='<ul class="mp-lines">'+rows.map(function(r){
+    var lab=mpType(r)==='progress'?'끝난 것 같음':mpType(r)==='follow'?'팔로업':mpType(r)==='missed'?'놓친 대화':r.source==='통화 할 일'?'통화':'새 내용';
+    return '<li><span class="d">'+mpMd(r.edition_date)+' '+lab+'</span><span class="x">'+mpEsc(r.hl)+(r.body?'<small>'+mpEsc(r.body)+'</small>':'')+'</span>'+
+      '<span class="a">'+(r.link?'<a href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">원문</a>':'')+(!r.decision&&r.kind==='merge'?'<button class="mp-link" onclick="mpSplit('+r.id+')" title="이 줄만 떼어 등록 못 한 놓친 일로">다른 일</button>':'')+'</span></li>';}).join('')+'</ul>';
+  var act;
+  if(!open.length){var last=rows.slice().sort(function(a,b){return String(a.decided_at).localeCompare(String(b.decided_at));}).pop();
+    act='<div class="mp-done"><span class="mp-res">'+mpEsc(last.decision_label||'정함')+'</span>'+(String(last.decision).indexOf('task_')===0?'<button class="mp-link" onclick="mpUndo('+last.id+')">되돌리기</button>':'')+'</div>';}
+  else if(MP.pick==='task_due') act=mpForm('task_due',{due:t&&t.dueDate,prio:t&&t.priority},'mpTask(\''+tid+'\',\'task_due\')','마감 바꾸기');
+  else {var keep=mpCanKeep(t), prog1=open.some(function(r){return mpType(r)==='progress';});
+    act=mpBtnRow([['task_done','완료'],['task_due','마감 바꾸기'],['task_ok','확인함',keep?'':'마감이 없거나 지나서 그대로 둘 수 없습니다']],prog1?'완료':'',function(b){return b[0]==='task_due'?'MP.pick=\'task_due\';renderMorning()':'mpTask(\''+tid+'\',\''+b[0]+'\')';})+
+      '<p class="mp-note">'+(keep?'정하면 새 내용 줄은 이 할 일 설명에 덧붙습니다':'마감이 없거나 지났습니다. 끝났으면 완료, 아니면 마감을 바꾸세요')+'</p>';}
+  return '<h2>#'+tid+' '+mpEsc(t?t.task:(rows[0]&&rows[0].task_title)||'')+'</h2><p class="src">'+(t?mpDueState(t)+(t.priority?' · '+mpEsc(MP_PRIO[t.priority]||''):''):'할 일을 찾지 못했습니다')+
+    ' · <button class="mp-link" onclick="openAutolabDetailModal(\''+tid+'\')">할 일 열기</button></p>'+
+    (prog?mpProgHtml(prog):'')+lines+'<div class="mp-verdict">'+act+'</div>';
+}
+function mpPick(key){MP.sel=key;MP.pick=null;MP.open=true;renderMorning();}
 
 // 대상 할 일 고르기 — 봇 제안이 틀렸을 때 검색해서 고른다(Linear의 '중복 처리'처럼 한 창에서)
 var MPP={rowId:null,list:[],idx:0};
@@ -2891,7 +2928,7 @@ async function mpCall(body){
   }
   return res.data;
 }
-function mpReplace(row){for(var i=0;i<MP.rows.length;i++){if(MP.rows[i].id===row.id){MP.rows[i]=Object.assign({},row,{grp:MP.rows[i].grp,sort:MP.rows[i].sort});}}}
+function mpReplace(row){if(!row)return;for(var i=0;i<MP.rows.length;i++){if(MP.rows[i].id===row.id){MP.rows[i]=Object.assign({},row);}}}
 function mpInputs(){
   var g=function(id){var e=document.getElementById(id);return e&&e.value?e.value.trim():'';};
   var pr=document.querySelector('input[name="mp-prio"]:checked');
@@ -2917,9 +2954,7 @@ async function mpDecide(id,k,label,taskId){
       reply:k==='done_self'?inp.reply:'',reason:inp.reason,person:inp.person,recheck:inp.recheck,promise:inp.promise,promise_due:inp.promise_due});
     if(out.already){showToast('이미 정한 항목: '+out.row.decision_label);mpReplace(out.row);return;}
     if(!out.ok) throw new Error(out.error||'처리 실패');
-    mpReplace(out.row);
-    var next=MP.rows.filter(function(x){return mpAct(x)&&!x.decision;})[0];
-    if(next) MP.sel=next.id;
+    mpReplace(out.row); MP.pick=null;
     showToast(out.row.decision_label||label);
     if(out.row.decided_task_id) loadData();
   }catch(e){showToast('실패: '+(e.message||e));}
@@ -2936,12 +2971,47 @@ async function mpMemo(id){
   }catch(e){showToast('실패: '+(e.message||e));}
   finally{MP.busy=false;renderMorning();}
 }
+// 할 일 카드 정하기 — 남은 줄 전부를 한 번에(슬랙 할 일 카드와 같은 처리)
+async function mpTask(tid,k){
+  if(MP.busy) return;
+  var rows=mpBoard().groups[tid]||[], open=rows.filter(function(r){return !r.decision;});
+  if(!open.length) return;
+  var inp=mpInputs();
+  if(k==='task_due'&&!inp.due){showToast('새 마감을 골라 주세요');return;}
+  MP.busy=true; renderMorning();
+  try{
+    var out=await mpCall({id:open[0].id,action:k,ids:open.map(function(r){return r.id;}),due:inp.due,priority:inp.priority,by:MP.person,via:'dashboard'});
+    if(!out.ok) throw new Error(out.error||'처리 실패');
+    (out.rows||[]).forEach(mpReplace); MP.pick=null;
+    showToast(out.row&&out.row.decision_label||'정함'); loadData();
+  }catch(e){showToast('실패: '+(e.message||e));}
+  finally{MP.busy=false;renderMorning();}
+}
+// 할 일 카드의 한 줄을 다른 일로 떼어 '등록 못 한 놓친 일'로
+async function mpSplit(id){
+  if(MP.busy) return; MP.busy=true; renderMorning();
+  try{
+    var out=await mpCall({id:id,action:'split',by:MP.person,via:'dashboard'});
+    if(!out.ok) throw new Error(out.error||'떼기 실패');
+    mpReplace(out.row); MP.sel='r'+id; MP.pick=null; showToast('놓친 일로 옮김');
+  }catch(e){showToast('실패: '+(e.message||e));}
+  finally{MP.busy=false;renderMorning();}
+}
+// 마감 된 할 일(봇 줄 없이 할 일 표에서 바로) — 완료·마감 바꾸기는 할 일 표에 직접 쓴다
+async function mpDueAct(id,k){
+  var it=_alFind(id); if(!it||MP.busy) return;
+  if(k==='done'){ var cd=dk(new Date()); autolabChecks[alKey(it)]={checked:true,completedDate:cd}; await upsertCheck('autolab',String(id),true,cd); showToast('#'+id+' 완료'); MP.pick=null; renderMorning(); return; }
+  var inp=mpInputs(); if(!inp.due){showToast('새 마감을 골라 주세요');return;}
+  var upd={due_date:inp.due}; if(inp.priority) upd.priority=inp.priority;
+  var r=await _sb.from('autolab_task').update(upd).eq('id',Number(id)); if(r.error){showToast('실패: '+r.error.message);return;}
+  it.dueDate=inp.due; if(inp.priority) it.priority=inp.priority; MP.pick=null; showToast('#'+id+' 마감 '+mpMd(inp.due)); renderMorning();
+}
 async function mpUndo(id){
   if(MP.busy) return; MP.busy=true; renderMorning();
   try{
     var out=await mpCall({id:id,action:'undo'});
     if(!out.ok) throw new Error(out.error||'되돌리기 실패');
-    mpReplace(out.row); MP.sel=id;
+    (out.rows||[out.row]).forEach(mpReplace); MP.sel=out.row&&mpGroupable(out.row)?'T'+out.row.task_id:'r'+id; MP.pick=null;
     showToast('되돌림'); loadData();
   }catch(e){showToast('실패: '+(e.message||e));}
   finally{MP.busy=false;renderMorning();}
@@ -3012,6 +3082,13 @@ mpDecide=async function(id,k,label,taskId){
   await _mpDecideOrig(id,k,label,taskId);
   var r=(MP.rows||[]).find(function(x){return x.id===id;});
   if(r&&r.decision&&!UNDO.replaying){ UNDO.stack.push({label:'정할 것 "'+(r.hl||'').slice(0,20)+'" 결정',fns:[function(){return mpCall({id:id,action:'undo'});}]}); UNDO.lastPush=Date.now()-600; }
+};
+var _mpTaskOrig=mpTask;
+mpTask=async function(tid,k){
+  await _mpTaskOrig(tid,k);
+  var r=(MP.rows||[]).filter(function(x){return String(x.task_id)===String(tid)&&String(x.decision||'').indexOf('task_')===0;})
+    .sort(function(a,b){return String(a.decided_at).localeCompare(String(b.decided_at));}).pop();
+  if(r&&!UNDO.replaying){ UNDO.stack.push({label:'#'+tid+' 할 일 카드 결정',fns:[function(){return mpCall({id:r.id,action:'undo'});}]}); UNDO.lastPush=Date.now()-600; }
 };
 async function undoLast(){
   var g=UNDO.stack.pop(); if(!g){ showToast('되돌릴 것이 없습니다'); return; }
