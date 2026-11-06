@@ -62,10 +62,10 @@ function suggestion(row: any) {
   if (row.kind === 'new') return '할 일에 넣기';
   if (row.kind === 'done') return '이미 끝남';
   if (row.kind === 'read') return '읽음';
-  return '내일 다시';
+  return '하는 중';
 }
 function buttons(row: any): [string, string][] {
-  if (row.kind === 'progress') return [['later', '내일 다시'], ['done', '완료'], ['mute', '그만 알림']];
+  if (row.kind === 'progress') return [['later', '하는 중'], ['done', '완료'], ['mute', '그만 알림']];
   const a: [string, string][] = [];
   if (row.kind === 'merge') a.push(['merge', `#${row.task_id}에 덧붙이기`], ['add', '다른 일 · 새로 넣기']);
   // 연결된 할 일 자체가 끝났으면 그 할 일까지 완료로(11/4). '이미 끝남'은 이 항목만 닫는다
@@ -75,7 +75,8 @@ function buttons(row: any): [string, string][] {
   if (row.kind === 'read') a.push(['read', '읽음'], ['add', '할 일에 넣기']);
   if (row.kind !== 'done') a.push(['done', '이미 끝남']);
   // 대시보드와 같은 버튼 — 폰에서 DM만으로 끝낼 수 있게(11/4 UX 검토)
-  a.push(['later', '내일 다시'], ['mute', '그만 알림']);
+  // 'later' = [하는 중](11/6 '내일 다시'에서 이름 변경). 다음 날 봇이 botrun.carry_doing으로 다시 묻는다
+  a.push(['later', '하는 중'], ['mute', '그만 알림']);
   return a;
 }
 

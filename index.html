@@ -2141,10 +2141,10 @@ function mpSuggest(r){
   if(r.kind==='new') return '할 일에 넣기';
   if(r.kind==='done') return '이미 끝남';
   if(r.kind==='read') return '읽음';
-  return '내일 다시';
+  return '하는 중';
 }
 function mpButtons(r){
-  if(r.kind==='progress') return [['later','내일 다시'],['done','완료'],['mute','그만 알림']];
+  if(r.kind==='progress') return [['later','하는 중'],['done','완료'],['mute','그만 알림']];
   var a=[];
   if(r.kind==='merge') a.push(['merge','#'+r.task_id+'에 덧붙이기'],['add','다른 일 · 새로 넣기']);
   // 연결된 할 일 자체가 끝났으면 그 할 일까지 완료(하위 남은 큰 주제는 서버가 거절). '이미 끝남'은 이 항목만 닫는다
@@ -2153,7 +2153,7 @@ function mpButtons(r){
   if(r.kind==='done') a.push(['done','이미 끝남'],['add','할 일에 넣기']);
   if(r.kind==='read') a.push(['read','읽음'],['add','할 일에 넣기']);
   if(r.kind!=='done') a.push(['done','이미 끝남']);
-  a.push(['later','내일 다시'],['mute','그만 알림']);
+  a.push(['later','하는 중'],['mute','그만 알림']);
   return a;
 }
 async function loadMorning(quiet){
