@@ -602,8 +602,10 @@ body{background:var(--bg-canvas)}
 .dmp-kdue{font-size:11.5px;color:var(--text-secondary);flex:none}
 .dmp-input{width:100%;box-sizing:border-box;margin-top:6px;font-family:var(--font-sans);font-size:12.5px;padding:7px 10px;border:1px dashed var(--border-default);border-radius:var(--radius-sm);background:var(--bg-surface);color:var(--text-primary)}
 .dmp-input:focus{border-style:solid;border-color:var(--accent);outline:none}
-.dmp-desc{cursor:text;border-radius:var(--radius-sm);padding:6px 8px;margin-left:-8px;margin-right:-8px}
-.dmp-desc:hover{background:var(--bg-subtle)}
+.dmp-desc{border-radius:var(--radius-sm);padding:6px 8px;margin-left:-8px;margin-right:-8px}
+.dmp-desc a{color:var(--accent);word-break:break-all}
+.dmp-desc-top{margin:0 0 4px}
+.dmp-desc-top .btn-ghost{padding:3px 10px}
 .dmp-desc-ta{width:100%;box-sizing:border-box;font-family:var(--font-sans);font-size:13px;line-height:1.6;padding:10px 12px;border:1px solid var(--accent);border-radius:var(--radius-sm);resize:vertical;color:var(--text-primary)}
 .dmp-desc-acts{display:flex;justify-content:flex-end;gap:6px;margin-top:6px}
 /* 날짜 고르기 창 */
@@ -2714,11 +2716,13 @@ function dmEnhance(id){
   var up=parent?'<div class="dmp-up">↳ 큰 주제 <button class="family-link" onclick="openAutolabDetailModal(\''+parent.id+'\')">#'+parent.id+' '+_alEsc(parent.task)+'</button></div>':'';
   document.getElementById('detail-modal-info').innerHTML=up+props+sub+
     '<input id="dmp-prog" class="dmp-input" placeholder="+ 진척 한 줄 남기기 (Enter) — 설명 끝에 날짜와 함께 붙습니다">';
-  // 설명: 눌러서 고치기
+  // 설명: 본문은 읽기만(링크는 눌러서 열기), 편집은 [고치기] 버튼으로만
   var dv=document.getElementById('dm-desc-view');
-  dv.classList.add('dmp-desc'); dv.title='눌러서 고치기';
-  if(!(item.description||'').trim()) dv.textContent='설명 없음 — 눌러서 쓰기';
-  dv.onclick=function(){dmEditDesc(item);};
+  dv.classList.add('dmp-desc'); dv.removeAttribute('title'); dv.onclick=null;
+  var dtxt=(item.description||'').trim();
+  dv.innerHTML='<div class="dmp-desc-acts dmp-desc-top"><button class="btn-ghost" id="dmp-desc-edit">'+(dtxt?'고치기':'설명 쓰기')+'</button></div>'+
+    (dtxt?_alEsc(item.description).replace(/(https?:\/\/[^\s<>]+?)(?=&gt;|\s|$)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>'):'<span class="dmp-muted">설명 없음</span>');
+  document.getElementById('dmp-desc-edit').onclick=function(){dmEditDesc(item);};
   // 이벤트
   document.getElementById('dmp-done').onchange=function(e){dmSetDone(item,e.target.checked);};
   document.querySelectorAll('.dmp-chip').forEach(function(b){b.onclick=function(){dmSave(item,{priority:b.dataset.prio},'우선순위');};});
