@@ -716,6 +716,7 @@ body{background:var(--bg-canvas)}
 .mp-fu{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .mp-fu select,.mp-fu input,.mp-more textarea{height:36px;box-sizing:border-box;font-family:var(--font-sans);font-size:var(--text-sm);padding:0 10px;border:1px solid var(--border-default);border-radius:var(--radius-md);background:var(--bg-surface);color:var(--text-primary)}
 .mp-more textarea{height:auto;padding:8px 10px;line-height:1.5;resize:vertical;width:100%}
+.mp-fu textarea{flex:1;min-width:0;box-sizing:border-box;font-family:var(--font-sans);font-size:var(--text-sm);padding:8px 10px;line-height:1.5;resize:vertical;border:1px solid var(--border-default);border-radius:var(--radius-md);background:var(--bg-surface);color:var(--text-primary)}
 .mp-fu label{display:flex;align-items:center;gap:8px;font-size:var(--text-sm);color:var(--text-secondary)}
 .mp-fu input[type=text]{flex:1;min-width:0}
 .mp-chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -2313,7 +2314,9 @@ function mpForm(k,r,confirmJs,label){
   if(k==='handoff'||k==='wait') f+='<div class="mp-fu"><select id="mp-person" aria-label="사람">'+people+'</select>'+(k==='wait'?'<label>다시 볼 날 <input type="date" id="mp-recheck"></label>':'')+'</div>';
   if(k==='handoff') f+='<div class="mp-fu"><input type="text" id="mp-promise" placeholder="내가 고객·외부에 직접 한 약속 (없으면 비움)"><input type="date" id="mp-pdue" aria-label="약속 결과 확인할 날"></div>';
   if(k==='done_none') f+='<div class="mp-fu"><select id="mp-reason" aria-label="사유"><option value="">사유 고르기</option>'+MP_REASONS.map(function(x){return '<option>'+x+'</option>';}).join('')+'</select></div>';
-  if(k==='done_self') f+='<div class="mp-fu"><input type="text" id="mp-reply" placeholder="원문 답글 (비우면 체크 반응만)"></div>';
+  // 9시 점검이 써 둔 답글 초안을 미리 채운다(11/7). 고쳐서 확정해야 나가고, 비우면 체크 반응만
+  if(k==='done_self') f+=(r.reply_draft?'<p class="mp-note">봇이 쓴 답글 초안 — 고쳐서 확정하면 원문 스레드에 올라갑니다</p>':'')+
+    '<div class="mp-fu"><textarea id="mp-reply" rows="2" placeholder="원문 답글 (비우면 체크 반응만)">'+mpEsc(r.reply_draft||'')+'</textarea></div>';
   if(k==='task_due'||k==='D_due') f+=mpDueFields(r.due,r.prio,null);
   var extra=k.indexOf('_due')<0&&k!=='done_none'?'<details class="mp-more"><summary>메모·후속 할 일</summary><textarea id="mp-memo" rows="2" placeholder="메모 — 할 일에 같이 남깁니다"></textarea>'+
     '<div class="mp-fu"><input type="text" id="mp-fu" placeholder="후속 할 일"><input type="date" id="mp-fu-due" aria-label="후속 할 일 마감"></div></details>':'';
