@@ -2118,7 +2118,9 @@ AUTH_READY.then(function(){loadData();});
 // 아침판 — 봇 DM(통화 할 일·슬랙 점검·하루 요약)을 한 화면으로. 표 morning_item, 누르면 바로 할 일에 반영
 // 탭은 ?morning=1 로 한 번 열면 이 브라우저에서만 보인다(강희준 개인용)
 // =============================================
-var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준',pick:null};
+var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준',pick:null,keys:[]};
+// 고른 카드는 새로고침·탭 이동 뒤에도 그 카드로 돌아온다(11/9 "카드 누르면 처음으로 돌아가 불편")
+try{MP.sel=localStorage.getItem('autolab_mp_sel')||null;}catch(e){}
 (function(){
   try{
     var qs=new URLSearchParams(location.search);
@@ -2251,12 +2253,25 @@ function renderMorning(){
   if(!n1) list+='<p class="mp-empty">'+(MP.filter==='done'?'없음':'지금 할 일이 없습니다')+'</p>';
   list+='</section><section class="mp-part"><h2>등록 못 한 놓친 일<span>'+n2+'</span></h2>'+B.loose.map(msgRow).join('')+
     (n2?'':'<p class="mp-empty">'+(MP.filter==='done'?'없음':'다 비웠습니다')+'</p>')+'</section>';
-  if(keys.indexOf(MP.sel)<0) MP.sel=keys[0]||null;
+  // 고른 카드가 정해져 빠지면 처음이 아니라 그 바로 다음 카드로 넘어간다
+  if(keys.indexOf(MP.sel)<0){
+    var was=MP.keys.indexOf(MP.sel), next=null;
+    for(var i=was+1;was>=0&&i<MP.keys.length&&!next;i++) if(keys.indexOf(MP.keys[i])>=0) next=MP.keys[i];
+    MP.sel=next||keys[0]||null;
+  }
+  MP.keys=keys;
+  try{localStorage.setItem('autolab_mp_sel',MP.sel||'');}catch(e){}
   var tabs=[['left','남은 것'],['done','오늘 정한 것']].map(function(t){return '<button class="mp-tab'+(MP.filter===t[0]?' on':'')+'" onclick="MP.filter=\''+t[0]+'\';MP.sel=null;MP.pick=null;renderMorning()">'+t[1]+'</button>';}).join('');
   html+='<div class="mp-work'+(MP.open?' open':'')+'"><div class="mp-list"><div class="mp-tabs">'+tabs+'</div>'+list+'</div><article class="mp-detail">'+mpDetail(B)+'</article></div>';
+  // 목록은 자체 스크롤이라 통째로 다시 그리면 맨 위로 튄다 → 그리기 전 위치를 재서 되돌린다
+  var oldList=document.querySelector('#morning-content .mp-list'), top=oldList?oldList.scrollTop:null;
   document.getElementById('morning-content').innerHTML=html;
-  // 앞서 그린 목록이 다시 그려진 뒤에도 고른 줄 자리를 유지(상세 패널만 바뀐 것처럼)
-  var cur=document.querySelector('.mp-row.cur'); if(cur&&cur.scrollIntoView&&MP.scrollSel){cur.scrollIntoView({block:'nearest'});MP.scrollSel=false;}
+  var list2=document.querySelector('#morning-content .mp-list');
+  if(list2&&top!=null) list2.scrollTop=top;
+  // 고른 줄이 목록 화면 밖이면(처음 열 때·다음 카드로 넘어갈 때) 보이게
+  var cur=document.querySelector('.mp-row.cur');
+  if(cur&&cur.scrollIntoView&&MP.shown!==MP.sel) cur.scrollIntoView({block:'nearest'});
+  MP.shown=MP.sel;
 }
 // 기다림 중 다시 볼 날이 된 할 일 — 봇 없이 할 일 표에서 바로 계산
 function mpWaitDue(){
@@ -2529,7 +2544,8 @@ function fillParentSelect(item){
     if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
     var bg=document.getElementById('detail-modal-bg'), eh=document.getElementById('dm-edit-header');
     if(bg&&bg.classList.contains('open')&&eh&&eh.style.display!=='none') return true;
-    return (typeof MP!=='undefined'&&MP.busy);
+    // 정할 것에서 칸을 펼쳐 둔 동안(MP.pick)도 미룬다 — 다시 그리면 고른 날짜·사람이 지워진다
+    return (typeof MP!=='undefined'&&(MP.busy||(currentTab==='morning'&&!!MP.pick)));
   }
   function soon(){
     clearTimeout(timer);
