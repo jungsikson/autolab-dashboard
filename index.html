@@ -2130,6 +2130,8 @@ var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준',p
     else if(qs.get('plan')==='1'){ localStorage.setItem('autolab_morning','1'); document.getElementById('nav-morning').style.display=''; setTimeout(function(){switchTab('plan');},0); }
   }catch(e){}
 })();
+function mpCopySend(){var t=MP.send||'';if(!t)return;
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){showToast('복사했습니다 — 원문 스레드에 붙여 보내세요');},function(){showToast('복사하지 못했습니다 — 글을 직접 골라 복사해 주세요');});}
 function mpEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function mpAct(r){return r.kind!=='info';}
 // 11/6 희준님 두 질문으로 나눈다: ① 지금 해야 하는 일(답할 것·할 일·다시 볼 기다림) / ② 등록 못 한 놓친 일(할 일에 안 붙은 줄)
@@ -2163,10 +2165,10 @@ function mpSuggest(r){
   return '';
 }
 // 각 버튼이 누르면 하는 일 — 고른 버튼 아래에 한 줄로 보여 준다
-var MP_HELP={done_self:'할 일을 만들어 오늘 완료로 기록하고, 슬랙 원문에 체크 반응을 답니다(답글 칸을 쓰면 답글도)',
-  date:'원문에 "M/D까지 확인해서 답드릴게요" 답글을 달고, 그 마감으로 할 일을 만듭니다',
+var MP_HELP={done_self:'할 일을 만들어 오늘 완료로 기록하고, 슬랙 원문에 체크 반응을 답니다(답글 칸을 쓰면 보낼 글로 띄워 줍니다)',
+  date:'그 마감으로 할 일을 만들고, 원문에 보낼 "M/D까지 확인해서 답드릴게요"를 띄워 줍니다',
   add:'마감 있는 할 일로 넣습니다(대상이 큰 주제면 그 밑 하위로, 하위 없는 할 일이면 그 설명에 덧붙임)',
-  handoff:'원문에 그 사람을 태그하고 "수락 대기" 할 일을 만듭니다. 수락이 보이면 닫힙니다(내 약속이 있으면 그 결과만 그날 확인)',
+  handoff:'"수락 대기" 할 일을 만들고, 원문에 그 사람을 태그할 글을 띄워 줍니다. 수락이 보이면 닫힙니다(내 약속이 있으면 그 결과만 그날 확인)',
   wait:'할 일로 두고 그 사람을 기다립니다. 다시 볼 날에 "다시 볼 기다림"에 올라옵니다',
   done_none:'할 일 없이 닫습니다. 사유가 남습니다',read:'닫습니다',done:'연결된 할 일을 완료로 바꿉니다',
   task_done:'이 할 일을 완료로 바꾸고, 새 내용 줄은 설명에 덧붙입니다',
@@ -2314,9 +2316,9 @@ function mpForm(k,r,confirmJs,label){
   if(k==='handoff'||k==='wait') f+='<div class="mp-fu"><select id="mp-person" aria-label="사람">'+people+'</select>'+(k==='wait'?'<label>다시 볼 날 <input type="date" id="mp-recheck"></label>':'')+'</div>';
   if(k==='handoff') f+='<div class="mp-fu"><input type="text" id="mp-promise" placeholder="내가 고객·외부에 직접 한 약속 (없으면 비움)"><input type="date" id="mp-pdue" aria-label="약속 결과 확인할 날"></div>';
   if(k==='done_none') f+='<div class="mp-fu"><select id="mp-reason" aria-label="사유"><option value="">사유 고르기</option>'+MP_REASONS.map(function(x){return '<option>'+x+'</option>';}).join('')+'</select></div>';
-  // 9시 점검이 써 둔 답글 초안을 미리 채운다(11/7). 고쳐서 확정해야 나가고, 비우면 체크 반응만
-  if(k==='done_self') f+=(r.reply_draft?'<p class="mp-note">봇이 쓴 답글 초안 — 고쳐서 확정하면 원문 스레드에 올라갑니다</p>':'')+
-    '<div class="mp-fu"><textarea id="mp-reply" rows="2" placeholder="원문 답글 (비우면 체크 반응만)">'+mpEsc(r.reply_draft||'')+'</textarea></div>';
+  // 9시 점검이 써 둔 답글 초안을 미리 채운다(11/7). 확정해도 직접 올리지 않고 보낼 글로 띄운다(11/9), 비우면 체크 반응만
+  if(k==='done_self') f+=(r.reply_draft?'<p class="mp-note">봇이 쓴 답글 초안 — 고쳐서 확정하면 복사해 보낼 수 있게 띄워 줍니다</p>':'')+
+    '<div class="mp-fu"><textarea id="mp-reply" rows="2" placeholder="원문에 보낼 답글 (비우면 체크 반응만)">'+mpEsc(r.reply_draft||'')+'</textarea></div>';
   if(k==='task_due'||k==='D_due') f+=mpDueFields(r.due,r.prio,null);
   var extra=k.indexOf('_due')<0&&k!=='done_none'?'<details class="mp-more"><summary>메모·후속 할 일</summary><textarea id="mp-memo" rows="2" placeholder="메모 — 할 일에 같이 남깁니다"></textarea>'+
     '<div class="mp-fu"><input type="text" id="mp-fu" placeholder="후속 할 일"><input type="date" id="mp-fu-due" aria-label="후속 할 일 마감"></div></details>':'';
@@ -2350,10 +2352,14 @@ function mpDetail(B){
   var ev=r.evidence?'<p class="mp-note">'+(r.evidence==='self'?'내가 처리한 흔적':'다른 사람이 처리한 흔적')+(r.evidence_note?': '+mpEsc(r.evidence_note):'')+'</p>':'';
   var sug=mpSuggest(r), bs=mpButtons(r), act;
   if(r.decision){
-    act='<div class="mp-done"><span class="mp-res">'+mpEsc(r.decision_label)+(r.decided_task_id&&String(r.decision_label||'').indexOf('#')<0?' · #'+r.decided_task_id:'')+(r.decided_via==='slack'?' · 슬랙에서':'')+'</span>'+
+    // 원문에 보낼 글은 결과 줄 끝 「」에 담겨 온다(11/9) — 떼어서 복사 칸으로
+    var sp=/^([\s\S]*?) · 보낼 글: 「([\s\S]*)」$/.exec(r.decision_label||''), resL=sp?sp[1]:r.decision_label;
+    MP.send=sp?sp[2]:'';
+    act='<div class="mp-done"><span class="mp-res">'+mpEsc(resL)+(r.decided_task_id&&String(resL||'').indexOf('#')<0?' · #'+r.decided_task_id:'')+(r.decided_via==='slack'?' · 슬랙에서':'')+'</span>'+
       (r.decided_task_id?'<button class="mp-link" onclick="openAutolabDetailModal(\''+r.decided_task_id+'\')">할 일 열기</button>':'')+
       (r.followup_task_id?'<button class="mp-link" onclick="openAutolabDetailModal(\''+r.followup_task_id+'\')">후속 #'+r.followup_task_id+'</button>':'')+
-      '<button class="mp-link" onclick="mpUndo('+r.id+')">되돌리기</button></div>'+(r.memo?'<p class="mp-memo-shown">'+mpEsc(r.memo).replace(/\n/g,'<br>')+'</p>':'')+
+      '<button class="mp-link" onclick="mpUndo('+r.id+')">되돌리기</button></div>'+
+      (sp?'<p class="mp-note">원문에 보낼 글 — 복사해서 직접 보내세요 <button class="mp-link" onclick="mpCopySend()">복사</button>'+(r.link?' <a class="mp-link" href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">원문 스레드 열기</a>':'')+'</p><p class="mp-memo-shown">'+mpEsc(sp[2]).replace(/\n/g,'<br>')+'</p>':'')+(r.memo?'<p class="mp-memo-shown">'+mpEsc(r.memo).replace(/\n/g,'<br>')+'</p>':'')+
       (r.decided_task_id?'<details class="mp-more"><summary>메모 덧붙이기</summary><textarea id="mp-memo" rows="2"></textarea><div class="mp-fu"><input type="text" id="mp-fu" placeholder="후속 할 일"><input type="date" id="mp-fu-due" aria-label="후속 할 일 마감"></div><div class="mp-acts"><button class="mp-btn" onclick="mpMemo('+r.id+')">덧붙이기</button></div></details>':'');
   } else {
     var picked=MP.pick&&bs.filter(function(b){return b[0]===MP.pick;})[0];
