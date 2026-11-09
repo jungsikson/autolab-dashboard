@@ -2152,7 +2152,7 @@ function mpButtons(r){
   switch(mpType(r)){
     case 'reply': return [['done_self','답함'],['date','날짜 잡기'],['handoff','넘기기'],['done_none','답할 필요 없음']];
     case 'follow': return [['done_self','끝남'],['add','마감 잡기'],['handoff','넘기기'],['wait','기다림']];
-    case 'missed': return [['add','내 일로'],['read','알아둠']];
+    case 'missed': return [['add','내 일로'],['read','읽음·닫기']];
     case 'progress': return [['done','완료 확인'],['read','아직']];
     default: return [['add','할 일로'],['handoff','넘기기'],['done_self','처리함'],['done_none','필요 없음']];
   }
