@@ -519,6 +519,10 @@ body{background:var(--bg-canvas)}
 .mp-target-head b{font-size:var(--text-sm);line-height:1.4}
 .mp-target-meta{margin-top:2px;font-size:var(--text-xs);color:var(--text-secondary)}
 .mp-target ul{margin:8px 0 0;padding-left:16px;font-size:var(--text-sm);color:var(--text-primary);display:grid;gap:2px}
+.mp-target ul.mp-remain{list-style:none;padding-left:0;gap:6px}
+.mp-remain li{display:grid;grid-template-columns:56px minmax(0,1fr);gap:8px;align-items:baseline}
+.mp-remain .w{font-size:var(--text-xs);color:var(--text-secondary)}
+.mp-remain .w-me{color:var(--text-primary);font-weight:600}
 .mp-target-last{margin-top:6px;font-size:var(--text-xs);color:var(--text-secondary)}
 .mp-lines{list-style:none;margin:16px 0 0;padding:0}
 .mp-lines li{display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:12px;padding:10px 0;align-items:baseline;font-size:var(--text-sm)}
@@ -2220,9 +2224,9 @@ function mpBoard(){
     .sort(function(a,b){return a.dueDate.localeCompare(b.dueDate);});
   var waits=done?[]:mpWaitDue().filter(function(i){return !g[i.id];});
   // 할 일 줄 순서: 마감 지난 것 → 오늘 마감 → 나머지
-  var tasks=groups.map(function(x){return {key:'T'+x.tid,g:x,due:(x.task&&x.task.dueDate)||'9999'};})
-    .concat(due.map(function(t){return {key:'D'+t.id,t:t,due:t.dueDate};})).sort(function(a,b){return a.due.localeCompare(b.due);});
-  return {replies:rows.filter(function(r){return mpType(r)==='reply';}),tasks:tasks,waits:waits,
+  // 마감 된 할 일(D)은 정할 것이 아니다 — 고를 게 없고 남은 것만 보면 된다(11/10 희준님). 숫자에 안 넣고 맨 아래 따로
+  var tasks=groups.map(function(x){return {key:'T'+x.tid,g:x,due:(x.task&&x.task.dueDate)||'9999'};}).sort(function(a,b){return a.due.localeCompare(b.due);});
+  return {replies:rows.filter(function(r){return mpType(r)==='reply';}),tasks:tasks,waits:waits,dues:due,
     loose:rows.filter(function(r){return !mpGroupable(r)&&mpType(r)!=='reply';}),groups:g};
 }
 function mpRowHtml(key,title,meta,when,cls){
@@ -2246,13 +2250,15 @@ function renderMorning(){
     if(x.g){var t=x.g.task, rs=x.g.rows, prog=rs.some(function(r){return mpType(r)==='progress';}), nNew=rs.filter(function(r){return r.kind!=='progress';}).length;
       return mpRowHtml(x.key,'#'+x.g.tid+' '+mpEsc(t?t.task:(rs[0].task_title||'')),
         mpEsc([prog?'끝난 것 같음':'',nNew?'새 내용 '+nNew+'줄':''].filter(Boolean).join(' · ')),t?mpDueState(t):'',t?MP_PRIO_CLS[t.priority]||'':'');}
-    return mpRowHtml(x.key,'#'+x.t.id+' '+mpEsc(x.t.task),'',mpDueState(x.t),MP_PRIO_CLS[x.t.priority]||'');
   }).join('');
   list+=sub('다시 볼 기다림 — 답이 왔는지 확인',B.waits.length)+B.waits.map(function(i){var k='W'+i.id;keys.push(k);
     return mpRowHtml(k,'#'+i.id+' '+mpEsc(i.task),mpEsc((mpIsHandoff(i)?'넘김 · ':'')+i.waitingOn),i.waitingSince?Math.round((new Date(dk(new Date())+'T00:00:00')-new Date(i.waitingSince+'T00:00:00'))/86400000)+'일째':'');}).join('');
   if(!n1) list+='<p class="mp-empty">'+(MP.filter==='done'?'없음':'지금 할 일이 없습니다')+'</p>';
   list+='</section><section class="mp-part"><h2>등록 못 한 놓친 일<span>'+n2+'</span></h2>'+B.loose.map(msgRow).join('')+
     (n2?'':'<p class="mp-empty">'+(MP.filter==='done'?'없음':'다 비웠습니다')+'</p>')+'</section>';
+  if(B.dues.length) list+='<section class="mp-part"><h2>오늘 마감·지난 할 일<span>'+B.dues.length+'</span></h2><div class="mp-grp">고를 것 없음 — 어디까지 왔고 무엇이 남았는지</div>'+
+    B.dues.map(function(t){var k='D'+t.id;keys.push(k);
+      return mpRowHtml(k,'#'+t.id+' '+mpEsc(t.task),mpEsc(mpRemainSummary(mpRemain(t))),mpDueState(t),MP_PRIO_CLS[t.priority]||'');}).join('')+'</section>';
   // 고른 카드가 정해져 빠지면 처음이 아니라 그 바로 다음 카드로 넘어간다
   if(keys.indexOf(MP.sel)<0){
     var was=MP.keys.indexOf(MP.sel), next=null;
@@ -2340,6 +2346,81 @@ function mpForm(k,r,confirmJs,label){
   return '<div class="mp-form"><p class="mp-note">'+mpEsc(MP_HELP[k]||'')+'</p>'+f+extra+
     '<div class="mp-acts"><button class="mp-btn pri"'+(MP.busy?' disabled':'')+' onclick="'+confirmJs+'">'+mpEsc(label)+' 확정</button><button class="mp-btn" onclick="MP.pick=null;renderMorning()">취소</button></div></div>';
 }
+// 마감 된 할 일의 "어디까지·남은 것"을 설명에서 뽑는다(11/10). 09시 DM(slack-daily-check.remain)과 같은 규칙
+// ① `■ 지금 상태` 칸의 `- ` 줄 → ② 없으면 마지막 [진척] 묶음의 남음:·확인:·대기:·결정: 줄 → ③ 둘 다 없으면 "정리 안 됨"
+// 줄마다 누구 몫인지: 확인·결정·희준님 = 희준님 / Claude = Claude / 대기·기다림(또는 waiting_on) = 기다림 / 나머지 = 어디까지
+function mpRemain(t){
+  var lines=(t.description||'').split('\n'), out=[], i, s, inState=false, found=false;
+  for(i=0;i<lines.length;i++){ s=lines[i].trim();
+    if(/^■\s*지금 상태/.test(s)){inState=true;found=true;continue;}
+    if(inState){ if(!s||/^■/.test(s)) break; if(/^[-•]\s*/.test(s)) out.push(s.replace(/^[-•]\s*/,'')); } }
+  if(!found){ var last=-1; for(i=0;i<lines.length;i++) if(/^\[진척 /.test(lines[i].trim())) last=i;
+    for(i=last+1;last>=0&&i<lines.length;i++){ s=lines[i].trim(); if(!s||/^\[/.test(s)) break;
+      s=s.replace(/^[-•]\s*/,''); if(/^(남음|남은 것|확인|대기|결정)/.test(s)) out.push(s); } }
+  var items=[];
+  // 상태 줄 중간의 "남은 것: …"·"남음: …"은 떼어 남은 것으로
+  out=[].concat.apply([],out.map(function(x){var m=x.match(/^(.*?)[.,]?\s*(남은 것|남음)\s*[:：]\s*(.+)$/);return m&&m[1]?[m[1],m[2]+': '+m[3]]:[x];}));
+  out.forEach(function(x){
+    var who=/^Claude/.test(x)?'Claude':/^(대기|기다림)/.test(x)?'기다림':/^(확인|결정|희준님)/.test(x)?'희준님':/^(남음|남은 것)/.test(x)?'남음':'상태';
+    var body=x.replace(/^(확인|결정|대기|남음|남은 것)\s*[:：]?\s*/,'');
+    // "확인: A / B" 처럼 한 줄에 여럿이면 나눈다
+    (who==='상태'?[body]:body.split(/\s+\/\s+/)).forEach(function(b){ if(b) items.push({who:who,text:b}); });
+  });
+  if(t.waitingOn) items.push({who:'기다림',text:t.waitingOn+' 답'});
+  return {items:items,none:!out.length&&!t.waitingOn};
+}
+function mpRemainSummary(R){
+  if(R.none) return '남은 것 정리 안 됨';
+  var c={}; R.items.forEach(function(x){c[x.who]=(c[x.who]||0)+1;});
+  return ['희준님','Claude','기다림','남음'].filter(function(k){return c[k];}).map(function(k){return (k==='남음'?'남은 것':k)+' '+c[k];}).join(' · ')||'남은 것 안 적힘';
+}
+function mpRemainHtml(t){
+  var R=mpRemain(t), st=R.items.filter(function(x){return x.who==='상태';}), rest=R.items.filter(function(x){return x.who!=='상태';});
+  var lab={희준님:'희준님',Claude:'Claude',기다림:'기다림',남음:'남은 것'};
+  var last=(t.description||'').split('\n').map(function(s){return s.trim();}).filter(function(s){return /^\[진척 /.test(s);}).pop();
+  return '<div class="mp-target"><div class="mp-target-head"><b>어디까지</b><button class="mp-link" onclick="openAutolabDetailModal(\''+t.id+'\')">할 일 열기</button></div>'+
+    (st.length?'<ul>'+st.map(function(x){return '<li>'+mpEsc(x.text)+'</li>';}).join('')+'</ul>':'')+
+    (last?mpProgHtml(last):(st.length?'':'<p class="mp-target-meta">진척 기록 없음</p>'))+'</div>'+
+    '<div class="mp-target"><div class="mp-target-head"><b>남은 것</b></div>'+
+    (R.none?'<p class="mp-target-meta">설명에 남은 것이 정리돼 있지 않습니다. 할 일을 열어 맨 위에 ■ 지금 상태를 적거나, Claude에게 정리를 맡기세요</p>'
+      :rest.length?'<ul class="mp-remain">'+rest.map(function(x){return '<li><span class="w w-'+(x.who==='희준님'?'me':x.who==='Claude'?'ai':'wait')+'">'+lab[x.who]+'</span>'+mpEsc(x.text)+'</li>';}).join('')+'</ul>'
+      :'<p class="mp-target-meta">남은 것이 안 적혀 있습니다. 끝났으면 완료, 아니면 미루기로 다음 할 일을 남기세요</p>')+'</div>';
+}
+var MP_DEFER=['남 기다림','다른 일 먼저','생각보다 큼','막힘'];
+function mpDeferForm(t){
+  var people='<option value="">누구를 기다리나</option>'+MP_PEOPLE.map(function(g){return '<optgroup label="'+g[0]+'">'+g[1].map(function(n){return '<option>'+n+'</option>';}).join('')+'</optgroup>';}).join('');
+  var why=MP.defer||'';
+  var chips=MP_DEFER.map(function(x){return '<label class="mp-chip"><input type="radio" name="mp-defer" value="'+x+'"'+(why===x?' checked':'')+' onchange="MP.defer=this.value;renderMorning()"><span>'+x+'</span></label>';}).join('');
+  var f='<div class="mp-chips" role="radiogroup" aria-label="미루는 이유">'+chips+'</div>';
+  if(why==='남 기다림') f+='<div class="mp-fu"><select id="mp-person" aria-label="기다리는 사람">'+people+'</select><label>다시 볼 날 <input type="date" id="mp-recheck"></label></div>';
+  else if(why) f+='<div class="mp-fu"><label>새 마감 <input type="date" id="mp-due"></label></div>';
+  if(why) f+='<div class="mp-fu"><input type="text" id="mp-next" placeholder="다음에 할 일 한 줄 (예: 11/11 오전 카드 눌러 보고 결과 적기)"></div>';
+  return '<div class="mp-form"><p class="mp-note">미루면 이유와 다음에 할 일이 설명 맨 위 ■ 지금 상태와 진척 줄에 남습니다. 남 기다림은 다시 볼 날에 "다시 볼 기다림"으로 올라옵니다</p>'+f+
+    '<div class="mp-acts"><button class="mp-btn pri"'+(MP.busy||!why?' disabled':'')+' onclick="mpDeferAct(\''+t.id+'\')">미루기 확정</button><button class="mp-btn" onclick="MP.pick=null;MP.defer=null;renderMorning()">취소</button></div></div>';
+}
+async function mpDeferAct(id){
+  var it=_alFind(id); if(!it||MP.busy) return;
+  var g=function(k){var e=document.getElementById(k);return e&&e.value?e.value.trim():'';};
+  var why=MP.defer, next=g('mp-next'), person=g('mp-person'), recheck=g('mp-recheck'), due=g('mp-due');
+  if(!why){showToast('이유를 골라 주세요');return;}
+  if(!next){showToast('다음에 할 일을 한 줄 적어 주세요');return;}
+  if(why==='남 기다림'&&(!person||!recheck)){showToast('기다리는 사람과 다시 볼 날을 골라 주세요');return;}
+  if(why!=='남 기다림'&&!due){showToast('새 마감을 골라 주세요');return;}
+  var d=new Date(), md=(d.getMonth()+1)+'/'+d.getDate();
+  var head=why==='남 기다림'?'대기: '+person+' 답 ('+mpMd(recheck)+' 다시 봄) — '+next:'다음: '+next+' ('+mpMd(due)+'까지)';
+  var desc=it.description||'';
+  if(/^■\s*지금 상태.*$/m.test(desc)) desc=desc.replace(/^(■\s*지금 상태.*)$/m,'$1\n- '+head);
+  else desc='■ 지금 상태\n- '+head+'\n\n'+desc;
+  desc+='\n\n[진척 '+md+' 희준님] 미룸('+why+')'+(why==='남 기다림'?' → '+person+' 기다림, '+mpMd(recheck)+' 다시 봄':' → 마감 '+mpMd(due))+' · 다음: '+next;
+  var upd={description:desc};
+  if(why==='남 기다림'){upd.waiting_on=person;upd.waiting_since=dk(d);upd.recheck_date=recheck;}
+  else upd.due_date=due;
+  MP.busy=true;
+  var r=await _sb.from('autolab_task').update(upd).eq('id',Number(id)); MP.busy=false;
+  if(r.error){showToast('실패: '+r.error.message);renderMorning();return;}
+  it.description=desc; if(upd.due_date) it.dueDate=upd.due_date; if(upd.waiting_on){it.waitingOn=person;it.waitingSince=upd.waiting_since;it.recheckDate=recheck;}
+  MP.pick=null; MP.defer=null; showToast('#'+id+' 미룸 — '+(why==='남 기다림'?person+' 기다림':'마감 '+mpMd(due))); renderMorning();
+}
 function mpDetail(B){
   var k=MP.sel; if(!k) return '<p class="mp-note">고를 항목이 없습니다.</p>';
   var back='<button class="mp-link mp-back" onclick="MP.open=false;renderMorning()">← 목록</button>';
@@ -2350,8 +2431,10 @@ function mpDetail(B){
     if(k[0]==='W'){var ho=mpIsHandoff(t);
       return back+head+'<div class="mp-acts"><button class="mp-btn pri" onclick="mpWaitAct(\''+t.id+'\',\'got\')">'+(ho?'수락 받음':'답 받음')+'</button><button class="mp-btn" onclick="mpWaitAct(\''+t.id+'\',\'more\',this)">더 기다리기</button><button class="mp-btn" onclick="mpWaitAct(\''+t.id+'\',\'done\')">완료</button></div>'+
         '<p class="mp-note">'+(ho?'수락 받음 — 내 약속이 없으면 바로 완료, 있으면 약속 결과만 그날 확인':'답 받음 — 기다림을 풀고 내 할 일로 돌아옵니다')+'</p>';}
-    return back+head+(MP.pick==='D_due'?mpForm('D_due',{due:t.dueDate,prio:t.priority},'mpDueAct(\''+t.id+'\',\'due\')','마감 바꾸기')
-      :mpBtnRow([['D_done','완료'],['D_due','마감 바꾸기']],'',function(b){return b[0]==='D_done'?'mpDueAct(\''+t.id+'\',\'done\')':'MP.pick=\'D_due\';renderMorning()';}));
+    // 마감 된 할 일: 고를 게 아니라 어디까지·남은 것을 본다. 미루려면 이유와 다음 할 일을 남긴다(11/10)
+    var headD='<h2>#'+t.id+' '+mpEsc(t.task)+'</h2><p class="src">'+mpDueState(t)+(t.priority?' · '+mpEsc(MP_PRIO[t.priority]||''):'')+'</p>'+mpRemainHtml(t);
+    return back+headD+(MP.pick==='D_defer'?mpDeferForm(t)
+      :mpBtnRow([['D_done','완료'],['D_defer','미루기…']],'',function(b){return b[0]==='D_done'?'mpDueAct(\''+t.id+'\',\'done\')':'MP.pick=\'D_defer\';MP.defer=null;renderMorning()';}));
   }
   var r=MP.rows.filter(function(x){return 'r'+x.id===k;})[0];
   if(!r) return back+'<p class="mp-note">항목을 찾지 못했습니다.</p>';
