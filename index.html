@@ -2208,7 +2208,19 @@ async function loadMorning(quiet){
   if(!(allData._autolab||[]).length){ try{ await loadData(true); }catch(e){} }
   renderMorning();
 }
-// 화면 항목 = 답할 것(r) · 할 일 카드(T) · 마감 된 할 일(D) · 다시 볼 기다림(W) · 놓친 일(r)
+// 내 할 일 전부 — 하루를 남의 요청이 아니라 내 일로 시작하게 정할 것 맨 위에(11/10 희준님 "다 보여주는게 나을듯", 과제 구분 없이).
+// 열린 할 일 중 손을 댈 단위만: 열린 하위가 있는 큰 주제는 빼고 그 하위가 나온다. 마감 순 묶음. 09시 DM(slack-daily-check.my_tasks)과 같은 규칙
+function mpWeekEnd(today){var d=new Date(today+'T00:00:00');d.setDate(d.getDate()+(7-d.getDay())%7);return dk(d);}
+function mpBucket(t,today){var d=t.dueDate;return !d?'마감 없음':d<today?'마감 지남':d===today?'오늘':d<=mpWeekEnd(today)?'이번 주':'다음 주 이후';}
+var MP_BUCKETS=['마감 지남','오늘','이번 주','다음 주 이후','마감 없음'];
+function mpMine(){
+  var today=dk(new Date());
+  var open=(allData._autolab||[]).filter(function(i){return i.person===MP.person&&!(autolabChecks[alKey(i)]||{}).checked;});
+  var hasKid={}; open.forEach(function(i){if(i.parentId) hasKid[i.parentId]=1;});
+  return open.filter(function(i){return !hasKid[i.id];}).map(function(t){return {t:t,b:mpBucket(t,today)};})
+    .sort(function(x,y){return MP_BUCKETS.indexOf(x.b)-MP_BUCKETS.indexOf(y.b)||(x.t.dueDate||'').localeCompare(y.t.dueDate||'')||Number(y.t.id)-Number(x.t.id);});
+}
+// 화면 항목 = 내 과제(M) · 답할 것(r) · 할 일 카드(T) · 마감 된 할 일(D) · 다시 볼 기다림(W) · 놓친 일(r)
 function mpBoard(){
   var done=MP.filter==='done', today=dk(new Date());
   var rows=MP.rows.filter(function(r){
@@ -2220,13 +2232,14 @@ function mpBoard(){
   rows.forEach(function(r){if(mpGroupable(r)){if(!g[r.task_id]){g[r.task_id]=[];order.push(r.task_id);}g[r.task_id].push(r);}});
   var groups=order.map(function(t){return {tid:t,rows:g[t],task:_alFind(t)};});
   var mine=function(i){return i.person===MP.person&&!(autolabChecks[alKey(i)]||{}).checked;};
-  var due=done?[]:(allData._autolab||[]).filter(function(i){return mine(i)&&i.dueDate&&i.dueDate<=today&&!i.waitingOn&&!g[i.id];})
-    .sort(function(a,b){return a.dueDate.localeCompare(b.dueDate);});
+  // 마감 된 할 일은 '내 할 일' 목록의 마감 지남·오늘 묶음으로 합쳤다(따로 칸 없음)
+  var my=done?[]:mpMine();
+  var due=[];
   var waits=done?[]:mpWaitDue().filter(function(i){return !g[i.id];});
   // 할 일 줄 순서: 마감 지난 것 → 오늘 마감 → 나머지
   // 마감 된 할 일(D)은 정할 것이 아니다 — 고를 게 없고 남은 것만 보면 된다(11/10 희준님). 숫자에 안 넣고 맨 아래 따로
   var tasks=groups.map(function(x){return {key:'T'+x.tid,g:x,due:(x.task&&x.task.dueDate)||'9999'};}).sort(function(a,b){return a.due.localeCompare(b.due);});
-  return {replies:rows.filter(function(r){return mpType(r)==='reply';}),tasks:tasks,waits:waits,dues:due,
+  return {replies:rows.filter(function(r){return mpType(r)==='reply';}),tasks:tasks,waits:waits,dues:due,my:my,
     loose:rows.filter(function(r){return !mpGroupable(r)&&mpType(r)!=='reply';}),groups:g};
 }
 function mpRowHtml(key,title,meta,when,cls){
@@ -2243,6 +2256,15 @@ function renderMorning(){
   var msgRow=function(r){var k='r'+r.id;keys.push(k);var sug=mpSuggest(r);
     return mpRowHtml(k,mpEsc(r.hl),mpEsc([sug?'제안: '+sug:'',r.who].filter(Boolean).join(' · ')),r.decision?'':mpAge(r),r.decision?'decided':'');};
   var sub=function(t,n){return n?'<div class="mp-grp">'+t+'</div>':'';};
+  // 내 할 일 — 정할 것 숫자에 안 센다. 새 소식 카드가 있는 할 일은 그 카드(T), 다시 볼 기다림이면 W, 나머지는 D(어디까지·남은 것·[완료][미루기…])
+  if(B.my.length){
+    var waitIds={}; B.waits.forEach(function(i){waitIds[i.id]=1;}); var lastB='';
+    list+='<section class="mp-part"><h2>내 할 일<span>'+B.my.length+'</span></h2>'+B.my.map(function(x){var t=x.t;
+      var k=B.groups[t.id]?'T'+t.id:waitIds[t.id]?'W'+t.id:'D'+t.id; keys.push(k);
+      var h=x.b!==lastB?'<div class="mp-grp">'+x.b+'</div>':''; lastB=x.b;
+      var meta=[B.groups[t.id]?'새 소식 있음':'',mpRemainSummary(mpRemain(t))].filter(Boolean).join(' · ');
+      return h+mpRowHtml(k,'#'+t.id+' '+mpEsc(t.task),mpEsc(meta),t.dueDate?mpDueState(t):'',MP_PRIO_CLS[t.priority]||'');}).join('')+'</section>';
+  }
   list+='<section class="mp-part"><h2>지금 해야 하는 일<span>'+n1+'</span></h2>';
   list+=sub('답할 것 — 상대가 내 답을 기다림',B.replies.length)+B.replies.map(msgRow).join('');
   list+=sub('할 일',B.tasks.length)+B.tasks.map(function(x){
@@ -2256,9 +2278,6 @@ function renderMorning(){
   if(!n1) list+='<p class="mp-empty">'+(MP.filter==='done'?'없음':'지금 할 일이 없습니다')+'</p>';
   list+='</section><section class="mp-part"><h2>등록 못 한 놓친 일<span>'+n2+'</span></h2>'+B.loose.map(msgRow).join('')+
     (n2?'':'<p class="mp-empty">'+(MP.filter==='done'?'없음':'다 비웠습니다')+'</p>')+'</section>';
-  if(B.dues.length) list+='<section class="mp-part"><h2>오늘 마감·지난 할 일<span>'+B.dues.length+'</span></h2><div class="mp-grp">고를 것 없음 — 어디까지 왔고 무엇이 남았는지</div>'+
-    B.dues.map(function(t){var k='D'+t.id;keys.push(k);
-      return mpRowHtml(k,'#'+t.id+' '+mpEsc(t.task),mpEsc(mpRemainSummary(mpRemain(t))),mpDueState(t),MP_PRIO_CLS[t.priority]||'');}).join('')+'</section>';
   // 고른 카드가 정해져 빠지면 처음이 아니라 그 바로 다음 카드로 넘어간다
   if(keys.indexOf(MP.sel)<0){
     var was=MP.keys.indexOf(MP.sel), next=null;
