@@ -495,6 +495,14 @@ body{background:var(--bg-canvas)}
 .mp-row.cur{background:var(--bg-muted)}
 .mp-row .t{font-size:var(--text-sm);font-weight:500;line-height:1.45;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .mp-row.decided .t{font-weight:400;color:var(--text-secondary)}
+/* 내 할 일 계단식(11/11): 큰 주제 줄 아래 하위를 한 칸씩 들여 놓는다 */
+.mp-row.topic .t{font-weight:600}
+.mp-row.lv1{margin-left:16px;width:calc(100% - 16px)}
+.mp-row.lv2{margin-left:32px;width:calc(100% - 32px)}
+.mp-grp+.mp-row.topic,.mp-row.lv1+.mp-row.topic:not(.lv1),.mp-row.lv2+.mp-row.topic:not(.lv1),.mp-row:not(.topic)+.mp-grp.solo{margin-top:8px}
+.mp-later{margin-top:12px}
+.mp-later summary{font-size:var(--text-xs);color:var(--text-secondary);padding:8px;cursor:pointer;list-style-position:inside}
+.mp-later summary:hover{color:var(--text-primary)}
 .mp-sub{margin-top:24px;padding-top:20px;border-top:1px solid var(--border-subtle)}
 .mp-detail .src+.mp-sub{margin-top:16px;padding-top:0;border-top:0}
 .mp-sub h3{font-size:var(--text-xs);font-weight:600;color:var(--text-secondary);margin:0 0 4px}
@@ -2246,8 +2254,32 @@ function mpMine(){
   var today=dk(new Date());
   var open=(allData._autolab||[]).filter(function(i){return i.person===MP.person&&!(autolabChecks[alKey(i)]||{}).checked;});
   var hasKid={}; open.forEach(function(i){if(i.parentId) hasKid[i.parentId]=1;});
-  return open.filter(function(i){return !hasKid[i.id];}).map(function(t){return {t:t,b:mpBucket(t,today)};})
-    .sort(function(x,y){return MP_BUCKETS.indexOf(x.b)-MP_BUCKETS.indexOf(y.b)||(x.t.dueDate||'').localeCompare(y.t.dueDate||'')||Number(y.t.id)-Number(x.t.id);});
+  var vis=[], later=[];
+  open.filter(function(i){return !hasKid[i.id];}).forEach(function(t){var f=mpShowFrom(t); if(f>today) later.push({t:t,from:f}); else vis.push({t:t,b:mpBucket(t,today)});});
+  vis.sort(function(x,y){return MP_BUCKETS.indexOf(x.b)-MP_BUCKETS.indexOf(y.b)||(x.t.dueDate||'').localeCompare(y.t.dueDate||'')||Number(y.t.id)-Number(x.t.id);});
+  vis.later=later.sort(function(x,y){return x.from.localeCompare(y.from)||(x.t.dueDate||'').localeCompare(y.t.dueDate||'');});
+  return vis;
+}
+// 언제부터 보이기 = 시작일(11/11 희준님). 자기와 위 큰 주제들 시작일 중 가장 늦은 날부터 보인다 — 큰 주제를 미루면 하위도 같이 빠진다
+// 09시 DM(slack-daily-check.show_from)과 같은 규칙 — 한쪽을 고치면 다른 쪽도
+function mpShowFrom(t){
+  var s=t.dateKey||'', p=t, seen={};
+  while(p&&p.parentId&&!seen[p.id]){ seen[p.id]=1; p=_alFind(p.parentId); if(p&&(p.dateKey||'')>s) s=p.dateKey; }
+  return s;
+}
+// 맨 위 큰 주제(없으면 자기)
+function mpRoot(t){ var p=t, seen={}; while(p.parentId&&!seen[p.id]){ seen[p.id]=1; var q=_alFind(p.parentId); if(!q) break; p=q; } return p; }
+// 내 할 일을 큰 주제별로 묶는다(11/11 B안). rest는 이미 급한 순 — 처음 나온 순서가 곧 가장 급한 하위 순서
+function mpTopicGroups(rest){
+  var G={}, order=[];
+  rest.forEach(function(x){
+    var r=mpRoot(x.t), k=String(r.id)===String(x.t.id)?'':String(r.id);
+    if(!G[k]){ G[k]={root:k?r:null,subs:{},subOrder:[],n:0,first:x}; order.push(k); }
+    var g=G[k], sk=(k&&String(x.t.parentId)!==k)?String(x.t.parentId):'';
+    if(!g.subs[sk]){ g.subs[sk]=[]; g.subOrder.push(sk); }
+    g.subs[sk].push(x); g.n++;
+  });
+  return order.map(function(k){return G[k];});
 }
 // 화면 항목 = 내 과제(M) · 답할 것(r) · 할 일 카드(T) · 마감 된 할 일(D) · 다시 볼 기다림(W) · 놓친 일(r)
 function mpBoard(){
@@ -2330,8 +2362,27 @@ function renderMorning(){
     // 내 할 일 — 할 일마다 한 줄. 이유가 걸린 할 일은 맨 위 '지금 볼 것'에, 나머지는 마감 순 묶음에
     list+='<section class="mp-part"><h2>내 할 일<span>'+(foc.length+rest.length)+'</span></h2>'+
       sub('지금 볼 것 — 답할 것·새 소식·다시 볼 기다림',foc.length)+foc.map(function(f){return taskRow(f.task,mpFocusTags(f));}).join('');
-    var lastB='';
-    list+=rest.map(function(x){var h=x.b!==lastB?'<div class="mp-grp">'+x.b+'</div>':''; lastB=x.b; return h+taskRow(x.t,mpRemainSummary(mpRemain(x.t)));}).join('')+'</section>';
+    // 큰 주제 줄 → 그 밑 하위(한 칸 들여), 중간 큰 주제가 있으면 그 밑은 두 칸(11/11 B안). 큰 주제는 가장 급한 하위 순
+    var lvRow=function(t,meta,when,cls){var k='T'+t.id;keys.push(k);return mpRowHtml(k,'#'+t.id+' '+mpEsc(t.task),mpEsc(meta),when,cls+(MP_PRIO_CLS[t.priority]?' '+MP_PRIO_CLS[t.priority]:''));};
+    list+=mpTopicGroups(rest).map(function(g){
+      var h='';
+      if(g.root) h+=lvRow(g.root,'하위 '+g.n,'가장 급한 것 '+(g.first.t.dueDate?mpDueState(g.first.t).replace(/^마감 /,''):'마감 없음'),'topic');
+      else h+='<div class="mp-grp solo">큰 주제 없음</div>';
+      g.subOrder.forEach(function(sk){
+        var lv=g.root?(sk?2:1):0;
+        if(sk){ var mid=_alFind(sk); if(mid) h+=lvRow(mid,'','','topic lv1'); }
+        h+=g.subs[sk].map(function(x){return lvRow(x.t,mpRemainSummary(mpRemain(x.t)),x.t.dueDate?mpDueState(x.t):'',lv?'lv'+lv:'');}).join('');
+      });
+      return h;
+    }).join('');
+    var later=B.my.later||[];
+    if(later.length){
+      var cnt={}; later.forEach(function(x){cnt[x.from]=(cnt[x.from]||0)+1;});
+      list+='<details class="mp-later"'+(MP.laterOpen?' open':'')+' ontoggle="MP.laterOpen=this.open"><summary>곧 보일 것 '+later.length+' · '+
+        Object.keys(cnt).sort().map(function(d){return mpMd(d)+'부터 '+cnt[d];}).join(' · ')+'</summary>'+
+        later.map(function(x){return lvRow(x.t,mpRoot(x.t)!==x.t?'큰 주제: '+mpRoot(x.t).task:'',mpMd(x.from)+'부터','');}).join('')+'</details>';
+    }
+    list+='</section>';
     // 3일 넘게 안 정한 줄 — 09시 DM 묶음 카드와 같은 기준·같은 처리(morning-action stale_close, 11/11)
     var old=mpStale(B);
     if(old.length) list+='<p class="mp-note mp-stale">3일 넘게 안 정한 카드 '+old.length+'장 <button class="mp-link" onclick="mpStaleClose()"'+(MP.busy?' disabled':'')+'>전부 닫기</button> <span>사유 "3일 넘게 안 정함" · 하나씩 되돌리기 가능</span></p>';
@@ -2549,7 +2600,20 @@ function mpWaitBlock(t){
 // 마감 된 할 일·이유 없는 할 일: 고를 게 아니라 어디까지·남은 것을 본다. 미루려면 이유와 다음 할 일을 남긴다(11/10)
 function mpDueBlock(t){
   return mpRemainHtml(t)+(MP.pick==='D_defer'?mpDeferForm(t)
-    :mpBtnRow([['D_done','완료'],['D_defer','미루기…']],'',function(b){return b[0]==='D_done'?'mpDueAct(\''+t.id+'\',\'done\')':'MP.pick=\'D_defer\';MP.pickRow=null;MP.defer=null;renderMorning()';}));
+    :mpBtnRow([['D_done','완료'],['D_defer','미루기…'],['D_show','언제부터 보이기…']],'',function(b){return b[0]==='D_done'?'mpDueAct(\''+t.id+'\',\'done\')':b[0]==='D_show'?'mpShowAct(\''+t.id+'\',this)':'MP.pick=\'D_defer\';MP.pickRow=null;MP.defer=null;renderMorning()';}));
+}
+// 언제부터 보이기 — 시작일을 바꾼다. 큰 주제면 하위도 그날까지 같이 빠진다(11/11)
+function mpShowAct(id,btn){
+  var it=_alFind(id); if(!it) return;
+  var nKid=(allData._autolab||[]).filter(function(i){return String(i.parentId)===String(id)&&!(autolabChecks[alKey(i)]||{}).checked;}).length;
+  duePicker(btn,it.dateKey,async function(v){
+    if(!v) return;
+    var r=await _sb.from('autolab_task').update({start_date:v}).eq('id',Number(id));
+    if(r.error){showToast('실패: '+r.error.message);return;}
+    it.dateKey=v; var today=dk(new Date());
+    showToast('#'+id+' '+(v>today?mpMd(v)+'부터 보임'+(nKid?' — 하위 '+nKid+'개도 같이':''):'지금부터 보임'));
+    renderMorning();
+  },{title:'이날부터 보이기',noClear:true});
 }
 function mpMsgBody(r){
   return '<p class="src">'+mpEsc([r.who,r.when_label,r.source].filter(Boolean).join(' · '))+
@@ -2950,12 +3014,13 @@ function duePresets(){
   var endM=new Date(t.getFullYear(),t.getMonth()+1,0);
   return [['오늘',t],['내일',add(1)],['이번 주 금',thisFri],['다음 주 월',nextMon],['다음 주 금',nextFri],['2주 뒤',add(14)],['이번 달 말',endM]];
 }
-function duePicker(anchor,current,onPick){
+function duePicker(anchor,current,onPick,lab){
+  lab=lab||{};
   var old=document.getElementById('due-pop'); if(old) old.remove();
   var pop=document.createElement('div'); pop.id='due-pop'; pop.className='due-pop';
   var w='일월화수목금토';
-  pop.innerHTML='<div class="due-pop-h">마감 고르기</div>'+duePresets().map(function(p){return '<button data-v="'+dk(p[1])+'"><span>'+p[0]+'</span><small>'+(p[1].getMonth()+1)+'/'+p[1].getDate()+' '+w[p[1].getDay()]+'</small></button>';}).join('')+
-    '<label class="due-pop-cal">날짜 직접 <input type="date" value="'+(current||'')+'"></label>'+(current?'<button class="due-pop-clear" data-v="">마감 지우기</button>':'');
+  pop.innerHTML='<div class="due-pop-h">'+(lab.title||'마감 고르기')+'</div>'+duePresets().map(function(p){return '<button data-v="'+dk(p[1])+'"><span>'+p[0]+'</span><small>'+(p[1].getMonth()+1)+'/'+p[1].getDate()+' '+w[p[1].getDay()]+'</small></button>';}).join('')+
+    '<label class="due-pop-cal">날짜 직접 <input type="date" value="'+(current||'')+'"></label>'+(current&&!lab.noClear?'<button class="due-pop-clear" data-v="">마감 지우기</button>':'');
   document.body.appendChild(pop);
   var r=anchor.getBoundingClientRect(), top=r.bottom+6, left=Math.min(r.left,window.innerWidth-pop.offsetWidth-12);
   if(top+pop.offsetHeight>window.innerHeight-8) top=Math.max(8,r.top-pop.offsetHeight-6);
