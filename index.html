@@ -2298,6 +2298,8 @@ function mpFocusTags(f){
   if(f.grp){ if(f.grp.some(function(r){return mpType(r)==='progress';})) a.push('끝난 것 같음');
     var n=f.grp.filter(function(r){return r.kind!=='progress';}).length; if(n) a.push('새 소식 '+n); }
   if(f.wait) a.push((mpIsHandoff(f.wait)?'넘김 수락 확인 · ':'기다림 · ')+f.wait.waitingOn);
+  // 9시 점검이 넘어온 카드 스레드에서 끝난 흔적을 찾았으면(11/11) 앞에 — 열어서 닫기만 하면 되는 카드
+  if(f.reps.concat(f.grp||[]).some(function(r){return !!r.evidence;})) a.unshift('끝난 흔적 있음');
   return a.join(' · ');
 }
 function renderMorning(){
@@ -2586,7 +2588,8 @@ function mpTaskDetail(rows,tid,embedded){
   var prog=t?(t.description||'').split('\n').map(function(s){return s.trim();}).filter(function(s){return /^\[진척 /.test(s);}).pop():'';
   var lines='<ul class="mp-lines">'+rows.map(function(r){
     var lab=mpType(r)==='progress'?'끝난 것 같음':mpType(r)==='follow'?'팔로업':mpType(r)==='missed'?'놓친 대화':r.source==='통화 할 일'?'통화':'새 내용';
-    return '<li><span class="d">'+mpMd(r.edition_date)+' '+lab+'</span><span class="x">'+mpEsc(r.hl)+(r.body?'<small>'+mpEsc(r.body)+'</small>':'')+'</span>'+
+    return '<li><span class="d">'+mpMd(r.edition_date)+' '+lab+'</span><span class="x">'+mpEsc(r.hl)+(r.body?'<small>'+mpEsc(r.body)+'</small>':'')+
+      (r.evidence?'<small>끝난 흔적('+(r.evidence==='self'?'내가 처리함':'다른 사람이 처리함')+'): '+mpEsc(r.evidence_note||'')+'</small>':'')+'</span>'+
       '<span class="a">'+(r.link?'<a href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">원문</a>':'')+(!r.decision&&r.kind==='merge'?'<button class="mp-link" onclick="mpSplit('+r.id+')" title="이 줄만 떼어 등록 못 한 놓친 일로">다른 일</button>':'')+'</span></li>';}).join('')+'</ul>';
   var act;
   if(!open.length){var last=rows.slice().sort(function(a,b){return String(a.decided_at).localeCompare(String(b.decided_at));}).pop();
