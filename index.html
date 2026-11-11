@@ -2217,9 +2217,10 @@ async function loadMorning(quiet){
   var last=await _sb.from('morning_item').select('edition_date').eq('person',MP.person).order('edition_date',{ascending:false}).limit(1);
   if(last.error){box.innerHTML='<div class="loading">불러오기 실패: '+mpEsc(last.error.message)+'</div>';return;}
   MP.date=last.data.length?last.data[0].edition_date:dk(new Date());
-  // 오늘 판 전부 + 지난 판에서 아직 안 정한 줄(놓치지 않게 계속 넘어온다)
+  // 오늘 판 전부 + 지난 판에서 아직 안 정한 줄(놓치지 않게 계속 넘어온다) + 지난 판인데 오늘 정한 줄('오늘 정한 것'에 보이게, 11/11)
+  var dayStart=new Date(dk(new Date())+'T00:00:00+09:00').toISOString();
   var res=await _sb.from('morning_item').select('*').eq('person',MP.person)
-    .or('edition_date.eq.'+MP.date+',and(decision.is.null,kind.neq.info)')
+    .or('edition_date.eq.'+MP.date+',and(decision.is.null,kind.neq.info),decided_at.gte.'+dayStart)
     .order('edition_date',{ascending:true}).order('sort');
   if(res.error){box.innerHTML='<div class="loading">불러오기 실패: '+mpEsc(res.error.message)+'</div>';return;}
   MP.rows=res.data.filter(mpAct);
