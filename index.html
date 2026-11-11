@@ -495,6 +495,10 @@ body{background:var(--bg-canvas)}
 .mp-row.cur{background:var(--bg-muted)}
 .mp-row .t{font-size:var(--text-sm);font-weight:500;line-height:1.45;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .mp-row.decided .t{font-weight:400;color:var(--text-secondary)}
+.mp-sub{margin-top:24px;padding-top:20px;border-top:1px solid var(--border-subtle)}
+.mp-detail .src+.mp-sub{margin-top:16px;padding-top:0;border-top:0}
+.mp-sub h3{font-size:var(--text-xs);font-weight:600;color:var(--text-secondary);margin:0 0 4px}
+.mp-sub .mp-sub-hl{font-size:var(--text-base);font-weight:600;color:var(--text-primary);margin:0 0 4px}
 .mp-row .m{grid-column:1/-1;font-size:var(--text-xs);color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mp-row .when{font-size:var(--text-xs);color:var(--text-secondary);white-space:nowrap;font-variant-numeric:tabular-nums}
 .mp-detail{padding:24px 28px}
@@ -2135,7 +2139,7 @@ AUTH_READY.then(function(){loadData();});
 // 아침판 — 봇 DM(통화 할 일·슬랙 점검·하루 요약)을 한 화면으로. 표 morning_item, 누르면 바로 할 일에 반영
 // 탭은 ?morning=1 로 한 번 열면 이 브라우저에서만 보인다(강희준 개인용)
 // =============================================
-var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준',pick:null,keys:[]};
+var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준',pick:null,pickRow:null,keys:[]};
 // 고른 카드는 새로고침·탭 이동 뒤에도 그 카드로 돌아온다(11/9 "카드 누르면 처음으로 돌아가 불편")
 try{MP.sel=localStorage.getItem('autolab_mp_sel')||null;}catch(e){}
 (function(){
@@ -2149,7 +2153,9 @@ try{MP.sel=localStorage.getItem('autolab_mp_sel')||null;}catch(e){}
     else if(qs.get('plan')==='1'){ localStorage.setItem('autolab_morning','1'); document.getElementById('nav-morning').style.display=''; setTimeout(function(){switchTab('plan');},0); }
   }catch(e){}
 })();
-function mpCopySend(){var t=MP.send||'';if(!t)return;
+function mpCopySend(id){var t=MP.send||'';
+  if(id){var r=MP.rows.filter(function(x){return x.id===id;})[0], sp=r&&/ · 보낼 글: 「([\s\S]*)」$/.exec(r.decision_label||''); t=sp?sp[1]:'';}
+  if(!t)return;
   (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){showToast('복사했습니다 — 원문 스레드에 붙여 보내세요');},function(){showToast('복사하지 못했습니다 — 글을 직접 골라 복사해 주세요');});}
 function mpEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function mpAct(r){return r.kind!=='info';}
@@ -2275,41 +2281,67 @@ function mpRowHtml(key,title,meta,when,cls){
   return '<button class="mp-row'+(cls?' '+cls:'')+(MP.sel===key?' cur':'')+'" onclick="mpPick(\''+key+'\')"><span class="t">'+title+'</span>'+
     '<span class="when">'+mpEsc(when||'')+'</span>'+(meta?'<span class="m">'+meta+'</span>':'')+'</button>';
 }
+// 할 일 하나 = 한 줄(11/11 희준님 "같은 할 일이 왜 여러 번 보여야 하는데?").
+// 할 일에 걸린 이유(답할 것·새 소식·다시 볼 기다림)를 할 일별로 모아 꼬리표로 붙이고, 누르면 한 화면에서 같이 처리한다
+function mpFocus(B){
+  var F={}, order=[];
+  var add=function(tid){tid=String(tid); if(!F[tid]){F[tid]={tid:tid,task:_alFind(tid),reps:[],grp:null,wait:null}; order.push(tid);} return F[tid];};
+  B.replies.forEach(function(r){ if(r.task_id&&mpTaskOpen(r.task_id)) add(r.task_id).reps.push(r); });
+  Object.keys(B.groups).forEach(function(t){ add(t).grp=B.groups[t]; });
+  if(MP.filter!=='done') mpWaitDue().forEach(function(i){ add(i.id).wait=i; });
+  return {map:F,order:order,solo:B.replies.filter(function(r){return !(r.task_id&&mpTaskOpen(r.task_id));})};
+}
+function mpFocusTags(f){
+  var a=[];
+  if(f.reps.length) a.push('답할 것 '+f.reps.length);
+  if(f.grp){ if(f.grp.some(function(r){return mpType(r)==='progress';})) a.push('끝난 것 같음');
+    var n=f.grp.filter(function(r){return r.kind!=='progress';}).length; if(n) a.push('새 소식 '+n); }
+  if(f.wait) a.push((mpIsHandoff(f.wait)?'넘김 수락 확인 · ':'기다림 · ')+f.wait.waitingOn);
+  return a.join(' · ');
+}
 function renderMorning(){
-  var B=mpBoard(), keys=[];
-  var n1=B.replies.length+B.tasks.length+B.waits.length, n2=B.loose.length;
-  var d=new Date(MP.date+'T00:00:00'), wd='일월화수목금토'[d.getDay()];
-  var html='<div class="mp-head"><h1>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+wd+'요일 아침</h1>'+
-    (MP.filter==='done'?'<p>오늘 정한 것을 보는 중입니다</p>':'<div class="mp-nums"><div><b>'+n1+'</b><span>지금 해야 하는 일</span></div><div'+(n2?' class="hot"':'')+'><b>'+n2+'</b><span>등록 못 한 놓친 일</span></div></div>')+'</div>';
-  var list='';
+  var B=mpBoard(), keys=[], done=MP.filter==='done', today=dk(new Date());
+  var FO=mpFocus(B), n1, n2=B.loose.length, list='';
   var msgRow=function(r){var k='r'+r.id;keys.push(k);var sug=mpSuggest(r);
     return mpRowHtml(k,mpEsc(r.hl),mpEsc([sug?'제안: '+sug:'',r.who].filter(Boolean).join(' · ')),r.decision?'':mpAge(r),r.decision?'decided':'');};
   var sub=function(t,n){return n?'<div class="mp-grp">'+t+'</div>':'';};
-  // 내 할 일 — 정할 것 숫자에 안 센다. 새 소식 카드가 있는 할 일은 그 카드(T), 다시 볼 기다림이면 W, 나머지는 D(어디까지·남은 것·[완료][미루기…])
-  if(B.my.length){
-    var waitIds={}; B.waits.forEach(function(i){waitIds[i.id]=1;}); var lastB='';
-    list+='<section class="mp-part"><h2>내 할 일<span>'+B.my.length+'</span></h2>'+B.my.map(function(x){var t=x.t;
-      var k=B.groups[t.id]?'T'+t.id:waitIds[t.id]?'W'+t.id:'D'+t.id; keys.push(k);
-      var h=x.b!==lastB?'<div class="mp-grp">'+x.b+'</div>':''; lastB=x.b;
-      var meta=[B.groups[t.id]?'새 소식 있음':'',mpRemainSummary(mpRemain(t))].filter(Boolean).join(' · ');
-      return h+mpRowHtml(k,'#'+t.id+' '+mpEsc(t.task),mpEsc(meta),t.dueDate?mpDueState(t):'',MP_PRIO_CLS[t.priority]||'');}).join('')+'</section>';
-  }
-  // 3일 넘게 안 정한 줄 — 09시 DM 묶음 카드와 같은 기준·같은 처리(morning-action stale_close, 11/11)
-  var old=MP.filter==='done'?[]:mpStale(B);
-  if(old.length) list+='<p class="mp-note mp-stale">3일 넘게 안 정한 카드 '+old.length+'장 <button class="mp-link" onclick="mpStaleClose()"'+(MP.busy?' disabled':'')+'>전부 닫기</button> <span>사유 "3일 넘게 안 정함" · 하나씩 되돌리기 가능</span></p>';
-  list+='<section class="mp-part"><h2>지금 해야 하는 일<span>'+n1+'</span></h2>';
-  list+=sub('답할 것 — 상대가 내 답을 기다림',B.replies.length)+B.replies.map(msgRow).join('');
-  list+=sub('할 일',B.tasks.length)+B.tasks.map(function(x){
-    keys.push(x.key);
-    if(x.g){var t=x.g.task, rs=x.g.rows, prog=rs.some(function(r){return mpType(r)==='progress';}), nNew=rs.filter(function(r){return r.kind!=='progress';}).length;
+  // 예전 열쇠(답할 것 줄 r·기다림 W·마감 D)로 고른 카드는 그 할 일 한 줄(T)로 옮긴다
+  if(!done&&MP.sel){ var m=/^([rDW])(\d+)$/.exec(MP.sel);
+    if(m&&m[1]!=='r') MP.sel='T'+m[2];
+    else if(m){ var rr=MP.rows.filter(function(x){return 'r'+x.id===MP.sel;})[0]; if(rr&&rr.task_id&&FO.map[String(rr.task_id)]) MP.sel='T'+rr.task_id; } }
+  if(!done){
+    var foc=FO.order.map(function(t){return FO.map[t];}).filter(function(f){return !!f.task;})
+      .sort(function(x,y){return MP_BUCKETS.indexOf(mpBucket(x.task,today))-MP_BUCKETS.indexOf(mpBucket(y.task,today))||(x.task.dueDate||'').localeCompare(y.task.dueDate||'')||Number(y.task.id)-Number(x.task.id);});
+    var rest=B.my.filter(function(x){return !FO.map[String(x.t.id)];});
+    n1=foc.length+FO.solo.length;
+    var taskRow=function(t,meta){var k='T'+t.id;keys.push(k);return mpRowHtml(k,'#'+t.id+' '+mpEsc(t.task),mpEsc(meta),t.dueDate?mpDueState(t):'',MP_PRIO_CLS[t.priority]||'');};
+    // 내 할 일 — 할 일마다 한 줄. 이유가 걸린 할 일은 맨 위 '지금 볼 것'에, 나머지는 마감 순 묶음에
+    list+='<section class="mp-part"><h2>내 할 일<span>'+(foc.length+rest.length)+'</span></h2>'+
+      sub('지금 볼 것 — 답할 것·새 소식·다시 볼 기다림',foc.length)+foc.map(function(f){return taskRow(f.task,mpFocusTags(f));}).join('');
+    var lastB='';
+    list+=rest.map(function(x){var h=x.b!==lastB?'<div class="mp-grp">'+x.b+'</div>':''; lastB=x.b; return h+taskRow(x.t,mpRemainSummary(mpRemain(x.t)));}).join('')+'</section>';
+    // 3일 넘게 안 정한 줄 — 09시 DM 묶음 카드와 같은 기준·같은 처리(morning-action stale_close, 11/11)
+    var old=mpStale(B);
+    if(old.length) list+='<p class="mp-note mp-stale">3일 넘게 안 정한 카드 '+old.length+'장 <button class="mp-link" onclick="mpStaleClose()"'+(MP.busy?' disabled':'')+'>전부 닫기</button> <span>사유 "3일 넘게 안 정함" · 하나씩 되돌리기 가능</span></p>';
+    if(FO.solo.length) list+='<section class="mp-part"><h2>답할 것 — 할 일에 안 붙은 것<span>'+FO.solo.length+'</span></h2>'+FO.solo.map(msgRow).join('')+'</section>';
+  } else {
+    n1=B.replies.length+B.tasks.length;
+    list+='<section class="mp-part"><h2>지금 해야 하는 일<span>'+n1+'</span></h2>';
+    list+=sub('답할 것 — 상대가 내 답을 기다림',B.replies.length)+B.replies.map(msgRow).join('');
+    list+=sub('할 일',B.tasks.length)+B.tasks.map(function(x){
+      keys.push(x.key);
+      var t=x.g.task, rs=x.g.rows, prog=rs.some(function(r){return mpType(r)==='progress';}), nNew=rs.filter(function(r){return r.kind!=='progress';}).length;
       return mpRowHtml(x.key,'#'+x.g.tid+' '+mpEsc(t?t.task:(rs[0].task_title||'')),
-        mpEsc([prog?'끝난 것 같음':'',nNew?'새 내용 '+nNew+'줄':''].filter(Boolean).join(' · ')),t?mpDueState(t):'',t?MP_PRIO_CLS[t.priority]||'':'');}
-  }).join('');
-  list+=sub('다시 볼 기다림 — 답이 왔는지 확인',B.waits.length)+B.waits.map(function(i){var k='W'+i.id;keys.push(k);
-    return mpRowHtml(k,'#'+i.id+' '+mpEsc(i.task),mpEsc((mpIsHandoff(i)?'넘김 · ':'')+i.waitingOn),i.waitingSince?Math.round((new Date(dk(new Date())+'T00:00:00')-new Date(i.waitingSince+'T00:00:00'))/86400000)+'일째':'');}).join('');
-  if(!n1) list+='<p class="mp-empty">'+(MP.filter==='done'?'없음':'지금 할 일이 없습니다')+'</p>';
-  list+='</section><section class="mp-part"><h2>등록 못 한 놓친 일<span>'+n2+'</span></h2>'+B.loose.map(msgRow).join('')+
-    (n2?'':'<p class="mp-empty">'+(MP.filter==='done'?'없음':'다 비웠습니다')+'</p>')+'</section>';
+        mpEsc([prog?'끝난 것 같음':'',nNew?'새 내용 '+nNew+'줄':''].filter(Boolean).join(' · ')),t?mpDueState(t):'',t?MP_PRIO_CLS[t.priority]||'':'');
+    }).join('');
+    if(!n1) list+='<p class="mp-empty">없음</p>';
+    list+='</section>';
+  }
+  list+='<section class="mp-part"><h2>등록 못 한 놓친 일<span>'+n2+'</span></h2>'+B.loose.map(msgRow).join('')+
+    (n2?'':'<p class="mp-empty">'+(done?'없음':'다 비웠습니다')+'</p>')+'</section>';
+  var d=new Date(MP.date+'T00:00:00'), wd='일월화수목금토'[d.getDay()];
+  var html='<div class="mp-head"><h1>'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+wd+'요일 아침</h1>'+
+    (done?'<p>오늘 정한 것을 보는 중입니다</p>':'<div class="mp-nums"><div><b>'+n1+'</b><span>지금 해야 하는 일</span></div><div'+(n2?' class="hot"':'')+'><b>'+n2+'</b><span>등록 못 한 놓친 일</span></div></div>')+'</div>';
   // 고른 카드가 정해져 빠지면 처음이 아니라 그 바로 다음 카드로 넘어간다
   if(keys.indexOf(MP.sel)<0){
     var was=MP.keys.indexOf(MP.sel), next=null;
@@ -2318,8 +2350,8 @@ function renderMorning(){
   }
   MP.keys=keys;
   try{localStorage.setItem('autolab_mp_sel',MP.sel||'');}catch(e){}
-  var tabs=[['left','남은 것'],['done','오늘 정한 것']].map(function(t){return '<button class="mp-tab'+(MP.filter===t[0]?' on':'')+'" onclick="MP.filter=\''+t[0]+'\';MP.sel=null;MP.pick=null;renderMorning()">'+t[1]+'</button>';}).join('');
-  html+='<div class="mp-work'+(MP.open?' open':'')+'"><div class="mp-list"><div class="mp-tabs">'+tabs+'</div>'+list+'</div><article class="mp-detail">'+mpDetail(B)+'</article></div>';
+  var tabs=[['left','남은 것'],['done','오늘 정한 것']].map(function(t){return '<button class="mp-tab'+(MP.filter===t[0]?' on':'')+'" onclick="MP.filter=\''+t[0]+'\';MP.sel=null;MP.pick=null;MP.pickRow=null;renderMorning()">'+t[1]+'</button>';}).join('');
+  html+='<div class="mp-work'+(MP.open?' open':'')+'"><div class="mp-list"><div class="mp-tabs">'+tabs+'</div>'+list+'</div><article class="mp-detail">'+mpDetail(B,FO)+'</article></div>';
   // 목록은 자체 스크롤이라 통째로 다시 그리면 맨 위로 튄다 → 그리기 전 위치를 재서 되돌린다
   var oldList=document.querySelector('#morning-content .mp-list'), top=oldList?oldList.scrollTop:null;
   document.getElementById('morning-content').innerHTML=html;
@@ -2370,10 +2402,11 @@ function mpTaskPreview(taskId,full){
     (last?'<p class="mp-target-last">최근: '+mpEsc(last)+'</p>':'')+'</div>';
 }
 // 버튼 줄 — 칸이 필요한 버튼은 고르면(MP.pick) 칸이 펼쳐지고, 아니면 바로 처리
-function mpBtnRow(bs,sug,onclick){
+function mpBtnRow(bs,sug,onclick,cur){
+  if(cur===undefined) cur=MP.pick;
   return '<div class="mp-acts">'+bs.map(function(b){
-    var on=MP.pick===b[0];
-    return '<button class="mp-btn'+(b[1]===sug&&!MP.pick?' pri':'')+(on?' on':'')+'"'+(MP.busy||b[2]?' disabled':'')+(b[2]?' title="'+mpEsc(b[2])+'"':'')+' onclick="'+onclick(b)+'">'+mpEsc(b[1])+'</button>';}).join('')+'</div>';
+    var on=cur===b[0];
+    return '<button class="mp-btn'+(b[1]===sug&&!cur?' pri':'')+(on?' on':'')+'"'+(MP.busy||b[2]?' disabled':'')+(b[2]?' title="'+mpEsc(b[2])+'"':'')+' onclick="'+onclick(b)+'">'+mpEsc(b[1])+'</button>';}).join('')+'</div>';
 }
 function mpDueFields(due,prio,why){
   var chips=[['DO','지금 하기'],['SCHEDULE','일정 잡기'],['DELEGATE','맡기기'],['ELIMINATE','안 함']].map(function(p){
@@ -2472,53 +2505,72 @@ async function mpDeferAct(id){
   it.description=desc; if(upd.due_date) it.dueDate=upd.due_date; if(upd.waiting_on){it.waitingOn=person;it.waitingSince=upd.waiting_since;it.recheckDate=recheck;}
   MP.pick=null; MP.defer=null; showToast('#'+id+' 미룸 — '+(why==='남 기다림'?person+' 기다림':'마감 '+mpMd(due))); renderMorning();
 }
-function mpDetail(B){
+function mpDetail(B,FO){
   var k=MP.sel; if(!k) return '<p class="mp-note">고를 항목이 없습니다.</p>';
   var back='<button class="mp-link mp-back" onclick="MP.open=false;renderMorning()">← 목록</button>';
+  if(k[0]==='T'&&MP.filter!=='done') return back+mpTaskFull(FO||mpFocus(B),k.slice(1));
   if(k[0]==='T') return back+mpTaskDetail((B.groups[k.slice(1)]||[]),k.slice(1));
-  if(k[0]==='D'||k[0]==='W'){
-    var t=_alFind(k.slice(1)); if(!t) return back+'<p class="mp-note">할 일을 찾지 못했습니다.</p>';
-    var head='<h2>#'+t.id+' '+mpEsc(t.task)+'</h2><p class="src">'+(k[0]==='W'?'다시 볼 기다림 · '+mpEsc(t.waitingOn):mpDueState(t)+(t.priority?' · '+mpEsc(MP_PRIO[t.priority]||''):''))+'</p>'+mpTaskPreview(t.id);
-    if(k[0]==='W'){var ho=mpIsHandoff(t);
-      return back+head+'<div class="mp-acts"><button class="mp-btn pri" onclick="mpWaitAct(\''+t.id+'\',\'got\')">'+(ho?'수락 받음':'답 받음')+'</button><button class="mp-btn" onclick="mpWaitAct(\''+t.id+'\',\'more\',this)">더 기다리기</button><button class="mp-btn" onclick="mpWaitAct(\''+t.id+'\',\'done\')">완료</button></div>'+
-        '<p class="mp-note">'+(ho?'수락 받음 — 내 약속이 없으면 바로 완료, 있으면 약속 결과만 그날 확인':'답 받음 — 기다림을 풀고 내 할 일로 돌아옵니다')+'</p>';}
-    // 마감 된 할 일: 고를 게 아니라 어디까지·남은 것을 본다. 미루려면 이유와 다음 할 일을 남긴다(11/10)
-    var headD='<h2>#'+t.id+' '+mpEsc(t.task)+'</h2><p class="src">'+mpDueState(t)+(t.priority?' · '+mpEsc(MP_PRIO[t.priority]||''):'')+'</p>'+mpRemainHtml(t);
-    return back+headD+(MP.pick==='D_defer'?mpDeferForm(t)
-      :mpBtnRow([['D_done','완료'],['D_defer','미루기…']],'',function(b){return b[0]==='D_done'?'mpDueAct(\''+t.id+'\',\'done\')':'MP.pick=\'D_defer\';MP.defer=null;renderMorning()';}));
-  }
   var r=MP.rows.filter(function(x){return 'r'+x.id===k;})[0];
   if(!r) return back+'<p class="mp-note">항목을 찾지 못했습니다.</p>';
-  // 대상 할 일: 봇 제안(task_id) → [대상 바꾸기]로 고른 번호(MP.tgt) → [대상 없이]는 -1
+  return back+'<h2>'+mpEsc(r.hl)+'</h2>'+mpMsgBody(r)+'<div class="mp-verdict">'+mpMsgAct(r,false)+'</div>';
+}
+// 할 일 한 장 — 이 할 일에 걸린 답할 것·새 소식·기다림을 위아래로, 각자 버튼으로 처리. 아무것도 안 걸렸으면 어디까지·남은 것과 [완료][미루기…]
+function mpTaskFull(FO,tid){
+  var t=_alFind(tid); if(!t) return '<p class="mp-note">할 일을 찾지 못했습니다(완료됐거나 지워짐).</p>';
+  var f=FO.map[String(tid)]||{reps:[],grp:null,wait:null}, today=dk(new Date());
+  // 이 화면에서 방금 정한 답할 것도 남겨 둔다 — 보낼 글을 복사해야 하니까
+  var reps=f.reps.concat(MP.rows.filter(function(r){return mpType(r)==='reply'&&String(r.task_id)===String(tid)&&r.decision&&r.decision!=='auto_done'&&r.decided_at&&dk(new Date(r.decided_at))===today;}));
+  var h='<h2>#'+t.id+' '+mpEsc(t.task)+'</h2><p class="src">'+mpDueState(t)+(t.priority?' · '+mpEsc(MP_PRIO[t.priority]||''):'')+
+    ' · <button class="mp-link" onclick="openAutolabDetailModal(\''+t.id+'\')">할 일 열기</button></p>';
+  reps.forEach(function(r){
+    h+='<section class="mp-sub"><h3>답할 것'+(r.decision?' · 정함':'')+'</h3><p class="mp-sub-hl">'+mpEsc(r.hl)+'</p>'+mpMsgBody(r)+'<div class="mp-verdict">'+mpMsgAct(r,true)+'</div></section>';});
+  if(f.grp) h+='<section class="mp-sub"><h3>새 소식</h3>'+mpTaskDetail(f.grp,tid,true)+'</section>';
+  if(f.wait) h+='<section class="mp-sub"><h3>'+(mpIsHandoff(t)?'넘긴 일 — 수락 확인':'다시 볼 기다림 — '+mpEsc(t.waitingOn)+' 답')+'</h3>'+mpWaitBlock(t)+'</section>';
+  if(!f.grp&&!f.wait) h+='<section class="mp-sub">'+(reps.length?'<h3>할 일</h3>':'')+mpDueBlock(t)+'</section>';
+  return h;
+}
+function mpWaitBlock(t){
+  var ho=mpIsHandoff(t);
+  return mpTaskPreview(t.id)+'<div class="mp-acts"><button class="mp-btn pri" onclick="mpWaitAct(\''+t.id+'\',\'got\')">'+(ho?'수락 받음':'답 받음')+'</button><button class="mp-btn" onclick="mpWaitAct(\''+t.id+'\',\'more\',this)">더 기다리기</button><button class="mp-btn" onclick="mpWaitAct(\''+t.id+'\',\'done\')">완료</button></div>'+
+    '<p class="mp-note">'+(ho?'수락 받음 — 내 약속이 없으면 바로 완료, 있으면 약속 결과만 그날 확인':'답 받음 — 기다림을 풀고 내 할 일로 돌아옵니다')+'</p>';
+}
+// 마감 된 할 일·이유 없는 할 일: 고를 게 아니라 어디까지·남은 것을 본다. 미루려면 이유와 다음 할 일을 남긴다(11/10)
+function mpDueBlock(t){
+  return mpRemainHtml(t)+(MP.pick==='D_defer'?mpDeferForm(t)
+    :mpBtnRow([['D_done','완료'],['D_defer','미루기…']],'',function(b){return b[0]==='D_done'?'mpDueAct(\''+t.id+'\',\'done\')':'MP.pick=\'D_defer\';MP.pickRow=null;MP.defer=null;renderMorning()';}));
+}
+function mpMsgBody(r){
+  return '<p class="src">'+mpEsc([r.who,r.when_label,r.source].filter(Boolean).join(' · '))+
+    (r.link?' · <a href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">'+mpEsc(r.link_label||'원문')+' 열기</a>':'')+'</p>'+
+    (r.quote?'<blockquote>'+mpEsc(r.quote)+'</blockquote>':'')+(r.body?'<p class="body">'+mpEsc(r.body)+'</p>':'');
+}
+// 한 줄 처리 — 칸이 필요한 버튼은 그 줄(MP.pickRow)에서만 펼친다. inTask: 할 일 한 장 안에서 그릴 때(대상은 이 할 일)
+function mpMsgAct(r,inTask){
   var T=mpType(r), ov=(MP.tgt||{})[r.id], tgt=ov===-1?null:(ov||r.task_id), tgtT=tgt?_alFind(tgt):null;
   var lead={reply:'누가 내 답을 기다리는 중입니다',follow:'하겠다고 했는데 끝난 게 안 보입니다',todo:'대시보드에 없는 새 일입니다',missed:'내가 없던 대화입니다. 내 일이면 할 일로 넣으세요',progress:'끝난 것 같습니다'}[T]||'';
-  var tg='';
+  var tg='', links=' <button class="mp-link" onclick="mpOpenPicker('+r.id+')">대상 바꾸기</button> <button class="mp-link" onclick="MP.tgt=MP.tgt||{};MP.tgt['+r.id+']=-1;renderMorning()">대상 없이</button>';
   if(!r.decision&&T!=='progress'){
-    tg=tgt?'<p class="mp-note">대상: <b>#'+tgt+' '+mpEsc(tgtT?tgtT.task:(r.task_title||''))+'</b>'+((allData._autolab||[]).some(function(i){return String(i.parentId)===String(tgt);})?' — 큰 주제라 할 일로 하면 그 밑 하위로':' — 할 일로 하면 그 설명에 덧붙임')+
-      ' <button class="mp-link" onclick="mpOpenPicker('+r.id+')">대상 바꾸기</button> <button class="mp-link" onclick="MP.tgt=MP.tgt||{};MP.tgt['+r.id+']=-1;renderMorning()">대상 없이</button></p>'+mpTaskPreview(tgt)
+    if(inTask&&!ov) tg='<p class="mp-note">이 할 일에 붙여 처리합니다'+links+'</p>';
+    else tg=tgt?'<p class="mp-note">대상: <b>#'+tgt+' '+mpEsc(tgtT?tgtT.task:(r.task_title||''))+'</b>'+((allData._autolab||[]).some(function(i){return String(i.parentId)===String(tgt);})?' — 큰 주제라 할 일로 하면 그 밑 하위로':' — 할 일로 하면 그 설명에 덧붙임')+links+'</p>'+mpTaskPreview(tgt)
       :'<p class="mp-note">대상 없음 — 새 할 일로 들어갑니다 <button class="mp-link" onclick="mpOpenPicker('+r.id+')">기존 할 일 고르기</button></p>';
   }
   var ev=r.evidence?'<p class="mp-note">'+(r.evidence==='self'?'내가 처리한 흔적':'다른 사람이 처리한 흔적')+(r.evidence_note?': '+mpEsc(r.evidence_note):'')+'</p>':'';
-  var sug=mpSuggest(r), bs=mpButtons(r), act;
+  var sug=mpSuggest(r), bs=mpButtons(r), act, cur=MP.pickRow===r.id?MP.pick:null;
   if(r.decision){
     // 원문에 보낼 글은 결과 줄 끝 「」에 담겨 온다(11/9) — 떼어서 복사 칸으로
     var sp=/^([\s\S]*?) · 보낼 글: 「([\s\S]*)」$/.exec(r.decision_label||''), resL=sp?sp[1]:r.decision_label;
-    MP.send=sp?sp[2]:'';
     act='<div class="mp-done"><span class="mp-res">'+mpEsc(resL)+(r.decided_task_id&&String(resL||'').indexOf('#')<0?' · #'+r.decided_task_id:'')+(r.decided_via==='slack'?' · 슬랙에서':'')+'</span>'+
-      (r.decided_task_id?'<button class="mp-link" onclick="openAutolabDetailModal(\''+r.decided_task_id+'\')">할 일 열기</button>':'')+
+      (r.decided_task_id&&!inTask?'<button class="mp-link" onclick="openAutolabDetailModal(\''+r.decided_task_id+'\')">할 일 열기</button>':'')+
       (r.followup_task_id?'<button class="mp-link" onclick="openAutolabDetailModal(\''+r.followup_task_id+'\')">후속 #'+r.followup_task_id+'</button>':'')+
       '<button class="mp-link" onclick="mpUndo('+r.id+')">되돌리기</button></div>'+
-      (sp?'<p class="mp-note">원문에 보낼 글 — 복사해서 직접 보내세요 <button class="mp-link" onclick="mpCopySend()">복사</button>'+(r.link?' <a class="mp-link" href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">원문 스레드 열기</a>':'')+'</p><p class="mp-memo-shown">'+mpEsc(sp[2]).replace(/\n/g,'<br>')+'</p>':'')+(r.memo?'<p class="mp-memo-shown">'+mpEsc(r.memo).replace(/\n/g,'<br>')+'</p>':'')+
-      (r.decided_task_id?'<details class="mp-more"><summary>메모 덧붙이기</summary><textarea id="mp-memo" rows="2"></textarea><div class="mp-fu"><input type="text" id="mp-fu" placeholder="후속 할 일"><input type="date" id="mp-fu-due" aria-label="후속 할 일 마감"></div><div class="mp-acts"><button class="mp-btn" onclick="mpMemo('+r.id+')">덧붙이기</button></div></details>':'');
+      (sp?'<p class="mp-note">원문에 보낼 글 — 복사해서 직접 보내세요 <button class="mp-link" onclick="mpCopySend('+r.id+')">복사</button>'+(r.link?' <a class="mp-link" href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">원문 스레드 열기</a>':'')+'</p><p class="mp-memo-shown">'+mpEsc(sp[2]).replace(/\n/g,'<br>')+'</p>':'')+(r.memo?'<p class="mp-memo-shown">'+mpEsc(r.memo).replace(/\n/g,'<br>')+'</p>':'')+
+      (r.decided_task_id&&!inTask?'<details class="mp-more"><summary>메모 덧붙이기</summary><textarea id="mp-memo" rows="2"></textarea><div class="mp-fu"><input type="text" id="mp-fu" placeholder="후속 할 일"><input type="date" id="mp-fu-due" aria-label="후속 할 일 마감"></div><div class="mp-acts"><button class="mp-btn" onclick="mpMemo('+r.id+')">덧붙이기</button></div></details>':'');
   } else {
-    var picked=MP.pick&&bs.filter(function(b){return b[0]===MP.pick;})[0];
-    act=mpBtnRow(bs,sug,function(b){return mpNeedsForm(b[0],r)?'MP.pick=\''+b[0]+'\';renderMorning()':'mpDecide('+r.id+',\''+b[0]+'\',\''+mpEsc(b[1])+'\','+(tgt||0)+')';})+
+    var picked=cur&&bs.filter(function(b){return b[0]===cur;})[0];
+    act=mpBtnRow(bs,sug,function(b){return mpNeedsForm(b[0],r)?'MP.pick=\''+b[0]+'\';MP.pickRow='+r.id+';renderMorning()':'mpDecide('+r.id+',\''+b[0]+'\',\''+mpEsc(b[1])+'\','+(tgt||0)+')';},cur)+
       (picked?mpForm(picked[0],r,'mpDecide('+r.id+',\''+picked[0]+'\',\''+mpEsc(picked[1])+'\','+(tgt||0)+')',picked[1]):'');
   }
-  return back+'<h2>'+mpEsc(r.hl)+'</h2><p class="src">'+mpEsc([r.who,r.when_label,r.source].filter(Boolean).join(' · '))+
-    (r.link?' · <a href="'+mpEsc(r.link)+'" target="_blank" rel="noopener">'+mpEsc(r.link_label||'원문')+' 열기</a>':'')+'</p>'+
-    (r.quote?'<blockquote>'+mpEsc(r.quote)+'</blockquote>':'')+(r.body?'<p class="body">'+mpEsc(r.body)+'</p>':'')+
-    '<div class="mp-verdict"><p class="mp-lead">'+lead+'</p>'+ev+tg+act+'</div>';
+  return (inTask?'':'<p class="mp-lead">'+lead+'</p>')+ev+tg+act;
 }
 // 진척 줄: "[진척 M/D 자동] 내용 <주소>" → 날짜·내용(짧게)·원문 링크
 function mpProgHtml(line){
@@ -2528,7 +2580,7 @@ function mpProgHtml(line){
   return '<p class="mp-note">최근 진척'+(m?' '+mpEsc(m[1].replace(/\s*자동$/,'')):'')+': '+mpEsc(txt)+(url?' <a href="'+mpEsc(url)+'" target="_blank" rel="noopener">원문</a>':'')+'</p>';
 }
 // 할 일 카드 — 할 일 머리 + 붙은 줄 목록 + [완료][마감 바꾸기][확인함]
-function mpTaskDetail(rows,tid){
+function mpTaskDetail(rows,tid,embedded){
   var t=_alFind(tid), open=rows.filter(function(r){return !r.decision;});
   var prog=t?(t.description||'').split('\n').map(function(s){return s.trim();}).filter(function(s){return /^\[진척 /.test(s);}).pop():'';
   var lines='<ul class="mp-lines">'+rows.map(function(r){
@@ -2540,13 +2592,14 @@ function mpTaskDetail(rows,tid){
     act='<div class="mp-done"><span class="mp-res">'+mpEsc(last.decision_label||'정함')+'</span>'+(String(last.decision).indexOf('task_')===0?'<button class="mp-link" onclick="mpUndo('+last.id+')">되돌리기</button>':'')+'</div>';}
   else if(MP.pick==='task_due') act=mpForm('task_due',{due:t&&t.dueDate,prio:t&&t.priority},'mpTask(\''+tid+'\',\'task_due\')','마감 바꾸기');
   else {var keep=mpCanKeep(t), prog1=open.some(function(r){return mpType(r)==='progress';});
-    act=mpBtnRow([['task_done','완료'],['task_due','마감 바꾸기'],['task_ok','확인함',keep?'':'마감이 없거나 지나서 그대로 둘 수 없습니다']],prog1?'완료':'',function(b){return b[0]==='task_due'?'MP.pick=\'task_due\';renderMorning()':'mpTask(\''+tid+'\',\''+b[0]+'\')';})+
+    act=mpBtnRow([['task_done','완료'],['task_due','마감 바꾸기'],['task_ok','확인함',keep?'':'마감이 없거나 지나서 그대로 둘 수 없습니다']],prog1?'완료':'',function(b){return b[0]==='task_due'?'MP.pick=\'task_due\';MP.pickRow=null;renderMorning()':'mpTask(\''+tid+'\',\''+b[0]+'\')';})+
       '<p class="mp-note">'+(keep?'정하면 새 내용 줄은 이 할 일 설명에 덧붙습니다':'마감이 없거나 지났습니다. 끝났으면 완료, 아니면 마감을 바꾸세요')+'</p>';}
+  if(embedded) return (prog?mpProgHtml(prog):'')+lines+'<div class="mp-verdict">'+act+'</div>';
   return '<h2>#'+tid+' '+mpEsc(t?t.task:(rows[0]&&rows[0].task_title)||'')+'</h2><p class="src">'+(t?mpDueState(t)+(t.priority?' · '+mpEsc(MP_PRIO[t.priority]||''):''):'할 일을 찾지 못했습니다')+
     ' · <button class="mp-link" onclick="openAutolabDetailModal(\''+tid+'\')">할 일 열기</button></p>'+
     (prog?mpProgHtml(prog):'')+lines+'<div class="mp-verdict">'+act+'</div>';
 }
-function mpPick(key){MP.sel=key;MP.pick=null;MP.open=true;renderMorning();}
+function mpPick(key){MP.sel=key;MP.pick=null;MP.pickRow=null;MP.open=true;renderMorning();}
 
 // 대상 할 일 고르기 — 봇 제안이 틀렸을 때 검색해서 고른다(Linear의 '중복 처리'처럼 한 창에서)
 var MPP={rowId:null,list:[],idx:0};
