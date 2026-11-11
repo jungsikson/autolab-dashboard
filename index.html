@@ -2242,6 +2242,22 @@ function mpBoard(){
   return {replies:rows.filter(function(r){return mpType(r)==='reply';}),tasks:tasks,waits:waits,dues:due,my:my,
     loose:rows.filter(function(r){return !mpGroupable(r)&&mpType(r)!=='reply';}),groups:g};
 }
+// 묵은 줄: 판 날짜가 3일 넘게 지난 안 정한 줄. 할 일 카드는 그 할 일 줄이 전부 묵었을 때만(09시 slack-daily-check.stale_ids와 같은 규칙)
+function mpStale(B){
+  var d=new Date(dk(new Date())+'T00:00:00'); d.setDate(d.getDate()-3); var cut=dk(d), ids=[];
+  B.replies.concat(B.loose).forEach(function(r){if(r.edition_date<=cut) ids.push(r.id);});
+  Object.keys(B.groups).forEach(function(t){var rs=B.groups[t]; if(rs.every(function(r){return r.edition_date<=cut;})) rs.forEach(function(r){ids.push(r.id);});});
+  return ids;
+}
+async function mpStaleClose(){
+  var ids=mpStale(mpBoard()); if(!ids.length||MP.busy) return;
+  if(!confirm('3일 넘게 안 정한 카드 '+ids.length+'장을 "3일 넘게 안 정함"으로 닫을까요? (오늘 정한 것에서 하나씩 되돌릴 수 있음)')) return;
+  MP.busy=true; renderMorning();
+  try{ var out=await mpCall({id:ids[0],action:'stale_close',ids:ids}); if(!out.ok) throw new Error(out.error||'실패');
+    (out.rows||[]).forEach(mpReplace); showToast(out.n+'장 닫음'); }
+  catch(e){ showToast('실패: '+(e.message||e)); }
+  MP.busy=false; renderMorning();
+}
 function mpRowHtml(key,title,meta,when,cls){
   return '<button class="mp-row'+(cls?' '+cls:'')+(MP.sel===key?' cur':'')+'" onclick="mpPick(\''+key+'\')"><span class="t">'+title+'</span>'+
     '<span class="when">'+mpEsc(when||'')+'</span>'+(meta?'<span class="m">'+meta+'</span>':'')+'</button>';
@@ -2265,6 +2281,9 @@ function renderMorning(){
       var meta=[B.groups[t.id]?'새 소식 있음':'',mpRemainSummary(mpRemain(t))].filter(Boolean).join(' · ');
       return h+mpRowHtml(k,'#'+t.id+' '+mpEsc(t.task),mpEsc(meta),t.dueDate?mpDueState(t):'',MP_PRIO_CLS[t.priority]||'');}).join('')+'</section>';
   }
+  // 3일 넘게 안 정한 줄 — 09시 DM 묶음 카드와 같은 기준·같은 처리(morning-action stale_close, 11/11)
+  var old=MP.filter==='done'?[]:mpStale(B);
+  if(old.length) list+='<p class="mp-note mp-stale">3일 넘게 안 정한 카드 '+old.length+'장 <button class="mp-link" onclick="mpStaleClose()"'+(MP.busy?' disabled':'')+'>전부 닫기</button> <span>사유 "3일 넘게 안 정함" · 하나씩 되돌리기 가능</span></p>';
   list+='<section class="mp-part"><h2>지금 해야 하는 일<span>'+n1+'</span></h2>';
   list+=sub('답할 것 — 상대가 내 답을 기다림',B.replies.length)+B.replies.map(msgRow).join('');
   list+=sub('할 일',B.tasks.length)+B.tasks.map(function(x){
