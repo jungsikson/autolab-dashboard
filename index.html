@@ -795,7 +795,7 @@ body{background:var(--bg-canvas)}
 .td-ev{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:6px}
 .td-ev li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px}.td-ev .w{color:var(--text-tertiary);font-size:13px;padding-top:1px}
 .td-ev a,.td-kv a{color:var(--text-primary);text-decoration:underline;text-decoration-color:#D5D8DD;text-underline-offset:3px}
-.td-ask blockquote{margin:10px 0 0;padding:10px 14px;background:var(--bg-canvas);border-radius:6px}
+.td-ask blockquote{margin:10px 0 0;padding:10px 14px;background:var(--bg-canvas);border-radius:6px;white-space:pre-line}
 .td-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .td-btn{height:34px;padding:0 14px;border-radius:6px;border:1px solid #D5D8DD;background:var(--bg-surface);cursor:pointer;white-space:nowrap;font-family:var(--font-sans);font-size:14px;color:var(--text-primary)}
 .td-btn:hover{border-color:var(--text-secondary)}.td-btn.primary{background:var(--text-primary);color:#fff;border-color:var(--text-primary)}
@@ -3490,6 +3490,10 @@ showToast=function(msg){ var hint=(!UNDO.replaying&&Date.now()-UNDO.lastPush<150
 var TD={sel:null,pick:null,busy:false,laterOpen:false,byTask:{}};
 var TD_STATES=['끝남','진행','기다림','넘김','미룸','안 함'];
 var TD_NEW=[['add','할 일로'],['merge','덧붙이기'],['handoff','넘기기'],['done_self','처리함'],['done_none','필요 없음']];
+// 운영 점검 '보내기 전 확인'(게이트) 카드 — [보내기]=넘기기, [보내지 않음]=필요 없음 + 이유(금요일 개선 고리 재료). 처리는 ops-audit gateDecide 하나
+var TD_GATE=[['handoff','보내기'],['done_none','보내지 않음']], TD_GATE_WHY=['이미 앎','판정이 틀림','내가 처리','지금은 보낼 때가 아님'];
+function tdIsGate(r){return String(r&&r.note||'').indexOf('gate:')===0;}
+function tdNames(r){return tdIsGate(r)?TD_GATE:TD_NEW;}
 function tdEsc(s){return mpEsc(s==null?'':String(s));}
 function tdMD(d){return d?(+d.slice(5,7))+'/'+(+d.slice(8,10)):'';}
 function tdDays(a,b){return Math.round((new Date(a+'T00:00:00')-new Date(b+'T00:00:00'))/864e5);}
@@ -3626,7 +3630,8 @@ function tdForm(k,t,r,today){
     if(k==='done_self'){hint='이미 처리했으면 한 줄 남기고 끝남으로 기록';f=tdField('td-memo','한 일','text','');}
     if(k==='done_none'){hint='하지 않는 이유';f=tdField('td-reason','이유','select','',[['','고르기']].concat(MP_REASONS.map(function(x){return [x,x];})));}
   }
-  var name=t?k:(TD_NEW.filter(function(x){return x[0]===k;})[0]||[])[1];
+  if(!t&&tdIsGate(r)){ hint=k==='handoff'?'받는 곳으로 바로 보냅니다(보낸 글은 되돌릴 수 없음)':'보내지 않는 이유 — 쌓이면 봇이 이런 질문을 아예 안 만들게 고칩니다'; f=k==='handoff'?'':tdField('td-reason','이유','select','',[['','고르기']].concat(TD_GATE_WHY.map(function(x){return [x,x];}))); }
+  var name=t?k:(tdNames(r).filter(function(x){return x[0]===k;})[0]||[])[1];
   return '<div class="td-form"><div class="td-hint">'+tdEsc(name)+' · '+tdEsc(hint)+'</div><div class="td-fields">'+f+'</div><div class="td-end"><button class="td-btn primary" onclick="tdConfirm()"'+(TD.busy?' disabled':'')+'>'+(TD.busy?'처리 중…':tdEsc(name)+'(으)로 확정')+'</button></div></div>';
 }
 function tdActs(names,primary){return '<div class="td-acts">'+names.map(function(n){var k=n[0],l=n[1];return '<button class="td-btn'+(k===primary?' primary':'')+'" aria-pressed="'+(TD.pick===k)+'" onclick="TD.pick=TD.pick===\''+k+'\'?null:\''+k+'\';tdRender()">'+tdEsc(l)+'</button>';}).join('')+'</div>';}
@@ -3635,10 +3640,10 @@ function tdDetail(B){
   if(k[0]==='n'){
     var r=MP.rows.filter(function(x){return 'n'+x.id===k;})[0]; if(!r) return '<p class="td-empty">고른 카드가 없습니다</p>';
     return '<article class="td-card">'+back+'<div class="td-path">새 일 › '+tdEsc([r.who||r.source,r.when_label].filter(Boolean).join(' · '))+'</div><h2>'+tdEsc(r.hl)+'</h2>'+
-      '<div class="td-ask"><div class="td-label"><span class="td-dot on"></span>오늘 정할 것</div><p class="td-q">할 일로 넣을까요?</p>'+
+      '<div class="td-ask"><div class="td-label"><span class="td-dot on"></span>오늘 정할 것</div><p class="td-q">'+(tdIsGate(r)?'이 질문을 보낼까요?':'할 일로 넣을까요?')+'</p>'+
       (r.quote?'<blockquote>"'+tdEsc(r.quote)+'"</blockquote>':'')+(r.body?'<blockquote>'+tdEsc(r.body)+'</blockquote>':'')+
       '<dl class="td-kv">'+(r.link?'<dt>원문</dt><dd><a href="'+tdEsc(r.link)+'" target="_blank" rel="noopener">'+tdEsc(r.link_label||'열기')+'</a></dd>':'')+(r.sug_due?'<dt>제안 마감</dt><dd>'+tdMD(r.sug_due)+(r.sug_why?' · '+tdEsc(r.sug_why):'')+'</dd>':'')+'</dl>'+
-      tdActs(TD_NEW,'add')+(TD.pick?tdForm(TD.pick,null,r,today):'')+'</div></article>';
+      tdActs(tdNames(r),tdIsGate(r)?null:'add')+(TD.pick?tdForm(TD.pick,null,r,today):'')+'</div></article>';
   }
   var t=k[0]==='t'?_alFind(k.slice(1)):null; if(!t) return '<p class="td-empty">왼쪽에서 카드를 고르세요</p>';
   var a=tdAsk(t,today), path=tdPath(t), now=tdNow(t.description), hist=tdHist(t.description), links=Array.isArray(t.links)?t.links:[];
@@ -3663,7 +3668,8 @@ async function tdConfirm(){
   if(k[0]==='t'){
     var to=TD.pick; body={action:'task_set',task_id:Number(k.slice(1)),to:to,by:MP.person,via:'dashboard',due:v('td-due'),next_step:v('td-next'),who:v('td-who'),recheck:v('td-recheck'),show_from:v('td-show'),proof:v('td-proof'),why:v('td-why')};
   } else {
-    var a=TD.pick, lab=(TD_NEW.filter(function(x){return x[0]===a;})[0]||[])[1];
+    var a=TD.pick, rr=MP.rows.filter(function(x){return 'n'+x.id===k;})[0], lab=(tdNames(rr).filter(function(x){return x[0]===a;})[0]||[])[1];
+    if(tdIsGate(rr)&&a==='done_none'&&!v('td-reason')){showToast('보내지 않는 이유를 골라 주세요');return;}
     body={id:Number(k.slice(1)),action:a,label:lab+(a==='done_none'&&v('td-reason')?' · '+v('td-reason'):''),by:MP.person,via:'dashboard',due:v('td-due'),
       task_id:a==='add'?(v('td-topic')||null):a==='merge'?(v('td-task')||null):null,person:v('td-who'),reason:v('td-reason'),memo:v('td-memo')};
   }
