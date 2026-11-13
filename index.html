@@ -3546,8 +3546,11 @@ function tdTags(t,today){
   var rows=TD.byTask[t.id]||[], out=[], st=t.state||'진행';
   if(rows.some(function(r){return mpType(r)==='progress';})) out.push({k:'done',ask:1,text:'끝난 것 같음'});
   if(rows.some(function(r){return mpType(r)==='reply';})) out.push({k:'reply',ask:1,text:'답할 것'});
-  if((st==='기다림'||st==='넘김')&&t.recheckDate&&t.recheckDate<=today) out.push({k:'recheck',ask:1,text:(st==='넘김'?'수락 확인 ':'다시 볼 날 ')+(t.recheckDate<today?tdMD(t.recheckDate)+' 지남':'오늘')+' · '+t.waitingOn});
-  else if(st==='기다림'||st==='넘김') out.push({k:'wait',text:(st==='넘김'?'넘김':'기다림')+' · '+t.waitingOn+(t.recheckDate?' · '+tdMD(t.recheckDate)+' 다시 봄':'')});
+  // 넘김은 손을 뗀 일 — 수락 확인 날이 와도 안 올리고, 마감일에 안 끝났으면 그날부터 올린다(11/13 희준님 "나한테 안떠도 돼", 재촉 봇 없음)
+  if(st==='기다림'&&t.recheckDate&&t.recheckDate<=today) out.push({k:'recheck',ask:1,text:'다시 볼 날 '+(t.recheckDate<today?tdMD(t.recheckDate)+' 지남':'오늘')+' · '+t.waitingOn});
+  else if(st==='넘김'&&t.dueDate&&t.dueDate<=today) out.push({k:t.dueDate<today?'over':'today',ask:1,text:'넘긴 일 '+(t.dueDate<today?'마감 '+tdDays(today,t.dueDate)+'일 지남':'오늘 마감')+' · '+t.waitingOn});
+  else if(st==='기다림') out.push({k:'wait',text:'기다림 · '+t.waitingOn+(t.recheckDate?' · '+tdMD(t.recheckDate)+' 다시 봄':'')});
+  else if(st==='넘김') out.push({k:'wait',text:'넘김 · '+t.waitingOn});
   if(st==='진행'&&!out.some(function(x){return x.k==='done';})){
     if(!t.dueDate) out.push({k:'nodue',ask:1,text:'마감 없음'});
     else if(t.dueDate<today) out.push({k:'over',ask:1,text:'마감 '+tdDays(today,t.dueDate)+'일 지남'});
@@ -3645,6 +3648,7 @@ function tdAsk(t,today){
   if(has('reply')) return {q:'답할 것이 있어요.',sub:'원문에 답한 뒤 상태를 정하세요',p:'진행',ev:rows.filter(function(r){return mpType(r)==='reply';}).map(function(r){return {when:r.when_label||tdMD(r.edition_date),text:r.hl,link:r.link};})};
   if(has('recheck')&&t.waitingOn==='Claude 확인') return {q:'Claude가 아직 확인하지 못했어요. 직접 볼까요?',sub:'Claude는 매일 09시 점검 때 설명의 "Claude가 확인할 일" 조건을 기록으로 대조합니다',p:'진행'};
   if(has('recheck')) return {q:t.state==='넘김'?t.waitingOn+'님이 맡았나요?':t.waitingOn+' 답이 왔나요?',sub:'왔으면 진행(새 마감), 아직이면 '+(t.state==='넘김'?'넘김':'기다림')+' 날짜를 다시',p:'진행'};
+  if(t.state==='넘김'&&(has('over')||has('today'))) return {q:t.waitingOn+'에게 넘긴 일이 '+(has('over')?'마감을 '+tdDays(today,t.dueDate)+'일 넘겼어요':'오늘 마감이에요')+'. 끝났나요?',sub:'끝났으면 끝남, 아니면 진행으로 가져와 새 마감',p:'끝남'};
   if(has('over')) return {q:'마감이 '+tdDays(today,t.dueDate)+'일 지났어요. 끝났나요, 마감을 다시 잡을까요?',sub:'끝났으면 끝남, 아니면 진행에서 새 마감',p:'진행'};
   if(has('nodue')) return {q:'마감이 없어요. 언제까지 끝낼까요?',p:'진행'};
   if(has('today')) return {q:'오늘 마감이에요. 오늘 끝낼 수 있나요?',sub:'못 끝내면 진행에서 새 마감',p:'끝남'};
@@ -3699,7 +3703,7 @@ function tdDetail(B){
   return '<article class="td-card">'+back+'<div class="td-path">'+(path.length?path.map(tdEsc).join(' › ')+' › ':'큰 주제 없음 › ')+'#'+t.id+'</div><h2>'+tdEsc(t.task)+'</h2>'+
     '<div class="td-facts"><span>상태 <b>'+tdEsc(st)+'</b></span><span>마감 '+dueTxt+'</span>'+(t.recheckDate&&t.waitingOn?'<span>다시 볼 날 <b>'+tdMD(t.recheckDate)+'</b></span>':'')+(st==='미룸'?'<span>보일 날 <b>'+tdMD(mpShowFrom(t))+'</b></span>':'')+
     ' <button class="td-link" onclick="openAutolabDetailModal(\''+t.id+'\')">상세 창</button></div>'+
-    '<div class="td-ask">'+(a?'<div class="td-label"><span class="td-dot on"></span>오늘 정할 것</div><p class="td-q">'+tdEsc(a.q)+'</p>'+(a.sub?'<div class="td-sub2">'+tdEsc(a.sub)+'</div>':''):'<div class="td-label">오늘 정할 것 없음</div><p class="td-q quiet">'+(t.waitingOn?tdEsc(t.waitingOn)+' '+(t.state==='넘김'?'수락':'답')+'을 기다리는 중 · '+tdMD(t.recheckDate)+'에 다시 봄':'마감 '+tdMD(t.dueDate)+'까지 진행 중')+'</p>')+
+    '<div class="td-ask">'+(a?'<div class="td-label"><span class="td-dot on"></span>오늘 정할 것</div><p class="td-q">'+tdEsc(a.q)+'</p>'+(a.sub?'<div class="td-sub2">'+tdEsc(a.sub)+'</div>':''):'<div class="td-label">오늘 정할 것 없음</div><p class="td-q quiet">'+(t.state==='넘김'?tdEsc(t.waitingOn)+'에게 넘김 · '+(t.dueDate?'마감일('+tdMD(t.dueDate)+')에 안 끝났으면 다시 올라와요':'다시 올라오지 않아요'):t.waitingOn?tdEsc(t.waitingOn)+' 답을 기다리는 중 · '+tdMD(t.recheckDate)+'에 다시 봄':'마감 '+tdMD(t.dueDate)+'까지 진행 중')+'</p>')+
     (a&&a.ev&&a.ev.length?'<ul class="td-ev">'+a.ev.map(function(e){return '<li><span class="w">'+tdEsc(e.when)+'</span><span>'+tdEsc(e.text)+(e.link?' <a href="'+tdEsc(e.link)+'" target="_blank" rel="noopener">원문</a>':'')+'</span></li>';}).join('')+'</ul>':'')+
     tdActs(TD_STATES.map(function(s){return [s,s];}),a?a.p:null)+(TD.pick?tdForm(TD.pick,t,null,today):'')+'</div>'+
     '<section class="td-block"><h3>지금 상태</h3>'+(now.length||t.nextStep||t.doneWhen?'<dl class="td-kv">'+now.map(function(s,i){return '<dt>'+(i?'':'지금')+'</dt><dd>'+tdEsc(s)+'</dd>';}).join('')+
