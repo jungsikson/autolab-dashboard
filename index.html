@@ -3592,6 +3592,8 @@ function tdRow(t,today){
     (l2.length?'<span class="td-t2">'+l2.map(function(x){return x.ask?'<b>'+tdEsc(x.text)+'</b>':tdEsc(x.text);}).join(' · ')+'</span>':'')+'</span>'+tdDue(t,today)+'</button>';
 }
 function tdRender(){
+  // 다시 그려도 보던 자리를 지킨다(11/13 '목록 누르면 맨 위로' 지적) — 목록·창 스크롤 위치를 기억했다가 되돌림
+  var _l=document.querySelector('.td-list'), _keepL=_l?_l.scrollTop:0, _keepW=window.scrollY;
   var box=document.getElementById('today-content'), B=tdBoard(), today=B.today;
   var need=B.news.length+B.vis.filter(function(t){return tdNeeds(t,today);}).length;
   var cnt=function(k){return B.vis.filter(function(t){return tdTags(t,today).some(function(x){return x.k===k;});}).length;};
@@ -3618,6 +3620,7 @@ function tdRender(){
   if(doneT.length) h+='<details class="td-later"'+(TD.doneOpen?' open':'')+' ontoggle="TD.doneOpen=this.open"><summary>오늘 정한 것 '+doneT.length+'</summary>'+doneT.map(function(r){var can=tdCanUndo(r);return '<div class="td-done"><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc(r.decision_label||r.decision)+'</span></span>'+(can?'<button class="td-link" onclick="tdUndo('+r.id+')">되돌리기</button>':'')+'</div>';}).join('')+'</details>';
   h+='</section><main class="td-detail" aria-live="polite">'+tdDetail(B)+'</main></div>';
   box.innerHTML=h;
+  var _n=document.querySelector('.td-list'); if(_n) _n.scrollTop=_keepL; if(window.scrollY!==_keepW) window.scrollTo(0,_keepW);
 }
 // 정할 것 탭에서 옮김(11/13): 3일 넘게 안 정한 새 일 한꺼번에 닫기(morning-action stale_close, 09시 DM 묶음 카드와 같은 기준) — 게이트·고위드 카드는 빼고(따로 정해야 함)
 function tdStale(news){var d=new Date(dk(new Date())+'T00:00:00');d.setDate(d.getDate()-3);var cut=dk(d);return news.filter(function(r){return r.edition_date<=cut&&!/^(gate|gowid):/.test(r.note||'');});}
