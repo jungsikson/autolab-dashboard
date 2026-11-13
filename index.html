@@ -3683,6 +3683,7 @@ function tdRender(){
   if(B.later.length) h+='<details class="td-later"'+(TD.laterOpen?' open':'')+' ontoggle="TD.laterOpen=this.open"><summary>곧 보일 것 '+B.later.length+'</summary>'+B.later.map(function(x){return '<button class="td-row" onclick="tdPick(\'t'+x.t.id+'\')"><span class="td-dot"></span><span class="td-txt"><span class="td-t1">'+tdEsc(x.t.task)+'</span><span class="td-t2">'+tdMD(x.from)+'부터 보임</span></span>'+tdDue(x.t,today)+'</button>';}).join('')+'</details>';
   var doneT=tdDoneToday();
   if(doneT.length) h+='<details class="td-later"'+(TD.doneOpen?' open':'')+' ontoggle="TD.doneOpen=this.open"><summary>오늘 정한 것 '+doneT.length+'</summary>'+doneT.map(function(r){var can=tdCanUndo(r);return '<div class="td-done"><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc(r.decision_label||r.decision)+'</span></span>'+(/ · 보낼 글: 「[\s\S]*」$/.test(r.decision_label||'')?'<button class="td-link" onclick="mpCopySend('+r.id+')">보낼 글 복사</button>':'')+(can?'<button class="td-link" onclick="tdUndo('+r.id+')">되돌리기</button>':'')+'</div>';}).join('')+'</details>';
+  h+=tdPastHtml();
   h+='</section><main class="td-detail" aria-live="polite">'+tdDetail(B)+'</main></div>';
   box.innerHTML=h; tdPrevUpd();
   var _n=document.querySelector('.td-list'); if(_n) _n.scrollTop=_keepL; if(window.scrollY!==_keepW) window.scrollTo(0,_keepW);
@@ -3697,6 +3698,26 @@ async function tdStaleClose(){
 }
 // 오늘 정한 것 — 되돌리기는 morning-action undo(정할 것 탭과 같음). 게이트(보낸 질문)·상태 옮기기·자동 처리는 되돌리기 없음
 function tdDoneToday(){var st=new Date(dk(new Date())+'T00:00:00+09:00').toISOString();return MP.rows.filter(function(r){return r.decision&&r.decided_at&&r.decided_at>=st;}).sort(function(a,b){return String(b.decided_at).localeCompare(String(a.decided_at));});}
+// 지난 7일 정한 것(11/13 희준님 점검 1번) — 어제 이전에 잘못 정한 것도 되돌릴 수 있게. 펼칠 때만 불러온다
+function tdPastHtml(){
+  var body=TD.past==null?'<p class="td-muted">불러오는 중…</p>':!TD.past.length?'<p class="td-muted">지난 7일 동안 정한 것이 없습니다</p>':
+    TD.past.map(function(r){var can=tdCanUndo(r),dd=dk(new Date(r.decided_at));return '<div class="td-done"><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdMD(dd)+' · '+tdEsc(r.decision_label||r.decision)+'</span></span>'+(can?'<button class="td-link" onclick="tdUndoPast('+r.id+')">되돌리기</button>':'')+'</div>';}).join('');
+  return '<details class="td-later"'+(TD.pastOpen?' open':'')+' ontoggle="tdPastToggle(this.open)"><summary>지난 7일 정한 것'+(TD.past&&TD.past.length?' '+TD.past.length:'')+'</summary>'+body+'</details>';
+}
+async function tdPastLoad(){
+  var end=new Date(dk(new Date())+'T00:00:00+09:00'), st=new Date(end.getTime()-7*86400000);
+  var res=await _sb.from('morning_item').select('*').eq('person',MP.person).neq('kind','info').not('decision','is',null)
+    .gte('decided_at',st.toISOString()).lt('decided_at',end.toISOString()).order('decided_at',{ascending:false}).limit(300);
+  TD.past=res.error?[]:res.data; if(res.error) showToast('지난 정한 것 불러오기 실패: '+res.error.message,6000);
+}
+async function tdPastToggle(open){TD.pastOpen=open; if(open&&TD.past==null){await tdPastLoad();tdRender();}}
+async function tdUndoPast(id){
+  var r=(TD.past||[]).filter(function(x){return x.id===id;})[0]; if(!r) return;
+  var made=['add','done_self','date','handoff','wait'].indexOf(r.decision)>=0&&r.decided_task_id;
+  var msg=tdMD(dk(new Date(r.decided_at)))+'에 정한 "'+r.hl+'"을(를) 되돌릴까요?\n\n'+(made?'이 카드로 만든 할 일 #'+r.decided_task_id+'이(가) 지워집니다. 그 뒤에 적은 내용도 같이 지워집니다.\n':'')+'카드는 새 일로 다시 올라옵니다.';
+  if(!confirm(msg)) return;
+  await tdUndo(id); TD.past=null; if(TD.pastOpen){await tdPastLoad();tdRender();}
+}
 function tdCanUndo(r){return !/^gate:/.test(r.note||'')&&['task_set','auto_done'].indexOf(r.decision)<0;}
 async function tdUndo(id){try{var out=await mpCall({id:id,action:'undo'}); if(!out.ok) throw new Error(out.error||'되돌리기 실패'); showToast('되돌림');}catch(e){showToast('실패: '+(e.message||e),6000);} await tdLoad(true);}
 function tdPick(k){TD.sel=k;TD.pick=null;TD.open=true;tdRender();var dd=document.querySelector('.td-detail');if(dd)dd.scrollTop=0;}
