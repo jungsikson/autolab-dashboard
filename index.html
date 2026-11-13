@@ -3741,7 +3741,7 @@ function tdForm(k,t,r,today){
   }
   if(!t&&tdIsGate(r)){ hint=k==='handoff'?'받는 곳으로 바로 보냅니다(보낸 글은 되돌릴 수 없음)':'보내지 않는 이유 — 쌓이면 봇이 이런 질문을 아예 안 만들게 고칩니다'; f=k==='handoff'?'':tdField('td-reason','이유','select','',[['','고르기']].concat(TD_GATE_WHY.map(function(x){return [x,x];}))); }
   var name=t?k:(tdNames(r).filter(function(x){return x[0]===k;})[0]||[])[1];
-  return '<div class="td-form" oninput="tdPrevUpd()" onchange="tdPrevUpd()"><div class="td-hint">'+tdEsc(name)+' · '+tdEsc(hint)+'</div><div class="td-fields">'+f+'</div>'+(t?'<p class="td-prev" id="td-prev" aria-live="polite"></p>':'')+'<div class="td-end"><button class="td-btn primary" onclick="tdConfirm()"'+(TD.busy?' disabled':'')+'>'+(TD.busy?'처리 중…':tdEsc(name)+'(으)로 확정')+'</button></div></div>';
+  return '<div class="td-form" oninput="tdPrevUpd()" onchange="tdPrevUpd()"><div class="td-hint">'+tdEsc(name)+' · '+tdEsc(hint)+'</div><div class="td-fields">'+f+'</div>'+'<p class="td-prev" id="td-prev" aria-live="polite"></p>'+'<div class="td-end"><button class="td-btn primary" onclick="tdConfirm()"'+(TD.busy?' disabled':'')+'>'+(TD.busy?'처리 중…':tdEsc(name)+'(으)로 확정')+'</button></div></div>';
 }
 function tdActs(names,primary){return '<div class="td-acts">'+names.map(function(n){var k=n[0],l=n[1];return '<button class="td-btn'+(k===primary?' primary':'')+'" aria-pressed="'+(TD.pick===k)+'" onclick="TD.pick=TD.pick===\''+k+'\'?null:\''+k+'\';tdRender()">'+tdEsc(l)+'</button>';}).join('')+'</div>';}
 function tdDetail(B){
@@ -3773,9 +3773,10 @@ function tdDetail(B){
 }
 // 확정 전 미리보기 — 고른 상태와 입력값으로 이 카드가 어떻게 되는지 한 문장(11/13 희준님). 규칙은 tdTags·morning-action task_set과 같게
 function tdPrevUpd(){
-  var el=document.getElementById('td-prev'), k=TD.sel||''; if(!el||k[0]!=='t'||!TD.pick) return;
-  var t=_alFind(k.slice(1)); if(!t) return;
+  var el=document.getElementById('td-prev'), k=TD.sel||''; if(!el||!TD.pick) return;
   var v=function(id){var e=document.getElementById(id);return e?e.value.trim():'';}, d=function(x){return x?tdMD(x):'';};
+  if(k[0]==='n'){ el.textContent=tdPrevNew(MP.rows.filter(function(x){return 'n'+x.id===k;})[0],TD.pick,v,d); return; }
+  var t=k[0]==='t'?_alFind(k.slice(1)):null; if(!t) return;
   var news=(TD.byTask[t.id]||[]).length, tail=news?' 이 할 일에 붙은 새 소식 '+news+'개도 같이 정리됩니다.':'', s='';
   switch(TD.pick){
     case '진행': s=v('td-due')?'내 할 일로 남고, '+d(v('td-due'))+' 아침에 오늘 마감으로 다시 올라옵니다.'+(v('td-next')?' 다음 한 걸음은 '+v('td-next')+'.':''):'마감을 고르면 언제 다시 올라올지 여기에 나옵니다.'; break;
@@ -3786,6 +3787,21 @@ function tdPrevUpd(){
     case '안 함': s='안 함으로 닫히고 이유가 이력에 남습니다. 화면에서 빠집니다.'; break;
   }
   el.textContent=(/고르면/.test(s)?'':'확정하면 ')+s+tail;
+}
+// 새 일 카드 버튼 미리보기 — morning-action 의 add·merge·handoff·done_self·done_none·gate 처리와 같게(11/13)
+function tdPrevNew(r,a,v,d){
+  if(!r) return '';
+  var slack=/slack\.com\/archives\//.test(r.link||''), mail=r.source==='메일 점검', opt=function(id){var e=document.getElementById(id);return e&&e.selectedIndex>0?e.options[e.selectedIndex].text:'';}, s='';
+  if(tdIsGate(r)) return a==='handoff'?'확정하면 받는 곳으로 바로 보냅니다. 보낸 글은 되돌릴 수 없습니다.':(v('td-reason')?'확정하면 보내지 않고 이유('+v('td-reason')+')가 남습니다. 같은 이유가 쌓이면 봇이 이런 질문을 안 만들게 고칩니다.':'이유를 고르면 여기에 나옵니다.');
+  if(a==='add') s=v('td-due')?'새 할 일이 '+(v('td-topic')?opt('td-topic'):'단발 운영')+' 밑에 생기고, '+d(v('td-due'))+' 아침에 오늘 마감으로 올라옵니다.':'마감을 고르면 여기에 나옵니다.';
+  if(a==='merge') s=v('td-task')?opt('td-task')+' 설명에 이 내용이 덧붙고 카드는 닫힙니다. 새 할 일은 생기지 않습니다.':'붙일 할 일을 고르면 여기에 나옵니다.';
+  if(a==='handoff') s=v('td-who')?'"'+v('td-who')+' 수락 대기" 할 일이 넘김 상태로 생기고 오늘 화면에서 빠집니다. 마감이 없어 다시 올라오지 않습니다.'+(slack?' 원문에 보낼 글은 확정 뒤 알림에 나오고, 보내는 건 직접 합니다.':' 봇이 '+v('td-who')+'에게 따로 알리지는 않습니다.'):'누구를 고르면 여기에 나옵니다.';
+  if(a==='done_self') s='처리한 기록으로 할 일이 하나 생겨 바로 끝남이 됩니다.'+(slack?' 슬랙 원문에 ✅ 반응이 달립니다.':'');
+  if(a==='done_none') s=v('td-reason')?'카드가 닫히고 이유('+v('td-reason')+')가 남습니다. 할 일은 생기지 않습니다.':'이유를 고르면 여기에 나옵니다.';
+  if(!s) return '';
+  if(/고르면/.test(s)) return s;
+  if(mail) s+=(['add','merge','handoff'].indexOf(a)>=0?' 메일은 읽음으로 바뀌고 할 일이 끝날 때 보관됩니다.':' 메일은 읽음으로 바뀌고 보관됩니다.');
+  return '확정하면 '+s;
 }
 async function tdConfirm(){
   if(TD.busy) return;
