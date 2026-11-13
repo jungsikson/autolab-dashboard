@@ -812,6 +812,8 @@ body{background:var(--bg-canvas)}
   .td-back{display:inline-block;background:none;border:0;padding:0 0 12px;color:var(--text-secondary);cursor:pointer;font-family:var(--font-sans)}
   .td-ev li,.td-kv{grid-template-columns:1fr;gap:2px}.td-head,.td-sec,.td-row{padding-left:16px;padding-right:16px}.td-th{padding-left:28px}.td-kids{margin-left:28px}}
 
+.td-done{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 0}
+.td-sec span .td-link{font-size:12.5px}
 /* 돌아보기(11/13 #2556) */
 .rv{background:var(--bg-surface);border:1px solid var(--border-default);border-radius:8px;padding:4px 0 24px;max-width:960px}
 .rv-sec{padding:14px 22px;border-top:1px solid #F1F2F4}.rv-sec:first-of-type{border-top:0}
@@ -832,26 +834,25 @@ body{background:var(--bg-canvas)}
       <img class="brand-logo" src="assets/caramel-logo.svg" alt="caramel Auto Lab">
     </div>
     <nav class="nav">
-      <div class="nav-group">
-        <div class="nav-label">워크스페이스</div>
-        <button class="tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">오늘 대시보드</button>
-        <button class="tab-btn" id="tab-history" onclick="switchTab('history')">업무 히스토리</button>
-        <button class="tab-btn" id="tab-cohort-schedule" onclick="switchTab('cohort-schedule')">기수 일정</button>
-        <button class="tab-btn" id="tab-cells" onclick="switchTab('cells')">셀현황</button>
-      </div>
-      <div class="nav-group">
-        <div class="nav-label">우선순위 매트릭스</div>
-        <button class="tab-btn" id="tab-matrix-강희준" onclick="switchTab('matrix-강희준')">강희준</button>
-        <button class="tab-btn" id="tab-matrix-송민호" onclick="switchTab('matrix-송민호')">송민호</button>
-        <button class="tab-btn" id="tab-matrix-안보람" onclick="switchTab('matrix-안보람')">안보람</button>
-      </div>
       <div class="nav-group" id="nav-morning" style="display:none">
         <div class="nav-label">강희준</div>
         <button class="tab-btn" id="tab-today" onclick="switchTab('today')">오늘</button>
         <button class="tab-btn" id="tab-review" onclick="switchTab('review')">돌아보기</button>
-        <button class="tab-btn" id="tab-morning" onclick="switchTab('morning')">정할 것</button>
         <button class="tab-btn" id="tab-plan" onclick="switchTab('plan')">일정</button>
       </div>
+      <div class="nav-group">
+        <div class="nav-label">팀</div>
+        <button class="tab-btn active" id="tab-dashboard" onclick="switchTab('dashboard')">오늘 대시보드</button>
+        <button class="tab-btn" id="tab-cohort-schedule" onclick="switchTab('cohort-schedule')">기수 일정</button>
+        <button class="tab-btn" id="tab-cells" onclick="switchTab('cells')">팀 현황</button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">우선순위 매트릭스</div>
+        <button class="tab-btn" id="tab-matrix-송민호" onclick="switchTab('matrix-송민호')">송민호</button>
+        <button class="tab-btn" id="tab-matrix-안보람" onclick="switchTab('matrix-안보람')">안보람</button>
+      </div>
+      <!-- 11/13 #2556 없앤 탭: 정할 것→오늘, 업무 히스토리→돌아보기, 매트릭스 강희준(중요도 칸 안 씀). 옛 링크는 switchTab이 옮긴다 -->
+      <div style="display:none"><button class="tab-btn" id="tab-history"></button><button class="tab-btn" id="tab-matrix-강희준"></button><button class="tab-btn" id="tab-morning"></button></div>
     </nav>
   </aside>
   <div class="content">
@@ -1153,6 +1154,7 @@ function toggleShowDone(){
   if(currentTab.startsWith('matrix-')) renderMatrix(currentTab.replace('matrix-',''));
 }
 function switchTab(tab){
+  if(tab==='morning'||tab==='matrix-강희준') tab='today'; else if(tab==='history') tab='review';  // 11/13 없앤 탭의 옛 링크
   currentTab=tab;
   var allTabs=['dashboard','matrix-강희준','matrix-송민호','matrix-안보람','history','cohort-schedule','cells','today','review','morning','plan'];
   allTabs.forEach(function(t){
@@ -1866,7 +1868,7 @@ var CELL_SHEET_ID='1cHfnjE4Aac2DMjFnIJsr0WxHeulkWPo2F0Axqs3qjqs';
 var CELL_SHEET_NAME='셀현황(자동)';
 async function renderCellStatus(){
   var el=document.getElementById('cells-content');
-  el.innerHTML='<div class="loading"><div class="spinner"></div>셀현황 불러오는 중...</div>';
+  el.innerHTML='<div class="loading"><div class="spinner"></div>팀 현황 불러오는 중...</div>';
   function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
   try{
     var url='https://docs.google.com/spreadsheets/d/'+CELL_SHEET_ID+'/gviz/tq?tqx=out:json&headers=0&sheet='+encodeURIComponent(CELL_SHEET_NAME);
@@ -1875,7 +1877,7 @@ async function renderCellStatus(){
     var json=JSON.parse(txt.substring(txt.indexOf('(')+1,txt.lastIndexOf(')')));
     var rows=(json.table&&json.table.rows)||[];
     var grid=rows.map(function(r){return (r.c||[]).map(function(c){return c&&c.v!=null?c.v:'';});});
-    if(!grid.length){el.innerHTML='<div style="padding:32px;text-align:center;color:var(--text-secondary)">셀현황 데이터가 없어요</div>';return;}
+    if(!grid.length){el.innerHTML='<div style="padding:32px;text-align:center;color:var(--text-secondary)">팀 현황 데이터가 없어요</div>';return;}
     var colCount=0;
     grid.forEach(function(row){for(var j=0;j<row.length;j++){if(String(row[j]==null?'':row[j]).trim()!=='')colCount=Math.max(colCount,j+1);}});
     var head=grid[0].slice();
@@ -1901,7 +1903,7 @@ async function renderCellStatus(){
     html+='</div>';
     el.innerHTML=html;
   }catch(e){
-    el.innerHTML='<div style="padding:32px;text-align:center;color:var(--text-secondary)">셀현황을 불러오지 못했어요<br><span style="font-size:12px;color:var(--text-tertiary)">'+esc(e.message||e)+'</span></div>';
+    el.innerHTML='<div style="padding:32px;text-align:center;color:var(--text-secondary)">팀 현황을 불러오지 못했어요<br><span style="font-size:12px;color:var(--text-tertiary)">'+esc(e.message||e)+'</span></div>';
   }
 }
 
@@ -2240,6 +2242,8 @@ try{MP.sel=localStorage.getItem('autolab_mp_sel')||null;}catch(e){}
     }
     else if(qs.get('morning')==='1'){ document.getElementById('nav-morning').style.display=''; setTimeout(function(){switchTab('morning');},0); }
     // 주간 점검 DM의 "일정 열기"(?plan=1)
+    // 11/13: 희준님 브라우저는 처음 열면 오늘 화면
+    else if(localStorage.getItem('autolab_morning')==='1'&&!qs.get('plan')){ setTimeout(function(){switchTab('today');},0); }
     else if(qs.get('plan')==='1'){ localStorage.setItem('autolab_morning','1'); document.getElementById('nav-morning').style.display=''; setTimeout(function(){switchTab('plan');},0); }
   }catch(e){}
 })();
@@ -3570,7 +3574,8 @@ function tdRender(){
   var d=new Date(), wd='일월화수목금토'[d.getDay()];
   var h='<div class="td'+(TD.open?' open':'')+'"><section class="td-list" aria-label="오늘 목록"><div class="td-head"><h1>오늘</h1><div class="td-date">'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+wd+'요일</div>'+
     '<div class="td-sum"><span class="lead">정할 것 <b>'+need+'</b></span><span>새 일 <b>'+B.news.length+'</b></span>'+[['done','끝난 것 같음'],['reply','답할 것'],['over','마감 지남'],['today','오늘 마감'],['nodue','마감 없음'],['recheck','다시 볼 날']].map(function(x){var n=cnt(x[0]);return n?'<span>'+x[1]+' <b>'+n+'</b></span>':'';}).join('')+'</div></div>';  // 09시 DM(today_counts)과 같은 항목
-  h+='<div class="td-sec"><h2>새 일</h2><span>'+(B.news.length?B.news.length+'건 · 할 일로 넣을지 정하기':'없음')+'</span></div>';
+  var stale=tdStale(B.news);
+  h+='<div class="td-sec"><h2>새 일</h2><span>'+(B.news.length?B.news.length+'건 · 할 일로 넣을지 정하기':'없음')+(stale.length?' · <button class="td-link" onclick="tdStaleClose()">3일 넘은 '+stale.length+'장 한꺼번에 닫기</button>':'')+'</span></div>';
   B.news.forEach(function(r){h+='<button class="td-row" aria-selected="'+(TD.sel==='n'+r.id)+'" onclick="tdPick(\'n'+r.id+'\')"><span class="td-dot on"></span><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc([r.who||r.source,r.when_label].filter(Boolean).join(' · '))+'</span></span><span class="td-due"></span></button>';});
   h+='<div class="td-sec"><h2>내 할 일</h2><span>큰 주제 순서 · 금요일에 다시 매김</span></div>';
   B.order.forEach(function(k){
@@ -3584,9 +3589,23 @@ function tdRender(){
     h+='</div></div>';
   });
   if(B.later.length) h+='<details class="td-later"'+(TD.laterOpen?' open':'')+' ontoggle="TD.laterOpen=this.open"><summary>곧 보일 것 '+B.later.length+'</summary>'+B.later.map(function(x){return '<button class="td-row" onclick="tdPick(\'t'+x.t.id+'\')"><span class="td-dot"></span><span class="td-txt"><span class="td-t1">'+tdEsc(x.t.task)+'</span><span class="td-t2">'+tdMD(x.from)+'부터 보임</span></span>'+tdDue(x.t,today)+'</button>';}).join('')+'</details>';
+  var doneT=tdDoneToday();
+  if(doneT.length) h+='<details class="td-later"'+(TD.doneOpen?' open':'')+' ontoggle="TD.doneOpen=this.open"><summary>오늘 정한 것 '+doneT.length+'</summary>'+doneT.map(function(r){var can=tdCanUndo(r);return '<div class="td-done"><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc(r.decision_label||r.decision)+'</span></span>'+(can?'<button class="td-link" onclick="tdUndo('+r.id+')">되돌리기</button>':'')+'</div>';}).join('')+'</details>';
   h+='</section><main class="td-detail" aria-live="polite">'+tdDetail(B)+'</main></div>';
   box.innerHTML=h;
 }
+// 정할 것 탭에서 옮김(11/13): 3일 넘게 안 정한 새 일 한꺼번에 닫기(morning-action stale_close, 09시 DM 묶음 카드와 같은 기준) — 게이트·고위드 카드는 빼고(따로 정해야 함)
+function tdStale(news){var d=new Date(dk(new Date())+'T00:00:00');d.setDate(d.getDate()-3);var cut=dk(d);return news.filter(function(r){return r.edition_date<=cut&&!/^(gate|gowid):/.test(r.note||'');});}
+async function tdStaleClose(){
+  var ids=tdStale(MP.rows.filter(function(r){return !r.decision&&!r.task_id;})).map(function(r){return r.id;}); if(!ids.length) return;
+  if(!confirm('3일 넘게 안 정한 새 일 '+ids.length+'장을 "3일 넘게 안 정함"으로 닫을까요? (오늘 정한 것에서 하나씩 되돌릴 수 있음)')) return;
+  try{var out=await mpCall({id:ids[0],action:'stale_close',ids:ids}); if(!out.ok) throw new Error(out.error||'실패'); showToast(ids.length+'장 닫음');}catch(e){showToast('실패: '+(e.message||e),6000);}
+  await tdLoad(true);
+}
+// 오늘 정한 것 — 되돌리기는 morning-action undo(정할 것 탭과 같음). 게이트(보낸 질문)·상태 옮기기·자동 처리는 되돌리기 없음
+function tdDoneToday(){var st=new Date(dk(new Date())+'T00:00:00+09:00').toISOString();return MP.rows.filter(function(r){return r.decision&&r.decided_at&&r.decided_at>=st;}).sort(function(a,b){return String(b.decided_at).localeCompare(String(a.decided_at));});}
+function tdCanUndo(r){return !/^gate:/.test(r.note||'')&&['task_set','auto_done'].indexOf(r.decision)<0;}
+async function tdUndo(id){try{var out=await mpCall({id:id,action:'undo'}); if(!out.ok) throw new Error(out.error||'되돌리기 실패'); showToast('되돌림');}catch(e){showToast('실패: '+(e.message||e),6000);} await tdLoad(true);}
 function tdPick(k){TD.sel=k;TD.pick=null;TD.open=true;tdRender();var dd=document.querySelector('.td-detail');if(dd)dd.scrollTop=0;}
 function tdBack(){TD.open=false;tdRender();}
 function tdPath(t){var p=[],x=t,seen={};while(x&&x.parentId&&!seen[x.id]){seen[x.id]=1;x=_alFind(x.parentId);if(x)p.unshift(x.task);}return p;}
@@ -3689,7 +3708,7 @@ async function tdConfirm(){
 // 돌아보기 (11/13 업무 흐름 재설계 #2556 · 매주 금요일 16시, 30분 목표)
 // 1 이번 주 끝낸 것 · 2 큰 주제 순서(=중요도, morning-action topic_rank) · 3 넘김·안 함 후보 · 4 단발 운영 · 5 시스템 점수 · 6 황대표님께 확인받을 초안
 // =============================================
-var RV={order:null,busy:false,prog:[]};
+var RV={order:null,busy:false,prog:[],off:0};
 function rvMon(d0){var d=new Date(d0+'T00:00:00');d.setDate(d.getDate()-((d.getDay()+6)%7));return dk(d);}
 function rvTouch(t){
   var y=String(new Date().getFullYear()), last=String(t.createdAt||'').slice(0,10), re=/\[(?:진척|확인|완료|넘김|기다림|안 함|수동 등록)[^\]]*?(\d{1,2})\/(\d{1,2})/g, m;
@@ -3701,8 +3720,8 @@ async function rvLoad(){
   box.innerHTML='<div class="loading"><div class="spinner"></div>돌아보기 불러오는 중...</div>';
   try{
     if(!(allData._autolab||[]).length) await loadData(true);
-    var ws=rvMon(dk(new Date()));
-    var res=await _sb.from('morning_item').select('id,kind,decision,decision_label,decided_at,task_id').eq('person',MP.person).eq('kind','progress').gte('decided_at',new Date(ws+'T00:00:00+09:00').toISOString());
+    var ws=tdAdd(rvMon(dk(new Date())),-7*RV.off), we1=tdAdd(ws,7);
+    var res=await _sb.from('morning_item').select('id,kind,decision,decision_label,decided_at,task_id').eq('person',MP.person).eq('kind','progress').gte('decided_at',new Date(ws+'T00:00:00+09:00').toISOString()).lt('decided_at',new Date(we1+'T00:00:00+09:00').toISOString());
     if(res.error) throw res.error;
     RV.prog=res.data||[];
   }catch(e){box.innerHTML='<div class="loading">불러오기 실패: '+tdEsc(e.message||e)+'</div>';return;}
@@ -3717,7 +3736,7 @@ function rvTopics(){
   return {all:all,kids:kids,tops:tops};
 }
 function rvRender(){
-  var box=document.getElementById('review-content'), today=dk(new Date()), ws=rvMon(today), we=tdAdd(ws,6), nws=tdAdd(ws,7), nwe=tdAdd(ws,13);
+  var box=document.getElementById('review-content'), today=dk(new Date()), ws=tdAdd(rvMon(today),-7*RV.off), we=tdAdd(ws,6), nws=tdAdd(ws,7), nwe=tdAdd(ws,13);
   var T=rvTopics(); if(!RV.order) RV.order=T.tops.map(function(t){return t.id;});
   var mine=(allData._autolab||[]).filter(function(t){return t.person===MP.person;});
   var doneW=mine.filter(function(t){var c=autolabChecks[alKey(t)]||{};return c.checked&&c.completedDate>=ws&&c.completedDate<=we;});
@@ -3731,7 +3750,7 @@ function rvRender(){
   var hit=RV.prog.filter(function(r){return r.decision==='task_done'||r.decision==='done'||(r.decision==='task_set'&&/끝남/.test(r.decision_label||''));}).length;
   var auto=RV.prog.filter(function(r){return r.decision==='auto_done';}).length, miss=RV.prog.length-hit-auto;
   var ordered=RV.order.map(function(id){return _alFind(id);}).filter(Boolean);
-  var h='<div class="rv"><div class="td-head"><h1>돌아보기</h1><div class="td-date">'+tdMD(ws)+'(월)–'+tdMD(we)+'(일) · 매주 금요일 16시, 정한 것은 황대표님께 확인받기</div></div>';
+  var h='<div class="rv"><div class="td-head"><h1>돌아보기</h1><div class="td-date">'+tdMD(ws)+'(월)–'+tdMD(we)+'(일) · 매주 금요일 16시, 정한 것은 황대표님께 확인받기</div><div class="td-acts"><button class="td-btn sm" onclick="RV.off++;rvLoad()">지난주</button>'+(RV.off?'<button class="td-btn sm" onclick="RV.off--;rvLoad()">다음 주</button><button class="td-btn sm" onclick="RV.off=0;rvLoad()">이번 주</button>':'')+'</div></div>';
   // 1
   h+='<section class="rv-sec"><h2>1. 이번 주 끝낸 것 <span>'+doneW.length+'건</span></h2>'+(doneW.length?Object.keys(byRoot).sort(function(a,b){return byRoot[b].length-byRoot[a].length;}).map(function(k){return '<div class="rv-row"><b>'+tdEsc(k)+'</b><span>'+byRoot[k].length+'건</span><div class="rv-small">'+byRoot[k].slice(0,6).map(function(t){return tdEsc(t.task);}).join(' · ')+(byRoot[k].length>6?' 외 '+(byRoot[k].length-6):'')+'</div></div>';}).join(''):'<p class="td-muted">이번 주에 완료로 체크한 할 일이 없습니다</p>')+'</section>';
   // 2
