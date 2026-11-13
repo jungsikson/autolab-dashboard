@@ -3580,7 +3580,10 @@ function tdVacDetail(r,back){
     '<div class="td-ask"><div class="td-label"><span class="td-dot'+(busy?'':' on')+'"></span>'+(busy?'처리 중':'오늘 정할 것')+'</div><p class="td-q">'+tdEsc(q)+'</p>'+
     (cancel?'<div class="td-sub2">취소를 승인한 뒤 남은 연차 차단은 DM 스레드의 [차단 지우기]로 따로 지웁니다</div>':'')+
     // DM 카드 줄을 이름표 칸으로: 1줄=상태, '댓글:'=댓글, '참고:'·'자동 처리:'=그 이름, 나머지=결재(누가 언제 승인·신청·사유)
-    '<dl class="td-kv">'+L.slice(1).map(function(s,i){var m=/^(참고|자동 처리):\s*(.*)$/.exec(s), lab=i===0?'상태':/ 댓글: /.test(s)?'댓글':m?m[1]:'결재';return '<dt>'+lab+'</dt><dd>'+tdEsc(m?m[2]:s)+'</dd>';}).join('')+'</dl>'+
+    // '증빙' 줄(11/13): 사진은 DM 글 스레드에 있다 → 그 스레드 링크
+    '<dl class="td-kv">'+L.slice(1).map(function(s,i){var m=/^(참고|자동 처리):\s*(.*)$/.exec(s), pf=/^증빙 /.test(s), lab=i===0?'상태':pf?'증빙':/ 댓글: /.test(s)?'댓글':m?m[1]:'결재';
+      if(pf){var sent=/ · 사진은 이 글 스레드/.test(s);return '<dt>증빙</dt><dd>'+tdEsc(s.replace(/^증빙 /,'').replace(/ · 사진은 이 글 스레드/,''))+(sent&&r.dm_ts?' <a class="td-link" href="https://trydrive.slack.com/archives/D0BED42T2CS/p'+String(r.dm_ts).replace('.','')+'" target="_blank" rel="noopener">사진 보기</a>':'')+'</dd>';}
+      return '<dt>'+lab+'</dt><dd>'+tdEsc(m?m[2]:s)+'</dd>';}).join('')+'</dl>'+
     (acts.length?'<dl class="td-kv"><dt>처리 중</dt><dd>'+acts.map(function(a){return tdEsc((KO[a.kind]||a.kind)+(a.body&&a.kind!=='unblock'?' · '+a.body:''));}).join('<br>')+'</dd></dl>':'')+
     (busy?'':tdActs(tdVacNames(r),'approve')+(TD.pick?tdVacForm(TD.pick,r):''))+
     '<div class="td-acts"><a class="td-link" href="https://flex.team/home/todo/inbox" target="_blank" rel="noopener">Flex에서 열기</a></div></div></article>';
