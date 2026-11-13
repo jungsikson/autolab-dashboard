@@ -801,7 +801,7 @@ body{background:var(--bg-canvas)}
 .td-btn:hover{border-color:var(--text-secondary)}.td-btn.primary{background:var(--text-primary);color:#fff;border-color:var(--text-primary)}
 .td-btn[aria-pressed="true"]{outline:1px solid var(--text-primary);outline-offset:-2px;border-color:var(--text-primary)}.td-btn:disabled{opacity:.6;cursor:default}
 .td-form{margin-top:12px;padding:12px 14px;background:var(--bg-canvas);border-radius:6px;display:grid;gap:10px}
-.td-hint{color:var(--text-secondary);font-size:13px}.td-fields{display:flex;flex-wrap:wrap;gap:10px}
+.td-hint{color:var(--text-secondary);font-size:13px}.td-prev{margin:0;font-size:14px;line-height:1.5;color:var(--text-primary);word-break:keep-all}.td-fields{display:flex;flex-wrap:wrap;gap:10px}
 .td-fields label{display:grid;gap:4px;font-size:13px;color:var(--text-secondary);flex:1 1 180px;min-width:0}
 .td-fields input,.td-fields select{height:34px;border:1px solid #D5D8DD;border-radius:6px;background:var(--bg-surface);padding:0 10px;width:100%;font-family:var(--font-sans);font-size:14px;color:var(--text-primary)}
 .td-block{margin-top:24px}.td-block h3{font-size:13px;font-weight:600;color:var(--text-secondary);margin:0 0 8px}
@@ -3622,7 +3622,7 @@ function tdRender(){
   var doneT=tdDoneToday();
   if(doneT.length) h+='<details class="td-later"'+(TD.doneOpen?' open':'')+' ontoggle="TD.doneOpen=this.open"><summary>오늘 정한 것 '+doneT.length+'</summary>'+doneT.map(function(r){var can=tdCanUndo(r);return '<div class="td-done"><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc(r.decision_label||r.decision)+'</span></span>'+(can?'<button class="td-link" onclick="tdUndo('+r.id+')">되돌리기</button>':'')+'</div>';}).join('')+'</details>';
   h+='</section><main class="td-detail" aria-live="polite">'+tdDetail(B)+'</main></div>';
-  box.innerHTML=h;
+  box.innerHTML=h; tdPrevUpd();
   var _n=document.querySelector('.td-list'); if(_n) _n.scrollTop=_keepL; if(window.scrollY!==_keepW) window.scrollTo(0,_keepW);
 }
 // 정할 것 탭에서 옮김(11/13): 3일 넘게 안 정한 새 일 한꺼번에 닫기(morning-action stale_close, 09시 DM 묶음 카드와 같은 기준) — 게이트·고위드 카드는 빼고(따로 정해야 함)
@@ -3670,7 +3670,7 @@ function tdForm(k,t,r,today){
   if(t){ var ev=(tdAsk(t,today)||{}).ev||[];
     if(k==='진행'){hint='끝내야 하는 날과 다음 한 걸음';f=tdField('td-due','마감','date',t.dueDate&&t.dueDate>=today?t.dueDate:'')+tdField('td-next','다음 한 걸음','text',t.nextStep||'');}
     if(k==='기다림'){hint='누구를 기다리는지, 언제 다시 볼지';f=tdField('td-who','누구','text',t.waitingOn||'')+tdField('td-recheck','다시 볼 날','date',tdAdd(today,3));}
-    if(k==='넘김'){hint='누구에게 넘기는지와 마감. 마감은 실제로 늦으면 안 되는 날의 전날로 잡아 주세요. 이날 아침까지 안 끝났으면 그때 다시 올라옵니다';f=tdField('td-who','누구','select',t.waitingOn||'',tdPeople())+tdField('td-due','마감','date',t.dueDate&&t.dueDate>=today?t.dueDate:'');}
+    if(k==='넘김'){hint='누구에게 넘기는지와 마감. 마감은 실제로 늦으면 안 되는 날의 전날로 잡아 주세요';f=tdField('td-who','누구','select',t.waitingOn||'',tdPeople())+tdField('td-due','마감','date',t.dueDate&&t.dueDate>=today?t.dueDate:'');}
     if(k==='미룸'){hint='화면에 다시 나타날 날';f=tdField('td-show','보일 날','date',tdAdd(today,1));}
     if(k==='끝남'){hint='끝난 근거 한 줄이나 링크';f=tdField('td-proof','근거','text',ev[0]?ev[0].when+' '+ev[0].text:'');}
     if(k==='안 함'){hint='하지 않는 이유 한 줄';f=tdField('td-why','이유','text','');}
@@ -3683,7 +3683,7 @@ function tdForm(k,t,r,today){
   }
   if(!t&&tdIsGate(r)){ hint=k==='handoff'?'받는 곳으로 바로 보냅니다(보낸 글은 되돌릴 수 없음)':'보내지 않는 이유 — 쌓이면 봇이 이런 질문을 아예 안 만들게 고칩니다'; f=k==='handoff'?'':tdField('td-reason','이유','select','',[['','고르기']].concat(TD_GATE_WHY.map(function(x){return [x,x];}))); }
   var name=t?k:(tdNames(r).filter(function(x){return x[0]===k;})[0]||[])[1];
-  return '<div class="td-form"><div class="td-hint">'+tdEsc(name)+' · '+tdEsc(hint)+'</div><div class="td-fields">'+f+'</div><div class="td-end"><button class="td-btn primary" onclick="tdConfirm()"'+(TD.busy?' disabled':'')+'>'+(TD.busy?'처리 중…':tdEsc(name)+'(으)로 확정')+'</button></div></div>';
+  return '<div class="td-form" oninput="tdPrevUpd()" onchange="tdPrevUpd()"><div class="td-hint">'+tdEsc(name)+' · '+tdEsc(hint)+'</div><div class="td-fields">'+f+'</div>'+(t?'<p class="td-prev" id="td-prev" aria-live="polite"></p>':'')+'<div class="td-end"><button class="td-btn primary" onclick="tdConfirm()"'+(TD.busy?' disabled':'')+'>'+(TD.busy?'처리 중…':tdEsc(name)+'(으)로 확정')+'</button></div></div>';
 }
 function tdActs(names,primary){return '<div class="td-acts">'+names.map(function(n){var k=n[0],l=n[1];return '<button class="td-btn'+(k===primary?' primary':'')+'" aria-pressed="'+(TD.pick===k)+'" onclick="TD.pick=TD.pick===\''+k+'\'?null:\''+k+'\';tdRender()">'+tdEsc(l)+'</button>';}).join('')+'</div>';}
 function tdDetail(B){
@@ -3711,6 +3711,22 @@ function tdDetail(B){
     (links.length?'<section class="td-block"><h3>연결</h3><ul class="td-ev">'+links.slice(0,6).map(function(u){var kind=/slack\.com/.test(u)?'슬랙':/mail\.google/.test(u)?'메일':/github\.com/.test(u)?'GitHub':/docs\.google|drive\.google/.test(u)?'구글':/notion/.test(u)?'노션':'링크';return '<li><span class="w">'+kind+'</span><span><a href="'+tdEsc(u)+'" target="_blank" rel="noopener">'+tdEsc(u.replace(/^https?:\/\//,'').slice(0,60))+'</a></span></li>';}).join('')+'</ul></section>':'')+
     (hist.length?'<section class="td-block"><h3>이력</h3><ul class="td-ev">'+hist.map(function(e){return '<li><span class="w">'+tdEsc(e.when)+'</span><span>'+tdEsc(e.text)+'</span></li>';}).join('')+'</ul></section>':'')+
     '</article>';
+}
+// 확정 전 미리보기 — 고른 상태와 입력값으로 이 카드가 어떻게 되는지 한 문장(11/13 희준님). 규칙은 tdTags·morning-action task_set과 같게
+function tdPrevUpd(){
+  var el=document.getElementById('td-prev'), k=TD.sel||''; if(!el||k[0]!=='t'||!TD.pick) return;
+  var t=_alFind(k.slice(1)); if(!t) return;
+  var v=function(id){var e=document.getElementById(id);return e?e.value.trim():'';}, d=function(x){return x?tdMD(x):'';};
+  var news=(TD.byTask[t.id]||[]).length, tail=news?' 이 할 일에 붙은 새 소식 '+news+'개도 같이 정리됩니다.':'', s='';
+  switch(TD.pick){
+    case '진행': s=v('td-due')?'내 할 일로 남고, '+d(v('td-due'))+' 아침에 오늘 마감으로 다시 올라옵니다.'+(v('td-next')?' 다음 한 걸음은 '+v('td-next')+'.':''):'마감을 고르면 언제 다시 올라올지 여기에 나옵니다.'; break;
+    case '기다림': s=v('td-who')&&v('td-recheck')?v('td-who')+' 답을 기다리는 일로 바뀌어 화면에서 빠지고, '+d(v('td-recheck'))+' 아침에 다시 올라옵니다. 그 전에 슬랙으로 답이 오면 09시 점검이 기다림을 풉니다.':'누구와 다시 볼 날을 고르면 여기에 나옵니다.'; break;
+    case '넘김': s=v('td-who')&&v('td-due')?v('td-who')+'에게 넘어가고 오늘 화면에서 빠집니다. '+d(v('td-due'))+' 아침까지 안 끝났으면 그때 다시 올라옵니다. 봇이 '+v('td-who')+'에게 따로 알리지는 않습니다.':'누구와 마감을 고르면 여기에 나옵니다.'; break;
+    case '미룸': s=v('td-show')?d(v('td-show'))+' 아침까지 오늘 화면과 09시 DM에서 빠졌다가 그날 다시 나타납니다.':'보일 날을 고르면 여기에 나옵니다.'; break;
+    case '끝남': s='끝남으로 닫히고 근거가 이력에 남습니다. 화면에서 빠집니다.'; break;
+    case '안 함': s='안 함으로 닫히고 이유가 이력에 남습니다. 화면에서 빠집니다.'; break;
+  }
+  el.textContent=(/고르면/.test(s)?'':'확정하면 ')+s+tail;
 }
 async function tdConfirm(){
   if(TD.busy) return;
