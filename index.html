@@ -3670,7 +3670,7 @@ function tdForm(k,t,r,today){
   if(t){ var ev=(tdAsk(t,today)||{}).ev||[];
     if(k==='진행'){hint='끝내야 하는 날과 다음 한 걸음';f=tdField('td-due','마감','date',t.dueDate&&t.dueDate>=today?t.dueDate:'')+tdField('td-next','다음 한 걸음','text',t.nextStep||'');}
     if(k==='기다림'){hint='누구를 기다리는지, 언제 다시 볼지';f=tdField('td-who','누구','text',t.waitingOn||'')+tdField('td-recheck','다시 볼 날','date',tdAdd(today,3));}
-    if(k==='넘김'){hint='누구에게 넘기는지, 수락을 언제 확인할지';f=tdField('td-who','누구','select',t.waitingOn||'',tdPeople())+tdField('td-recheck','수락 확인할 날','date',tdBiz(today));}
+    if(k==='넘김'){hint='누구에게 넘기는지와 마감. 마감은 실제로 늦으면 안 되는 날의 전날로 잡아 주세요. 이날 아침까지 안 끝났으면 그때 다시 올라옵니다';f=tdField('td-who','누구','select',t.waitingOn||'',tdPeople())+tdField('td-due','마감','date',t.dueDate&&t.dueDate>=today?t.dueDate:'');}
     if(k==='미룸'){hint='화면에 다시 나타날 날';f=tdField('td-show','보일 날','date',tdAdd(today,1));}
     if(k==='끝남'){hint='끝난 근거 한 줄이나 링크';f=tdField('td-proof','근거','text',ev[0]?ev[0].when+' '+ev[0].text:'');}
     if(k==='안 함'){hint='하지 않는 이유 한 줄';f=tdField('td-why','이유','text','');}
