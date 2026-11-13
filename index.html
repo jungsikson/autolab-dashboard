@@ -801,7 +801,7 @@ body{background:var(--bg-canvas)}
 .td-btn:hover{border-color:var(--text-secondary)}.td-btn.primary{background:var(--text-primary);color:#fff;border-color:var(--text-primary)}
 .td-btn[aria-pressed="true"]{outline:1px solid var(--text-primary);outline-offset:-2px;border-color:var(--text-primary)}.td-btn:disabled{opacity:.6;cursor:default}
 .td-form{margin-top:12px;padding:12px 14px;background:var(--bg-canvas);border-radius:6px;display:grid;gap:10px}
-.td-hint{color:var(--text-secondary);font-size:13px}.td-prev{margin:0;font-size:14px;line-height:1.5;color:var(--text-primary);word-break:keep-all}.td-fields{display:flex;flex-wrap:wrap;gap:10px}
+.td-hint{color:var(--text-secondary);font-size:13px}.td-fields label.td-wide{flex:1 1 100%}.td-fields textarea{min-height:88px;border:1px solid #D5D8DD;border-radius:6px;background:var(--bg-surface);padding:8px 10px;width:100%;font-family:var(--font-sans);font-size:14px;line-height:1.5;color:var(--text-primary);resize:vertical}.td-prev{margin:0;font-size:14px;line-height:1.5;color:var(--text-primary);word-break:keep-all}.td-fields{display:flex;flex-wrap:wrap;gap:10px}
 .td-fields label{display:grid;gap:4px;font-size:13px;color:var(--text-secondary);flex:1 1 180px;min-width:0}
 .td-fields input,.td-fields select{height:34px;border:1px solid #D5D8DD;border-radius:6px;background:var(--bg-surface);padding:0 10px;width:100%;font-family:var(--font-sans);font-size:14px;color:var(--text-primary)}
 .td-block{margin-top:24px}.td-block h3{font-size:13px;font-weight:600;color:var(--text-secondary);margin:0 0 8px}
@@ -3679,7 +3679,7 @@ function tdRender(){
   });
   if(B.later.length) h+='<details class="td-later"'+(TD.laterOpen?' open':'')+' ontoggle="TD.laterOpen=this.open"><summary>곧 보일 것 '+B.later.length+'</summary>'+B.later.map(function(x){return '<button class="td-row" onclick="tdPick(\'t'+x.t.id+'\')"><span class="td-dot"></span><span class="td-txt"><span class="td-t1">'+tdEsc(x.t.task)+'</span><span class="td-t2">'+tdMD(x.from)+'부터 보임</span></span>'+tdDue(x.t,today)+'</button>';}).join('')+'</details>';
   var doneT=tdDoneToday();
-  if(doneT.length) h+='<details class="td-later"'+(TD.doneOpen?' open':'')+' ontoggle="TD.doneOpen=this.open"><summary>오늘 정한 것 '+doneT.length+'</summary>'+doneT.map(function(r){var can=tdCanUndo(r);return '<div class="td-done"><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc(r.decision_label||r.decision)+'</span></span>'+(can?'<button class="td-link" onclick="tdUndo('+r.id+')">되돌리기</button>':'')+'</div>';}).join('')+'</details>';
+  if(doneT.length) h+='<details class="td-later"'+(TD.doneOpen?' open':'')+' ontoggle="TD.doneOpen=this.open"><summary>오늘 정한 것 '+doneT.length+'</summary>'+doneT.map(function(r){var can=tdCanUndo(r);return '<div class="td-done"><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc(r.decision_label||r.decision)+'</span></span>'+(/ · 보낼 글: 「[\s\S]*」$/.test(r.decision_label||'')?'<button class="td-link" onclick="mpCopySend('+r.id+')">보낼 글 복사</button>':'')+(can?'<button class="td-link" onclick="tdUndo('+r.id+')">되돌리기</button>':'')+'</div>';}).join('')+'</details>';
   h+='</section><main class="td-detail" aria-live="polite">'+tdDetail(B)+'</main></div>';
   box.innerHTML=h; tdPrevUpd();
   var _n=document.querySelector('.td-list'); if(_n) _n.scrollTop=_keepL; if(window.scrollY!==_keepW) window.scrollTo(0,_keepW);
@@ -3713,6 +3713,10 @@ function tdAsk(t,today){
   if(has('today')) return {q:'오늘 마감이에요. 오늘 끝낼 수 있나요?',sub:'못 끝내면 진행에서 새 마감',p:'끝남'};
   return null;
 }
+// 보낼 글 칸(11/13): auto=1 이면 사람을 고를 때 기본 문구의 이름을 따라 바꾼다. 직접 고치면 그때부터 그대로 둔다
+function tdText(id,label,val,auto){return '<label class="td-wide" for="'+id+'">'+label+'<textarea id="'+id+'" data-auto="'+(auto?1:0)+'" data-orig="'+tdEsc(val)+'" oninput="this.dataset.auto=0">'+tdEsc(val)+'</textarea></label>';}
+// 보내기 전 확인 카드 본문에서 실제로 나가는 글만(받는 곳 줄·희준님만 보는 근거 빼고)
+function tdGateMsg(b){var x=String(b||''),i=x.indexOf('─ 희준님만 보는 근거 ─');if(i>=0)x=x.slice(0,i);return x.replace(/^받는 곳:[^\n]*\n+/,'').trim();}
 function tdField(id,label,type,val,opts){
   if(type==='select') return '<label for="'+id+'">'+label+'<select id="'+id+'">'+opts.map(function(o){return '<option value="'+tdEsc(o[0])+'"'+(o[0]===val?' selected':'')+'>'+tdEsc(o[1])+'</option>';}).join('')+'</select></label>';
   return '<label for="'+id+'">'+label+'<input id="'+id+'" type="'+type+'" value="'+tdEsc(val||'')+'"></label>';
@@ -3736,11 +3740,11 @@ function tdForm(k,t,r,today){
   } else {
     if(k==='add'){hint='큰 주제와 마감을 정하면 할 일이 됩니다';f=tdField('td-topic','큰 주제','select','',tdTopics())+tdField('td-due','마감','date',r.sug_due||'');}
     if(k==='merge'){hint='이미 있는 할 일의 소식으로 붙입니다';f=tdField('td-task','붙일 할 일','select','',tdLeaves());}
-    if(k==='handoff'){hint='누구에게 넘기는지 (원문에 보낼 글은 결과에 나옵니다)';f=tdField('td-who','누구','select','',tdPeople());}
+    if(k==='handoff'){var sl=/slack\.com\/archives\//.test(r.link||'');hint=sl?'누구에게 넘기는지와 원문에 보낼 글. 보낼 글을 비우면 보낼 글 없이 넘깁니다':'누구에게 넘기는지';f=tdField('td-who','누구','select','',tdPeople())+(sl?tdText('td-send','원문에 보낼 글','@(누구) 이 건 맡아 주실 수 있을까요?',1):'');}
     if(k==='done_self'){hint='이미 처리했으면 한 줄 남기고 끝남으로 기록';f=tdField('td-memo','한 일','text','');}
     if(k==='done_none'){hint='하지 않는 이유';f=tdField('td-reason','이유','select','',[['','고르기']].concat(MP_REASONS.map(function(x){return [x,x];})));}
   }
-  if(!t&&tdIsGate(r)){ hint=k==='handoff'?'받는 곳으로 바로 보냅니다(보낸 글은 되돌릴 수 없음)':'보내지 않는 이유 — 쌓이면 봇이 이런 질문을 아예 안 만들게 고칩니다'; f=k==='handoff'?'':tdField('td-reason','이유','select','',[['','고르기']].concat(TD_GATE_WHY.map(function(x){return [x,x];}))); }
+  if(!t&&tdIsGate(r)){ hint=k==='handoff'?'받는 곳으로 바로 보냅니다(보낸 글은 되돌릴 수 없음)':'보내지 않는 이유 — 쌓이면 봇이 이런 질문을 아예 안 만들게 고칩니다'; f=k==='handoff'?tdText('td-send','보낼 글 (고치면 고친 글로 나감)',tdGateMsg(r.body),0):tdField('td-reason','이유','select','',[['','고르기']].concat(TD_GATE_WHY.map(function(x){return [x,x];}))); }
   var name=t?k:(tdNames(r).filter(function(x){return x[0]===k;})[0]||[])[1];
   return '<div class="td-form" oninput="tdPrevUpd()" onchange="tdPrevUpd()"><div class="td-hint">'+tdEsc(name)+' · '+tdEsc(hint)+'</div><div class="td-fields">'+f+'</div>'+'<p class="td-prev" id="td-prev" aria-live="polite"></p>'+'<div class="td-end"><button class="td-btn primary" onclick="tdConfirm()"'+(TD.busy?' disabled':'')+'>'+(TD.busy?'처리 중…':tdEsc(name)+'(으)로 확정')+'</button></div></div>';
 }
@@ -3776,6 +3780,7 @@ function tdDetail(B){
 function tdPrevUpd(){
   var el=document.getElementById('td-prev'), k=TD.sel||''; if(!el||!TD.pick) return;
   var v=function(id){var e=document.getElementById(id);return e?e.value.trim():'';}, d=function(x){return x?tdMD(x):'';};
+  var se=document.getElementById('td-send'); if(se&&se.dataset.auto==='1'){var w=v('td-who');se.value='@'+(w||'(누구)')+' 이 건 맡아 주실 수 있을까요?';}
   if(k[0]==='n'){ el.textContent=tdPrevNew(MP.rows.filter(function(x){return 'n'+x.id===k;})[0],TD.pick,v,d); return; }
   var t=k[0]==='t'?_alFind(k.slice(1)):null; if(!t) return;
   var news=(TD.byTask[t.id]||[]).length, tail=news?' 이 할 일에 붙은 새 소식 '+news+'개도 같이 정리됩니다.':'', s='';
@@ -3793,10 +3798,10 @@ function tdPrevUpd(){
 function tdPrevNew(r,a,v,d){
   if(!r) return '';
   var slack=/slack\.com\/archives\//.test(r.link||''), mail=r.source==='메일 점검', opt=function(id){var e=document.getElementById(id);return e&&e.selectedIndex>0?e.options[e.selectedIndex].text:'';}, s='';
-  if(tdIsGate(r)) return a==='handoff'?'확정하면 받는 곳으로 바로 보냅니다. 보낸 글은 되돌릴 수 없습니다.':(v('td-reason')?'확정하면 보내지 않고 이유('+v('td-reason')+')가 남습니다. 같은 이유가 쌓이면 봇이 이런 질문을 안 만들게 고칩니다.':'이유를 고르면 여기에 나옵니다.');
+  if(tdIsGate(r)) return a==='handoff'?(!v('td-send')?'보낼 글이 비어 있으면 원래 글로 나갑니다.':'확정하면 위 '+(v('td-send')!==(document.getElementById('td-send')||{dataset:{}}).dataset.orig?'고친 ':'')+'글이 받는 곳으로 바로 나갑니다. 보낸 글은 되돌릴 수 없습니다.'):(v('td-reason')?'확정하면 보내지 않고 이유('+v('td-reason')+')가 남습니다. 같은 이유가 쌓이면 봇이 이런 질문을 안 만들게 고칩니다.':'이유를 고르면 여기에 나옵니다.');
   if(a==='add') s=v('td-due')?'새 할 일이 '+(v('td-topic')?opt('td-topic'):'단발 운영')+' 밑에 생기고, '+d(v('td-due'))+' 아침에 오늘 마감으로 올라옵니다.':'마감을 고르면 여기에 나옵니다.';
   if(a==='merge') s=v('td-task')?opt('td-task')+' 설명에 이 내용이 덧붙고 카드는 닫힙니다. 새 할 일은 생기지 않습니다.':'붙일 할 일을 고르면 여기에 나옵니다.';
-  if(a==='handoff') s=v('td-who')?'"'+v('td-who')+' 수락 대기" 할 일이 넘김 상태로 생기고 오늘 화면에서 빠집니다. 마감이 없어 다시 올라오지 않습니다.'+(slack?' 원문에 보낼 글은 확정 뒤 알림에 나오고, 보내는 건 직접 합니다.':' 봇이 '+v('td-who')+'에게 따로 알리지는 않습니다.'):'누구를 고르면 여기에 나옵니다.';
+  if(a==='handoff') s=v('td-who')?'"'+v('td-who')+' 수락 대기" 할 일이 넘김 상태로 생기고 오늘 화면에서 빠집니다. 마감이 없어 다시 올라오지 않습니다.'+(slack?(v('td-send')?' 보낼 글은 확정 뒤 오늘 정한 것에 [보낼 글 복사]와 함께 남고, 보내는 건 직접 합니다.':' 보낼 글을 비워서 원문에 보낼 글은 없습니다.'):' 봇이 '+v('td-who')+'에게 따로 알리지는 않습니다.'):'누구를 고르면 여기에 나옵니다.';
   if(a==='done_self') s='처리한 기록으로 할 일이 하나 생겨 바로 끝남이 됩니다.'+(slack?' 슬랙 원문에 ✅ 반응이 달립니다.':'');
   if(a==='done_none') s=v('td-reason')?'카드가 닫히고 이유('+v('td-reason')+')가 남습니다. 할 일은 생기지 않습니다.':'이유를 고르면 여기에 나옵니다.';
   if(!s) return '';
@@ -3818,6 +3823,9 @@ async function tdConfirm(){
     if(tdIsGate(rr)&&a==='done_none'&&!v('td-reason')){showToast('보내지 않는 이유를 골라 주세요');return;}
     body={id:Number(k.slice(1)),action:a,label:lab+(a==='done_none'&&v('td-reason')?' · '+v('td-reason'):''),by:MP.person,via:'dashboard',due:v('td-due'),
       task_id:a==='add'?(v('td-topic')||null):a==='merge'?(v('td-task')||null):null,person:v('td-who'),reason:v('td-reason'),memo:v('td-memo')};
+    // 보낼 글: 넘기기는 칸이 있으면 그대로(빈 글=보낼 글 없음), 보내기 전 확인은 고쳤을 때만 보낸다(안 고치면 원래 글·링크 그대로)
+    var se=document.getElementById('td-send');
+    if(se&&a==='handoff'){ if(!tdIsGate(rr)) body.send_text=se.value.trim(); else if(se.value.trim()&&se.value.trim()!==se.dataset.orig) body.send_text=se.value.trim(); }
   }
   TD.busy=true; tdRender();
   try{
