@@ -3742,10 +3742,11 @@ function rvRender(){
     '<dt>놓친 진척</dt><dd class="td-muted">아직 셀 수 없음 — 버튼 이력이 2주 쌓이면 계산</dd><dt>목표 수치</dt><dd class="td-muted">2주 모은 뒤 정하기</dd></dl></section>';
   // 6
   var top3=ordered.slice(0,3).map(function(t,i){return (i+1)+'. '+t.task;});
-  var did=Object.keys(byRoot).sort(function(a,b){return byRoot[b].length-byRoot[a].length;}).slice(0,4).map(function(k){return k+' '+byRoot[k].length+'건';});
-  var oldWait=waits.filter(function(t){return t.waitingSince;}).sort(function(a,b){return a.waitingSince.localeCompare(b.waitingSince);})[0];
+  var did=Object.keys(byRoot).sort(function(a,b){return byRoot[b].length-byRoot[a].length;}).slice(0,4).map(function(k){return (k==='큰 주제 없음'?'개별 일':k)+' '+byRoot[k].length+'건';});
+  var waitsP=waits.filter(function(t){return t.waitingOn!=='Claude 확인';});
+  var oldWait=waitsP.filter(function(t){return t.waitingSince;}).sort(function(a,b){return a.waitingSince.localeCompare(b.waitingSince);})[0];
   var draft=['이번 주('+tdMD(ws)+'–'+tdMD(we)+') 정리입니다.','','한 것: '+(did.length?did.join(' · '):'완료 체크한 일 없음'),'다음 주 우선순위:',top3.length?top3.join('\n'):'(큰 주제 순서 미정)','',
-    '바꿀 것·막힌 것: 마감 지난 일 '+over.length+'건 · 기다리는 일 '+waits.length+'건'+(oldWait?'(가장 오래된 것: '+oldWait.task+' — '+oldWait.waitingOn+', '+tdMD(oldWait.waitingSince)+'부터)':''),
+    '바꿀 것·막힌 것: 마감 지난 일 '+over.length+'건 · 남을 기다리는 일 '+waitsP.length+'건'+(oldWait?'(가장 오래된 것: '+oldWait.task+' — '+oldWait.waitingOn+', '+tdMD(oldWait.waitingSince)+'부터)':''),
     '','이 순서로 가도 될까요?'].join('\n');
   RV.draft=draft;
   h+='<section class="rv-sec"><h2>6. 황대표님께 확인받기 <span>초안 — 고쳐서 직접 보내세요</span></h2><pre class="rv-draft">'+tdEsc(draft)+'</pre><div class="td-acts"><button class="td-btn" onclick="rvCopy()">복사</button></div>'+
