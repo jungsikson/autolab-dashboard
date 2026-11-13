@@ -3547,7 +3547,7 @@ function tdRender(){
   if(!TD.sel){ var f=B.news[0]?'n'+B.news[0].id:(B.vis.filter(function(t){return tdNeeds(t,today);})[0]?'t'+B.vis.filter(function(t){return tdNeeds(t,today);})[0].id:null); TD.sel=f; }
   var d=new Date(), wd='일월화수목금토'[d.getDay()];
   var h='<div class="td'+(TD.open?' open':'')+'"><section class="td-list" aria-label="오늘 목록"><div class="td-head"><h1>오늘</h1><div class="td-date">'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+wd+'요일</div>'+
-    '<div class="td-sum"><span class="lead">정할 것 <b>'+need+'</b></span><span>새 일 <b>'+B.news.length+'</b></span><span>끝난 것 같음 <b>'+cnt('done')+'</b></span><span>마감 지남 <b>'+cnt('over')+'</b></span><span>오늘 마감 <b>'+cnt('today')+'</b></span><span>다시 볼 날 <b>'+cnt('recheck')+'</b></span></div></div>';
+    '<div class="td-sum"><span class="lead">정할 것 <b>'+need+'</b></span><span>새 일 <b>'+B.news.length+'</b></span>'+[['done','끝난 것 같음'],['reply','답할 것'],['over','마감 지남'],['today','오늘 마감'],['nodue','마감 없음'],['recheck','다시 볼 날']].map(function(x){var n=cnt(x[0]);return n?'<span>'+x[1]+' <b>'+n+'</b></span>':'';}).join('')+'</div></div>';  // 09시 DM(today_counts)과 같은 항목
   h+='<div class="td-sec"><h2>새 일</h2><span>'+(B.news.length?B.news.length+'건 · 할 일로 넣을지 정하기':'없음')+'</span></div>';
   B.news.forEach(function(r){h+='<button class="td-row" aria-selected="'+(TD.sel==='n'+r.id)+'" onclick="tdPick(\'n'+r.id+'\')"><span class="td-dot on"></span><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc([r.who||r.source,r.when_label].filter(Boolean).join(' · '))+'</span></span><span class="td-due"></span></button>';});
   h+='<div class="td-sec"><h2>내 할 일</h2><span>큰 주제 순서 · 금요일에 다시 매김</span></div>';
@@ -3574,6 +3574,7 @@ function tdAsk(t,today){
   var tg=tdTags(t,today), has=function(k){return tg.some(function(x){return x.k===k;});}, rows=TD.byTask[t.id]||[];
   if(has('done')) return {q:'끝난 것 같아요. 끝남으로 옮길까요?',p:'끝남',ev:rows.filter(function(r){return mpType(r)==='progress';}).map(function(r){return {when:tdMD(r.edition_date),text:(r.body||r.hl||'').replace(/^완료로 보임 · /,''),link:r.link};})};
   if(has('reply')) return {q:'답할 것이 있어요.',sub:'원문에 답한 뒤 상태를 정하세요',p:'진행',ev:rows.filter(function(r){return mpType(r)==='reply';}).map(function(r){return {when:r.when_label||tdMD(r.edition_date),text:r.hl,link:r.link};})};
+  if(has('recheck')&&t.waitingOn==='Claude 확인') return {q:'Claude가 아직 확인하지 못했어요. 직접 볼까요?',sub:'Claude는 매일 09시 점검 때 설명의 "Claude가 확인할 일" 조건을 기록으로 대조합니다',p:'진행'};
   if(has('recheck')) return {q:t.state==='넘김'?t.waitingOn+'님이 맡았나요?':t.waitingOn+' 답이 왔나요?',sub:'왔으면 진행(새 마감), 아직이면 '+(t.state==='넘김'?'넘김':'기다림')+' 날짜를 다시',p:'진행'};
   if(has('over')) return {q:'마감이 '+tdDays(today,t.dueDate)+'일 지났어요. 끝났나요, 마감을 다시 잡을까요?',sub:'끝났으면 끝남, 아니면 진행에서 새 마감',p:'진행'};
   if(has('nodue')) return {q:'마감이 없어요. 언제까지 끝낼까요?',p:'진행'};
