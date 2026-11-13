@@ -3539,7 +3539,61 @@ async function tdLoad(quiet){
     MP.rows=res.data;
     if(!(allData._autolab||[]).length||quiet) await loadData(true);
   }catch(e){box.innerHTML='<div class="loading">불러오기 실패: '+tdEsc(e.message||e)+'</div>';return;}
+  await tdVacLoad();
   tdRender();
+}
+// =============================================
+// 휴가 승인 (11/13 희준님 "오늘 화면에도") — Flex 승인 대기 중 희준님 차례인 신청. 슬랙 DM 휴가 카드와 같은 표(flex_vac_request)·같은 처리(morning-action flexv)
+// 실제 Flex 누르기는 에어가 1분 안에 한다 → 누른 뒤엔 '처리 중', 끝나면 목록에서 빠진다. 09시 DM '휴가 승인 N'과 같은 기준(approvable)
+// =============================================
+TD.vac=null;
+async function tdVacLoad(){
+  try{var out=await mpCall({action:'flexv_list'}); TD.vac=out&&out.ok?out:null;}catch(e){TD.vac=null;} // 강희준 로그인 아니면 칸 자체를 안 보임
+  // 처리 중인 휴가가 있으면 30초 뒤 다시 본다(에어 결과 반영). 입력 칸을 펼쳐 둔 동안은 미룸 — 다시 그리면 적던 글이 지워진다
+  clearTimeout(TD.vacTimer);
+  if(tdVacRows().some(tdVacBusy)) TD.vacTimer=setTimeout(function(){ if(currentTab!=='today') return; if(TD.pick||TD.busy){tdVacLoad();return;} tdLoad(true); },30000);
+}
+function tdVacStrip(s){return String(s||'').replace(/\*/g,'').replace(/`/g,'').trim();}
+function tdVacLines(r){return String(r.dm_text||'').split('\n').map(tdVacStrip).filter(Boolean);}
+function tdVacActs(r){return ((TD.vac&&TD.vac.actions)||[]).filter(function(a){return a.task_key===r.task_key&&!a.done_at&&!a.error;});}
+// 처리 중 = 승인 요청을 넣었고 아직 결과 없음, 또는 에어가 아직 안 집은 반려·댓글 등
+function tdVacBusy(r){return (r.approve_requested_at&&!r.approve_error)||tdVacActs(r).length>0;}
+function tdVacRows(){return ((TD.vac&&TD.vac.rows)||[]).filter(function(r){return r.approvable;});}
+function tdVacRow(r,today){
+  var L=tdVacLines(r), busy=tdVacBusy(r);
+  var t2=busy?'<b>처리 중</b> · 에어가 Flex에서 누르는 중':r.approve_error?'<b>승인 못 함</b> · '+tdEsc(r.approve_error):tdEsc(L[1]||'');
+  var d=String(r.date_from||'').slice(0,10);
+  return '<button class="td-row" aria-selected="'+(TD.sel==='v'+r.task_key)+'" onclick="tdPick(\'v'+r.task_key+'\')"><span class="td-dot'+(busy?'':' on')+'"></span><span class="td-txt"><span class="td-t1">'+tdEsc(L[0]||r.requester)+'</span><span class="td-t2">'+t2+'</span></span>'+
+    '<span class="td-due'+(d&&d<=today&&!busy?' now':'')+'">'+(d?(d<=today?(d<today?tdMD(d)+' 지남':'오늘'):tdMD(d)):'')+'</span></button>';
+}
+function tdVacNames(r){
+  var cancel=r.kind==='cancel', st=r.check_state||{}, n=[['approve',cancel?'취소 승인':'승인'],['reject','반려'],['comment','댓글']];
+  if(!cancel&&!st.urgent) n.push(['urgent','긴급휴가로 처리']);
+  if((st.trapped||[]).length) n.push(['ask','팀장에게 보내기'],['mine','내가 처리']);
+  return n;
+}
+function tdVacDetail(r,back){
+  var L=tdVacLines(r), cancel=r.kind==='cancel', busy=tdVacBusy(r), acts=tdVacActs(r);
+  var KO={reject:'반려',comment:'댓글',urgent:'긴급휴가 처리',unblock:'차단 지우기'};
+  var q=busy?'처리 중이에요. 에어가 1분 안에 Flex에서 누르고 결과를 DM 스레드에 남겨요.':r.approve_error?'승인을 못 했어요: '+r.approve_error:(cancel?'휴가 취소를 승인할까요?':'휴가를 승인할까요?');
+  var h='<article class="td-card">'+back+'<div class="td-path">휴가 승인 › '+tdEsc(r.status||'')+'</div><h2>'+tdEsc(L[0]||r.requester)+'</h2>'+
+    '<div class="td-ask"><div class="td-label"><span class="td-dot'+(busy?'':' on')+'"></span>'+(busy?'처리 중':'오늘 정할 것')+'</div><p class="td-q">'+tdEsc(q)+'</p>'+
+    (cancel?'<div class="td-sub2">취소를 승인한 뒤 남은 연차 차단은 DM 스레드의 [차단 지우기]로 따로 지웁니다</div>':'')+
+    '<ul class="td-ev">'+L.slice(1).map(function(s){return '<li><span>'+tdEsc(s)+'</span></li>';}).join('')+'</ul>'+
+    (acts.length?'<dl class="td-kv"><dt>처리 중</dt><dd>'+acts.map(function(a){return tdEsc((KO[a.kind]||a.kind)+(a.body&&a.kind!=='unblock'?' · '+a.body:''));}).join('<br>')+'</dd></dl>':'')+
+    (busy?'':tdActs(tdVacNames(r),'approve')+(TD.pick?tdVacForm(TD.pick,r):''))+
+    '<div class="td-acts"><a class="td-link" href="https://flex.team/home/todo/inbox" target="_blank" rel="noopener">Flex에서 열기</a></div></div></article>';
+  return h;
+}
+function tdVacForm(k,r){
+  var cancel=r.kind==='cancel', name=(tdVacNames(r).filter(function(x){return x[0]===k;})[0]||[])[1]||k, hint='', f='';
+  if(k==='approve') hint=cancel?'Flex에서 휴가 취소를 승인합니다. 되돌릴 수 없어요':'Flex에서 승인합니다. 되돌릴 수 없어요';
+  if(k==='reject'){hint=cancel?'취소 요청을 반려하면 휴가는 그대로 남고 차단도 그대로 둡니다. 신청자가 이유를 Flex에서 그대로 읽어요':'신청자가 이유를 Flex에서 그대로 읽어요. 걸어 둔 차단은 DM에서 지울지 따로 물어요';f=tdField('td-body','반려 이유','text','');}
+  if(k==='comment'){hint='Flex 이 신청에 희준님 이름으로 올라가요. 신청자·팀장님이 봅니다';f=tdField('td-body','댓글','text','');}
+  if(k==='urgent') hint='차단 memo에 긴급연차를 붙입니다. 휴가 다음 날 증빙 카드가 생겨요';
+  if(k==='ask') hint='휴가 시간에 남은 예약을 팀장에게 옮겨 달라고 보냅니다(휴가 점검 카드와 같은 처리)';
+  if(k==='mine') hint='남은 예약을 희준님이 옮기는 것으로 기록합니다';
+  return '<div class="td-form"><div class="td-hint">'+tdEsc(name)+' · '+tdEsc(hint)+'</div>'+(f?'<div class="td-fields">'+f+'</div>':'')+'<div class="td-end"><button class="td-btn primary" onclick="tdConfirm()"'+(TD.busy?' disabled':'')+'>'+(TD.busy?'처리 중…':tdEsc(name)+'(으)로 확정')+'</button></div></div>';
 }
 // 할 일 줄의 꼬리표 — ask=오늘 정해야 하는 이유(DM 스레드에 오르는 기준과 같음)
 function tdTags(t,today){
@@ -3598,13 +3652,17 @@ function tdRender(){
   // 다시 그려도 보던 자리를 지킨다(11/13 '목록 누르면 맨 위로' 지적) — 목록·창 스크롤 위치를 기억했다가 되돌림
   var _l=document.querySelector('.td-list'), _keepL=_l?_l.scrollTop:0, _keepW=window.scrollY;
   var box=document.getElementById('today-content'), B=tdBoard(), today=B.today;
-  var need=B.news.length+B.vis.filter(function(t){return tdNeeds(t,today);}).length;
+  var VR=tdVacRows();
+  var need=VR.length+B.news.length+B.vis.filter(function(t){return tdNeeds(t,today);}).length;
   var cnt=function(k){return B.vis.filter(function(t){return tdTags(t,today).some(function(x){return x.k===k;});}).length;};
+  if(TD.sel&&TD.sel[0]==='v'&&!VR.some(function(r){return 'v'+r.task_key===TD.sel;})) TD.sel=null; // 처리돼 빠진 휴가 카드
+  if(!TD.sel&&VR.filter(function(r){return !tdVacBusy(r);})[0]) TD.sel='v'+VR.filter(function(r){return !tdVacBusy(r);})[0].task_key;
   if(!TD.sel){ var f=B.news[0]?'n'+B.news[0].id:(B.vis.filter(function(t){return tdNeeds(t,today);})[0]?'t'+B.vis.filter(function(t){return tdNeeds(t,today);})[0].id:null); TD.sel=f; }
   var d=new Date(), wd='일월화수목금토'[d.getDay()];
   var h='<div class="td'+(TD.open?' open':'')+'"><section class="td-list" aria-label="오늘 목록"><div class="td-head"><h1>오늘</h1><div class="td-date">'+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+wd+'요일</div>'+
-    '<div class="td-sum"><span class="lead">정할 것 <b>'+need+'</b></span><span>새 일 <b>'+B.news.length+'</b></span>'+[['done','끝난 것 같음'],['reply','답할 것'],['over','마감 지남'],['today','오늘 마감'],['nodue','마감 없음'],['recheck','다시 볼 날']].map(function(x){var n=cnt(x[0]);return n?'<span>'+x[1]+' <b>'+n+'</b></span>':'';}).join('')+'</div></div>';  // 09시 DM(today_counts)과 같은 항목
+    '<div class="td-sum"><span class="lead">정할 것 <b>'+need+'</b></span>'+(VR.length?'<span>휴가 승인 <b>'+VR.length+'</b></span>':'')+'<span>새 일 <b>'+B.news.length+'</b></span>'+[['done','끝난 것 같음'],['reply','답할 것'],['over','마감 지남'],['today','오늘 마감'],['nodue','마감 없음'],['recheck','다시 볼 날']].map(function(x){var n=cnt(x[0]);return n?'<span>'+x[1]+' <b>'+n+'</b></span>':'';}).join('')+'</div></div>';  // 09시 DM(today_counts)과 같은 항목
   var stale=tdStale(B.news);
+  if(VR.length){ h+='<div class="td-sec"><h2>휴가 승인</h2><span>'+VR.length+'건 · Flex에서 희준님 차례</span></div>'; VR.forEach(function(r){h+=tdVacRow(r,today);}); }
   h+='<div class="td-sec"><h2>새 일</h2><span>'+(B.news.length?B.news.length+'건 · 할 일로 넣을지 정하기':'없음')+(stale.length?' · <button class="td-link" onclick="tdStaleClose()">3일 넘은 '+stale.length+'장 한꺼번에 닫기</button>':'')+'</span></div>';
   B.news.forEach(function(r){h+='<button class="td-row" aria-selected="'+(TD.sel==='n'+r.id)+'" onclick="tdPick(\'n'+r.id+'\')"><span class="td-dot on"></span><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc([r.who||r.source,r.when_label].filter(Boolean).join(' · '))+'</span></span><span class="td-due"></span></button>';});
   h+='<div class="td-sec"><h2>내 할 일</h2><span>큰 주제 순서 · 금요일에 다시 매김</span></div>';
@@ -3688,6 +3746,7 @@ function tdForm(k,t,r,today){
 function tdActs(names,primary){return '<div class="td-acts">'+names.map(function(n){var k=n[0],l=n[1];return '<button class="td-btn'+(k===primary?' primary':'')+'" aria-pressed="'+(TD.pick===k)+'" onclick="TD.pick=TD.pick===\''+k+'\'?null:\''+k+'\';tdRender()">'+tdEsc(l)+'</button>';}).join('')+'</div>';}
 function tdDetail(B){
   var today=B.today, k=TD.sel||'', back='<button class="td-back" onclick="tdBack()">목록으로</button>';
+  if(k[0]==='v'){ var vr=tdVacRows().filter(function(x){return 'v'+x.task_key===k;})[0]; return vr?tdVacDetail(vr,back):'<p class="td-empty">처리된 휴가 신청입니다</p>'; }
   if(k[0]==='n'){
     var r=MP.rows.filter(function(x){return 'n'+x.id===k;})[0]; if(!r) return '<p class="td-empty">고른 카드가 없습니다</p>';
     return '<article class="td-card">'+back+'<div class="td-path">새 일 › '+tdEsc([r.who||r.source,r.when_label].filter(Boolean).join(' · '))+'</div><h2>'+tdEsc(r.hl)+'</h2>'+
@@ -3732,7 +3791,10 @@ async function tdConfirm(){
   if(TD.busy) return;
   var v=function(id){var e=document.getElementById(id);return e?e.value.trim():'';};
   var k=TD.sel||'', body;
-  if(k[0]==='t'){
+  if(k[0]==='v'){
+    if((TD.pick==='reject'||TD.pick==='comment')&&!v('td-body')){showToast(TD.pick==='reject'?'반려 이유를 적어 주세요':'댓글을 적어 주세요');return;}
+    body={action:'flexv',key:k.slice(1),kind:TD.pick,body:v('td-body')};
+  } else if(k[0]==='t'){
     var to=TD.pick; body={action:'task_set',task_id:Number(k.slice(1)),to:to,by:MP.person,via:'dashboard',due:v('td-due'),next_step:v('td-next'),who:v('td-who'),recheck:v('td-recheck'),show_from:v('td-show'),proof:v('td-proof'),why:v('td-why')};
   } else {
     var a=TD.pick, rr=MP.rows.filter(function(x){return 'n'+x.id===k;})[0], lab=(tdNames(rr).filter(function(x){return x[0]===a;})[0]||[])[1];
