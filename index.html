@@ -775,7 +775,7 @@ body{background:var(--bg-canvas)}
 .td-t1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .td-t2{color:var(--text-secondary);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.td-t2 b{color:var(--text-primary);font-weight:500}
 .td-due{font-size:12.5px;color:var(--text-secondary);white-space:nowrap;padding-top:2px;font-variant-numeric:tabular-nums}
-.td-due.over{color:#C4242A}.td-due.now{color:var(--text-primary);font-weight:600}
+.td-due.over{color:#C4242A}.td-due-btn{cursor:pointer;border-radius:4px}.td-due-btn:hover{text-decoration:underline;text-underline-offset:3px}.td-due.now{color:var(--text-primary);font-weight:600}
 .td-topic{margin-top:4px}.td-th{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 22px 4px 40px}
 .td-th strong{font-size:14.5px;font-weight:600}.td-th span{color:var(--text-secondary);font-size:12.5px;white-space:nowrap}.td-th span b{color:var(--accent)}
 .td-kids{margin-left:40px;border-left:1px solid #D5D8DD}.td-kids .td-row{padding-left:14px}.td-kids .td-kids{margin-left:14px}
@@ -3643,10 +3643,20 @@ function tdBoard(){
   return {today:today,news:news,G:G,order:order,later:later.sort(function(a,b){return a.from.localeCompare(b.from);}),vis:vis};
 }
 function tdDue(t,today){
-  if(t.state!=='진행'||!t.dueDate) return '<span class="td-due">'+tdMD(t.dueDate)+'</span>';
-  if(t.dueDate<today) return '<span class="td-due over">'+tdMD(t.dueDate)+' 지남</span>';
-  if(t.dueDate===today) return '<span class="td-due now">오늘</span>';
-  return '<span class="td-due">'+tdMD(t.dueDate)+'</span>';
+  // 11/13 점검 2번: 날짜를 누르면 바로 날짜 칸이 열린다(줄 전체는 카드 열기). 진행=마감, 기다림=다시 볼 날, 넘김=마감
+  var a=function(cls,txt){return '<span class="td-due td-due-btn'+cls+'" title="날짜 바꾸기" onclick="tdDateOpen(event,\''+t.id+'\')">'+txt+'</span>';};
+  if(t.state!=='진행'||!t.dueDate) return t.dueDate?a('',tdMD(t.dueDate)):'<span class="td-due"></span>';
+  if(t.dueDate<today) return a(' over',tdMD(t.dueDate)+' 지남');
+  if(t.dueDate===today) return a(' now','오늘');
+  return a('',tdMD(t.dueDate));
+}
+function tdDatePick(t){return t.state==='기다림'?'기다림':t.state==='넘김'?'넘김':'진행';}
+function tdDateOpen(e,id){
+  if(e){e.stopPropagation();e.preventDefault();}
+  var t=_alFind(id); if(!t) return;
+  TD.sel='t'+id; TD.pick=tdDatePick(t); TD.open=true;
+  if(currentTab!=='today') switchTab('today'); else tdRender();
+  var n=0,want=TD.pick==='기다림'?'td-recheck':'td-due';(function go(){var f=document.getElementById(want); if(f){f.focus(); if(f.showPicker) try{f.showPicker();}catch(x){}} else if(n++<40) setTimeout(go,100);})();
 }
 function tdRow(t,today){
   var tg=tdTags(t,today), on=tg.some(function(x){return x.ask;}), l2=tg.filter(function(x){return x.k!=='over'&&x.k!=='today';});
@@ -3790,7 +3800,7 @@ function tdDetail(B){
   var dueTxt=t.dueDate?(t.dueDate<today&&t.state==='진행'?'<span class="over">'+tdMD(t.dueDate)+' · '+tdDays(today,t.dueDate)+'일 지남</span>':tdMD(t.dueDate)+(t.dueDate===today?' · 오늘':'')):'없음';
   var st=t.state==='진행'&&mpShowFrom(t)>today?'미룸':(t.state||'진행');
   return '<article class="td-card">'+back+'<div class="td-path">'+(path.length?path.map(tdEsc).join(' › ')+' › ':'큰 주제 없음 › ')+'#'+t.id+'</div><h2>'+tdEsc(t.task)+'</h2>'+
-    '<div class="td-facts"><span>상태 <b>'+tdEsc(st)+'</b></span><span>마감 '+dueTxt+'</span>'+(t.recheckDate&&t.waitingOn?'<span>다시 볼 날 <b>'+tdMD(t.recheckDate)+'</b></span>':'')+(st==='미룸'?'<span>보일 날 <b>'+tdMD(mpShowFrom(t))+'</b></span>':'')+
+    '<div class="td-facts"><span>상태 <b>'+tdEsc(st)+'</b></span><button class="td-link td-fact-btn" title="마감 바꾸기" onclick="tdDateOpen(event,\''+t.id+'\')">마감 '+dueTxt+'</button>'+(t.recheckDate&&t.waitingOn?'<button class="td-link td-fact-btn" title="다시 볼 날 바꾸기" onclick="tdDateOpen(event,\''+t.id+'\')">다시 볼 날 <b>'+tdMD(t.recheckDate)+'</b></button>':'')+(st==='미룸'?'<span>보일 날 <b>'+tdMD(mpShowFrom(t))+'</b></span>':'')+
     ' <button class="td-link" onclick="openAutolabDetailModal(\''+t.id+'\')">상세 창</button></div>'+
     '<div class="td-ask">'+(a?'<div class="td-label"><span class="td-dot on"></span>오늘 정할 것</div><p class="td-q">'+tdEsc(a.q)+'</p>'+(a.sub?'<div class="td-sub2">'+tdEsc(a.sub)+'</div>':''):'<div class="td-label">오늘 정할 것 없음</div><p class="td-q quiet">'+(t.state==='넘김'?tdEsc(t.waitingOn)+'에게 넘김 · '+(t.dueDate?'마감일('+tdMD(t.dueDate)+')에 안 끝났으면 다시 올라와요':'다시 올라오지 않아요'):t.waitingOn?tdEsc(t.waitingOn)+' 답을 기다리는 중 · '+tdMD(t.recheckDate)+'에 다시 봄':'마감 '+tdMD(t.dueDate)+'까지 진행 중')+'</p>')+
     (a&&a.ev&&a.ev.length?'<ul class="td-ev">'+a.ev.map(function(e){return '<li><span class="w">'+tdEsc(e.when)+'</span><span>'+tdEsc(e.text)+(e.link?' <a href="'+tdEsc(e.link)+'" target="_blank" rel="noopener">원문</a>':'')+'</span></li>';}).join('')+'</ul>':'')+
