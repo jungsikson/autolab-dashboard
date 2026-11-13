@@ -1892,7 +1892,7 @@ async function saveAutolabEdit(){
   btn.textContent='저장'; btn.disabled=false;
 }
 
-function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+function showToast(msg,ms){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show');},ms||2500);}
 
 // =============================================
 // 상세 모달
@@ -2986,8 +2986,12 @@ async function plSetDates(it,s,e){
   var upd={due_date:e||null}; if(s) upd.start_date=s;
   var res=await _sb.from('autolab_task').update(upd).eq('id',Number(it.id));
   if(res.error){showToast('날짜 저장 실패: '+res.error.message);renderPlan();return;}
+  var tk=dk(new Date()), was=it.dateKey||'', vis='';
+  // 시작일 = 보일 날(11/11). 막대를 옮겨 보일 날이 오늘을 넘나들면 알린다 — 말없이 '곧 보일 것'으로 빠지던 문제(11/13)
+  if(s&&s>tk&&!(was>tk)) vis=' · '+s.slice(5).replace('-','/')+'부터 내 할 일에 보임(그 전엔 곧 보일 것) · ⌘Z로 되돌리기';
+  else if(s&&s<=tk&&was>tk) vis=' · 오늘부터 내 할 일에 다시 보임';
   if(s) it.dateKey=s; it.dueDate=e||''; renderPlan();
-  showToast(e?'#'+it.id+' 마감 '+e.slice(5).replace('-','/')+'('+'일월화수목금토'[plDay(e).getDay()]+')':'#'+it.id+' 마감 지움');
+  showToast((e?'#'+it.id+' 마감 '+e.slice(5).replace('-','/')+'('+'일월화수목금토'[plDay(e).getDay()]+')':'#'+it.id+' 마감 지움')+vis, vis?6000:2500);
 }
 // 처음 마감을 잡을 때 시작일: 옛 등록일이 2주 넘게 앞이면 오늘로 당긴다(막대가 과거로 길게 늘어지지 않게)
 function plStartFor(it,due){
