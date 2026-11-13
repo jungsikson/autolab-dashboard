@@ -684,7 +684,7 @@ body{background:var(--bg-canvas)}
 /* 일정 v2 — 큰 주제 지도 */
 .pl-row>.pl-name{position:sticky;left:0;z-index:3;background:var(--bg-surface)}
 .pl-row.drop-over>.pl-name,.pl-name.drop-over{background:var(--accent-subtle)}
-.pl-help{margin-top:4px;font-size:var(--text-xs);color:var(--text-tertiary)}
+.pl-help{margin-top:4px;font-size:var(--text-xs);color:var(--text-tertiary)}.pl-nav{margin-top:12px;align-items:center}
 .pl-over-t{color:#C8392E}
 .pl-row.line{border-top:1px solid var(--border-default)}
 .pl-name.topic{font-weight:600}
@@ -2941,7 +2941,7 @@ function fillParentSelect(item){
 // 막대 = 시작일부터 마감(목표)일. 하위는 펼치면 목록, 마감 있는 하위는 막대 위 ◆.
 // 막대 몸통을 끌면 날짜 이동, 양 끝을 끌면 시작·마감 조정. 마감 없는 것은 아래 '날짜 없음' 칸 → 끌어다 놓으면 날짜가 생김.
 // =============================================
-var PL={person:'강희준',daysBack:14,days:56,open:{},drag:null};
+var PL={person:'강희준',daysBack:14,days:56,off:0,open:{},drag:null};  // off: 4주 단위 이동(11/13 점검 4번)
 function plDay(s){return new Date(s+'T00:00:00');}
 function plKey(d){return dk(d);}
 function plDone(i){var a=autolabChecks[alKey(i)]||autolabChecks['autolab_'+alKey(i)];return !!(a&&a.checked);}
@@ -2953,7 +2953,7 @@ function renderPlan(){
   var byId={}; all.forEach(function(i){byId[i.id]=i;});
   var kidsAll={}; all.forEach(function(i){if(i.parentId&&byId[i.parentId])(kidsAll[i.parentId]=kidsAll[i.parentId]||[]).push(i);});
   var today=plDay(dk(new Date())), DAY=86400000, span=PL.days;
-  var start=new Date(today); start.setDate(start.getDate()-PL.daysBack); start.setDate(start.getDate()-((start.getDay()+6)%7));
+  var start=new Date(today); start.setDate(start.getDate()-PL.daysBack+PL.off*28); start.setDate(start.getDate()-((start.getDay()+6)%7));
   PL.start=start; PL.DAY=DAY;
   var pos=function(d){return (d-start)/DAY/span*100;};
   // 줄 = 열린 큰 주제(하위가 있는 것) + 하위도 상위도 없는 열린 독립 할 일
@@ -2968,14 +2968,15 @@ function renderPlan(){
 
   var html='<div class="pl-head"><h1>일정</h1>'+
     '<p>큰 주제 <b>'+dated.length+'</b> · 순서는 금요일 돌아보기에서 매긴 순서'+(nOver?' · 마감 지난 할 일 <b class="pl-over-t">'+nOver+'</b>':'')+'</p>'+
-    '<p class="pl-help">막대 = 보일 날부터 마감까지(보일 날 전이면 흐림) · ◆ 하위 마감 · ◇ 기다림 다시 볼 날. 막대 앞쪽을 끌면 보일 날, 뒤쪽은 마감이 바뀝니다</p></div>';
+    '<p class="pl-help">막대 = 보일 날부터 마감까지(보일 날 전이면 흐림) · ◆ 하위 마감 · ◇ 기다림 다시 볼 날. 막대 앞쪽을 끌면 보일 날, 뒤쪽은 마감이 바뀝니다</p>'+
+    '<div class="td-acts pl-nav"><button class="td-btn sm" onclick="PL.off--;renderPlan()">◀ 4주 전</button>'+(PL.off?'<button class="td-btn sm" onclick="PL.off=0;renderPlan()">오늘로</button>':'')+'<button class="td-btn sm" onclick="PL.off++;renderPlan()">4주 뒤 ▶</button><span class="rv-small">'+plMD(start)+'–'+plMD(new Date(start.getTime()+(span-1)*DAY))+'</span></div></div>';
   var ticks='', wk='';
   for(var d=0;d<span;d++){var day=new Date(start.getTime()+d*DAY);
     if(day.getDay()===0||day.getDay()===6) wk+='<div class="pl-wkend" style="left:'+pos(day)+'%;width:'+(100/span)+'%"></div>';
     if(day.getDay()===1) ticks+='<span class="pl-tick" style="left:'+pos(day)+'%">'+plMD(day)+'</span>';}
   var tpos=pos(today)+50/span;
-  var layer='<div class="pl-layer">'+wk+'<div class="pl-today" style="left:'+tpos+'%"></div></div>';
-  var rows='<div class="pl-row pl-scale"><div class="pl-name">큰 주제 · 할 일</div><div class="pl-track" id="pl-scale-track">'+ticks+'<span class="pl-tick today" style="left:'+tpos+'%;bottom:22px">오늘</span></div></div>';
+  var tIn=tpos>=0&&tpos<=100, layer='<div class="pl-layer">'+wk+(tIn?'<div class="pl-today" style="left:'+tpos+'%"></div>':'')+'</div>';
+  var rows='<div class="pl-row pl-scale"><div class="pl-name">큰 주제 · 할 일</div><div class="pl-track" id="pl-scale-track">'+ticks+''+(tIn?'<span class="pl-tick today" style="left:'+tpos+'%;bottom:22px">오늘</span>':'')+'</div></div>';
 
   var progress=function(i){var k=kidsAll[i.id]||[];if(!k.length) return '';var dn=k.filter(plDone).length;
     return '<span class="pl-prog'+(dn===k.length?' all':'')+'" title="하위 '+dn+'/'+k.length+' 완료"><i style="width:'+Math.round(dn/k.length*100)+'%"></i></span><span class="n">'+dn+'/'+k.length+'</span>';};
@@ -2989,7 +2990,8 @@ function renderPlan(){
     var later=s>today;
     var over=e<today, l=pos(s), r=pos(new Date(e.getTime()+DAY));
     var lab=over?Math.round((today-e)/DAY)+'일 지남 · '+plMD(e):plMD(e);
-    if(r<=0) return '<span class="pl-lbl over" style="left:0">← '+lab+'</span>';
+    if(r<=0) return '<span class="pl-lbl'+(over?' over':'')+'" style="left:0">← '+lab+'</span>';
+    if(l>=100) return '<button class="pl-lbl pl-lbl-btn" style="left:auto;right:0" data-due-for="'+i.id+'" title="마감 바꾸기">'+lab+' →</button>';
     var lc=Math.max(0,l), rc=Math.min(100,r);
     var dia=diaOnly(i);
     return '<div class="pl-bar'+(over?' over':'')+(later?' later':'')+(kidsAll[i.id]?' topic':'')+'" data-id="'+i.id+'" style="left:'+lc+'%;width:'+Math.max(0.8,rc-lc)+'%">'+
