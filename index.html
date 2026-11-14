@@ -3626,7 +3626,7 @@ function tdBoard(){
   var today=dk(new Date()), all=(allData._autolab||[]).filter(tdOpen), kids={};
   all.forEach(function(t){if(t.parentId) kids[t.parentId]=1;});
   TD.byTask={}; MP.rows.forEach(function(r){if(r.task_id&&!r.decision)(TD.byTask[String(r.task_id)]=TD.byTask[String(r.task_id)]||[]).push(r);});
-  var news=MP.rows.filter(function(r){return !r.decision&&!r.task_id;});
+  var news=MP.rows.filter(function(r){return !r.decision&&!r.task_id&&!tdIsGate(r);});  // 11/14 보내기 전 확인은 #caramel_운영에서만(중복 없이)
   var leaves=all.filter(function(t){return !kids[t.id];}), vis=[], later=[];
   leaves.forEach(function(t){var f=mpShowFrom(t); if(f>today) later.push({t:t,from:f}); else vis.push(t);});
   vis.sort(function(a,b){return (a.dueDate||'9999').localeCompare(b.dueDate||'9999')||Number(a.id)-Number(b.id);});
@@ -3669,7 +3669,7 @@ function tdRender(){
   // 다시 그려도 보던 자리를 지킨다(11/13 '목록 누르면 맨 위로' 지적) — 목록·창 스크롤 위치를 기억했다가 되돌림
   var _l=document.querySelector('.td-list'), _keepL=_l?_l.scrollTop:0, _keepW=window.scrollY;
   var box=document.getElementById('today-content'), B=tdBoard(), today=B.today;
-  var VR=tdVacRows();
+  var VR=[];  // 11/14 강희준 "중복 없이": 휴가 승인은 슬랙 DM 한 곳에서만 — 오늘 화면엔 안 띄운다(tdVacRows 는 남겨 둠)
   var need=VR.length+B.news.length+B.vis.filter(function(t){return tdNeeds(t,today);}).length;
   var cnt=function(k){return B.vis.filter(function(t){return tdTags(t,today).some(function(x){return x.k===k;});}).length;};
   if(TD.sel&&TD.sel[0]==='v'&&!VR.some(function(r){return 'v'+r.task_key===TD.sel;})) TD.sel=null; // 처리돼 빠진 휴가 카드
