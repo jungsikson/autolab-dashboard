@@ -3622,13 +3622,17 @@ function tdTags(t,today){
   return out;
 }
 function tdNeeds(t,today){return tdTags(t,today).some(function(x){return x.ask;});}
+// 11/16 희준님 "목록에서 빼고 접기": 'Claude 확인'으로 기다리는 일은 희준님이 할 게 없다 → 내 할 일에서 빼고 맨 아래 'Claude가 지켜보는 것'으로.
+// 다시 올리는 건 막혔을 때만 — 붙은 카드(끝난 것 같음 등)가 있거나 다시 볼 날이 지났는데(9시 점검이 못 밀었음) 그대로일 때. slack-daily-check today_counts 와 같은 규칙
+function tdWatched(t,today){return (t.state||'진행')==='기다림'&&t.waitingOn==='Claude 확인'&&!(TD.byTask[t.id]||[]).length&&(!t.recheckDate||t.recheckDate>=today);}
 function tdBoard(){
   var today=dk(new Date()), all=(allData._autolab||[]).filter(tdOpen), kids={};
   all.forEach(function(t){if(t.parentId) kids[t.parentId]=1;});
   TD.byTask={}; MP.rows.forEach(function(r){if(r.task_id&&!r.decision)(TD.byTask[String(r.task_id)]=TD.byTask[String(r.task_id)]||[]).push(r);});
   var news=MP.rows.filter(function(r){return !r.decision&&!r.task_id&&!tdIsGate(r);});  // 11/14 보내기 전 확인은 #caramel_운영에서만(중복 없이)
-  var leaves=all.filter(function(t){return !kids[t.id];}), vis=[], later=[];
-  leaves.forEach(function(t){var f=mpShowFrom(t); if(f>today) later.push({t:t,from:f}); else vis.push(t);});
+  var leaves=all.filter(function(t){return !kids[t.id];}), vis=[], later=[], watch=[];
+  leaves.forEach(function(t){var f=mpShowFrom(t); if(f>today) later.push({t:t,from:f}); else if(tdWatched(t,today)) watch.push(t); else vis.push(t);});
+  watch.sort(function(a,b){return (a.recheckDate||'9999').localeCompare(b.recheckDate||'9999');});
   vis.sort(function(a,b){return (a.dueDate||'9999').localeCompare(b.dueDate||'9999')||Number(a.id)-Number(b.id);});
   var G={}, order=[];
   vis.forEach(function(t){
@@ -3642,7 +3646,7 @@ function tdBoard(){
   var pos={}; order.forEach(function(k,i){pos[k]=i;});
   order.sort(function(a,b){if(a==='')return 1;if(b==='')return -1;return ((B0(a))-(B0(b)))||pos[a]-pos[b];});
   function B0(k){return (G[k].root&&G[k].root.topicRank)||999;}
-  return {today:today,news:news,G:G,order:order,later:later.sort(function(a,b){return a.from.localeCompare(b.from);}),vis:vis};
+  return {today:today,news:news,G:G,order:order,later:later.sort(function(a,b){return a.from.localeCompare(b.from);}),watch:watch,vis:vis};
 }
 function tdDue(t,today){
   // 11/13 점검 2번: 날짜를 누르면 바로 날짜 칸이 열린다(줄 전체는 카드 열기). 진행=마감, 기다림=다시 볼 날, 넘김=마감
@@ -3694,6 +3698,7 @@ function tdRender(){
     h+='</div></div>';
   });
   if(B.later.length) h+='<details class="td-later"'+(TD.laterOpen?' open':'')+' ontoggle="TD.laterOpen=this.open"><summary>곧 보일 것 '+B.later.length+'</summary>'+B.later.map(function(x){return '<button class="td-row" onclick="tdPick(\'t'+x.t.id+'\')"><span class="td-dot"></span><span class="td-txt"><span class="td-t1">'+tdEsc(x.t.task)+'</span><span class="td-t2">'+tdMD(x.from)+'부터 보임</span></span>'+tdDue(x.t,today)+'</button>';}).join('')+'</details>';
+  if(B.watch.length) h+='<details class="td-later"'+(TD.watchOpen?' open':'')+' ontoggle="TD.watchOpen=this.open"><summary>Claude가 지켜보는 것 '+B.watch.length+'</summary>'+B.watch.map(function(t){return '<button class="td-row" onclick="tdPick(\'t'+t.id+'\')"><span class="td-dot"></span><span class="td-txt"><span class="td-t1">'+tdEsc(t.task)+'</span><span class="td-t2">'+(t.recheckDate?tdMD(t.recheckDate)+' 다시 봄':'다시 볼 날 없음')+'</span></span></button>';}).join('')+'</details>';
   var doneT=tdDoneToday();
   if(doneT.length) h+='<details class="td-later"'+(TD.doneOpen?' open':'')+' ontoggle="TD.doneOpen=this.open"><summary>오늘 정한 것 '+doneT.length+'</summary>'+doneT.map(function(r){var can=tdCanUndo(r);return '<div class="td-done"><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc(r.decision_label||r.decision)+'</span></span>'+(/ · 보낼 글: 「[\s\S]*」$/.test(r.decision_label||'')?'<button class="td-link" onclick="mpCopySend('+r.id+')">보낼 글 복사</button>':'')+(can?'<button class="td-link" onclick="tdUndo('+r.id+')">되돌리기</button>':'')+'</div>';}).join('')+'</details>';
   h+=tdPastHtml();
