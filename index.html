@@ -2255,6 +2255,17 @@ AUTH_READY.then(function(){loadData();});
 var MP={rows:[],date:null,sel:null,filter:'left',busy:false,person:'강희준',pick:null,pickRow:null,keys:[]};
 // 고른 카드는 새로고침·탭 이동 뒤에도 그 카드로 돌아온다(11/9 "카드 누르면 처음으로 돌아가 불편")
 try{MP.sel=localStorage.getItem('autolab_mp_sel')||null;}catch(e){}
+// 첫 탭 열기는 페이지의 스크립트를 다 읽은 뒤에 한다(11/16 "가끔 빈 화면") — 오늘 화면 함수(tdLoad)는 아래 스크립트 덩어리에 있어서,
+// 받는 도중 setTimeout 이 먼저 돌면 탭 표시만 바뀌고 tdLoad 가 없어 빈 화면으로 멈췄다
+function bootTab(t){
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){switchTab(t);},{once:true});
+  else setTimeout(function(){switchTab(t);},0);
+}
+// 대시보드가 열린 탭에서 #tab= 만 다른 북마크를 누르면 페이지가 다시 열리지 않는다 → 주소의 탭으로 바로 넘어간다(11/16)
+window.addEventListener('hashchange',function(){
+  var m=/^#tab=(.+)$/.exec(location.hash), t=m?decodeURIComponent(m[1]):'';
+  if(t && document.getElementById('tab-'+t) && document.getElementById('view-'+t)) switchTab(t);
+});
 (function(){
   try{
     var qs=new URLSearchParams(location.search);
@@ -2265,13 +2276,13 @@ try{MP.sel=localStorage.getItem('autolab_mp_sel')||null;}catch(e){}
     var hm=/^#tab=(.+)$/.exec(location.hash), ht=hm?decodeURIComponent(hm[1]):'';
     if(ht && document.getElementById('tab-'+ht) && document.getElementById('view-'+ht)){
       if(ht==='morning'||ht==='plan'||ht==='today'||ht==='review') document.getElementById('nav-morning').style.display='';
-      setTimeout(function(){switchTab(ht);},0);
+      bootTab(ht);
     }
-    else if(qs.get('morning')==='1'){ document.getElementById('nav-morning').style.display=''; setTimeout(function(){switchTab('morning');},0); }
+    else if(qs.get('morning')==='1'){ document.getElementById('nav-morning').style.display=''; bootTab('morning'); }
     // 주간 점검 DM의 "일정 열기"(?plan=1)
     // 11/13: 희준님 브라우저는 처음 열면 오늘 화면
-    else if(localStorage.getItem('autolab_morning')==='1'&&!qs.get('plan')){ setTimeout(function(){switchTab('today');},0); }
-    else if(qs.get('plan')==='1'){ localStorage.setItem('autolab_morning','1'); document.getElementById('nav-morning').style.display=''; setTimeout(function(){switchTab('plan');},0); }
+    else if(localStorage.getItem('autolab_morning')==='1'&&!qs.get('plan')){ bootTab('today'); }
+    else if(qs.get('plan')==='1'){ localStorage.setItem('autolab_morning','1'); document.getElementById('nav-morning').style.display=''; bootTab('plan'); }
   }catch(e){}
 })();
 function mpCopySend(id){var t=MP.send||'';
