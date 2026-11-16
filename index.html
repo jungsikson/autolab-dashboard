@@ -3632,6 +3632,8 @@ function tdTags(t,today){
   if(news) out.push({k:'news',text:'새 소식 '+news});
   return out;
 }
+// 'N일째'는 카드를 만든 날 기준 글자라 하루 지나도 그대로였다(11/16 '맹주성 · 2일째'가 실제로는 11/4 카드) → 오늘 기준으로 다시 센다
+function tdWhen(r){var w=r.when_label||'',m=/^(\d+)일째$/.exec(w);if(!m||!r.edition_date)return w;var n=Math.round((new Date(dk(new Date())+'T00:00:00')-new Date(r.edition_date+'T00:00:00'))/86400000);return (Number(m[1])+Math.max(n,0))+'일째';}
 function tdNeeds(t,today){return tdTags(t,today).some(function(x){return x.ask;});}
 // 11/16 희준님 "목록에서 빼고 접기": 'Claude 확인'으로 기다리는 일은 희준님이 할 게 없다 → 내 할 일에서 빼고 맨 아래 'Claude가 지켜보는 것'으로.
 // 다시 올리는 건 막혔을 때만 — 붙은 카드(끝난 것 같음 등)가 있거나 다시 볼 날이 지났는데(9시 점검이 못 밀었음) 그대로일 때. slack-daily-check today_counts 와 같은 규칙
@@ -3696,7 +3698,7 @@ function tdRender(){
   var stale=tdStale(B.news);
   if(VR.length){ h+='<div class="td-sec"><h2>휴가 승인</h2><span>'+VR.length+'건 · Flex에서 희준님 차례</span></div>'; VR.forEach(function(r){h+=tdVacRow(r,today);}); }
   h+='<div class="td-sec"><h2>새 일</h2><span>'+(B.news.length?B.news.length+'건 · 할 일로 넣을지 정하기':'없음')+(stale.length?' · <button class="td-link" onclick="tdStaleClose()">3일 넘은 '+stale.length+'장 한꺼번에 닫기</button>':'')+'</span></div>';
-  B.news.forEach(function(r){h+='<button class="td-row" aria-selected="'+(TD.sel==='n'+r.id)+'" onclick="tdPick(\'n'+r.id+'\')"><span class="td-dot on"></span><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc([r.who||r.source,r.when_label].filter(Boolean).join(' · '))+'</span></span><span class="td-due"></span></button>';});
+  B.news.forEach(function(r){h+='<button class="td-row" aria-selected="'+(TD.sel==='n'+r.id)+'" onclick="tdPick(\'n'+r.id+'\')"><span class="td-dot on"></span><span class="td-txt"><span class="td-t1">'+tdEsc(r.hl)+'</span><span class="td-t2">'+tdEsc([r.who||r.source,tdWhen(r)].filter(Boolean).join(' · '))+'</span></span><span class="td-due"></span></button>';});
   h+='<div class="td-sec"><h2>내 할 일</h2><span>큰 주제 순서 · 금요일에 다시 매김</span></div>';
   B.order.forEach(function(k){
     var g=B.G[k], n=g.items.filter(function(t){return tdNeeds(t,today);}).length;
@@ -3807,7 +3809,7 @@ function tdDetail(B){
   if(k[0]==='v'){ var vr=tdVacRows().filter(function(x){return 'v'+x.task_key===k;})[0]; return vr?tdVacDetail(vr,back):'<p class="td-empty">처리된 휴가 신청입니다</p>'; }
   if(k[0]==='n'){
     var r=MP.rows.filter(function(x){return 'n'+x.id===k;})[0]; if(!r) return '<p class="td-empty">고른 카드가 없습니다</p>';
-    return '<article class="td-card">'+back+'<div class="td-path">새 일 › '+tdEsc([r.who||r.source,r.when_label].filter(Boolean).join(' · '))+'</div><h2>'+tdEsc(r.hl)+'</h2>'+
+    return '<article class="td-card">'+back+'<div class="td-path">새 일 › '+tdEsc([r.who||r.source,tdWhen(r)].filter(Boolean).join(' · '))+'</div><h2>'+tdEsc(r.hl)+'</h2>'+
       '<div class="td-ask"><div class="td-label"><span class="td-dot on"></span>오늘 정할 것</div><p class="td-q">'+(tdIsGate(r)?'이 질문을 보낼까요?':'할 일로 넣을까요?')+'</p>'+
       (r.quote?'<blockquote>"'+tdEsc(r.quote)+'"</blockquote>':'')+(r.body?'<blockquote>'+tdEsc(r.body)+'</blockquote>':'')+
       '<dl class="td-kv">'+(r.link?'<dt>원문</dt><dd><a href="'+tdEsc(r.link)+'" target="_blank" rel="noopener">'+tdEsc(r.link_label||'열기')+'</a></dd>':'')+(r.sug_due?'<dt>제안 마감</dt><dd>'+tdMD(r.sug_due)+(r.sug_why?' · '+tdEsc(r.sug_why):'')+'</dd>':'')+'</dl>'+
