@@ -3536,7 +3536,10 @@ var TD_NEW=[['add','할 일로'],['merge','덧붙이기'],['handoff','넘기기'
 // 운영 점검 '보내기 전 확인'(게이트) 카드 — [보내기]=넘기기, [보내지 않음]=필요 없음 + 이유(금요일 개선 고리 재료). 처리는 ops-audit gateDecide 하나
 var TD_GATE=[['handoff','보내기'],['done_none','보내지 않음']], TD_GATE_WHY=['이미 앎','판정이 틀림','내가 처리','지금은 보낼 때가 아님'];
 function tdIsGate(r){return String(r&&r.note||'').indexOf('gate:')===0;}
-function tdNames(r){return tdIsGate(r)?TD_GATE:TD_NEW;}
+// 11/17 고위드 증빙 카드 — [Claude가 제출] = morning-action claude_do → 에어가 영수증 찾아 제출(.tools/gowid-submit.py)
+var TD_GOWID=[['claude_do','Claude가 제출'],['done_self','처리함'],['done_none','필요 없음']];
+function tdIsGowid(r){return String(r&&r.note||'').indexOf('gowid:')===0;}
+function tdNames(r){return tdIsGate(r)?TD_GATE:tdIsGowid(r)?TD_GOWID:TD_NEW;}
 function tdEsc(s){return mpEsc(s==null?'':String(s));}
 function tdMD(d){return d?(+d.slice(5,7))+'/'+(+d.slice(8,10)):'';}
 function tdDays(a,b){return Math.round((new Date(a+'T00:00:00')-new Date(b+'T00:00:00'))/864e5);}
@@ -3796,6 +3799,7 @@ function tdForm(k,t,r,today){
     if(k==='add'){hint='큰 주제와 마감을 정하면 할 일이 됩니다';f=tdField('td-topic','큰 주제','select','',tdTopics())+tdField('td-due','마감','date',r.sug_due||'');}
     if(k==='merge'){hint='이미 있는 할 일의 소식으로 붙입니다';f=tdField('td-task','붙일 할 일','select','',tdLeaves());}
     if(k==='handoff'){var sl=/slack\.com\/archives\//.test(r.link||'');hint=(sl?'누구에게 넘기는지, 마감, 원문에 보낼 글. 보낼 글을 비우면 보낼 글 없이 넘깁니다':'누구에게 넘기는지와 마감')+'. 마감은 실제로 늦으면 안 되는 날의 전날로 잡아 주세요';f=tdField('td-who','누구','select','',tdPeople())+tdField('td-due','마감','date',r.sug_due&&r.sug_due>=today?r.sug_due:'')+(sl?tdText('td-send','원문에 보낼 글','@(누구) 이 건 맡아 주실 수 있을까요?',1):'');}
+    if(k==='claude_do'){hint='에어가 영수증을 찾아 고위드에 바로 제출합니다. 쿠팡은 비워 둬도 되고, 식대면 함께한 사람·판공비 여부를 적어 주세요';f=tdField('td-memo','알려줄 것','text','');}
     if(k==='done_self'){hint='이미 처리했으면 한 줄 남기고 끝남으로 기록';f=tdField('td-memo','한 일','text','');}
     if(k==='done_none'){hint='하지 않는 이유';f=tdField('td-reason','이유','select','',[['','고르기']].concat(MP_REASONS.map(function(x){return [x,x];})));}
   }
@@ -3810,10 +3814,10 @@ function tdDetail(B){
   if(k[0]==='n'){
     var r=MP.rows.filter(function(x){return 'n'+x.id===k;})[0]; if(!r) return '<p class="td-empty">고른 카드가 없습니다</p>';
     return '<article class="td-card">'+back+'<div class="td-path">새 일 › '+tdEsc([r.who||r.source,tdWhen(r)].filter(Boolean).join(' · '))+'</div><h2>'+tdEsc(r.hl)+'</h2>'+
-      '<div class="td-ask"><div class="td-label"><span class="td-dot on"></span>오늘 정할 것</div><p class="td-q">'+(tdIsGate(r)?'이 질문을 보낼까요?':'할 일로 넣을까요?')+'</p>'+
+      '<div class="td-ask"><div class="td-label"><span class="td-dot on"></span>오늘 정할 것</div><p class="td-q">'+(tdIsGate(r)?'이 질문을 보낼까요?':tdIsGowid(r)?'증빙을 Claude가 낼까요?':'할 일로 넣을까요?')+'</p>'+
       (r.quote?'<blockquote>"'+tdEsc(r.quote)+'"</blockquote>':'')+(r.body?'<blockquote>'+tdEsc(r.body)+'</blockquote>':'')+
       '<dl class="td-kv">'+(r.link?'<dt>원문</dt><dd><a href="'+tdEsc(r.link)+'" target="_blank" rel="noopener">'+tdEsc(r.link_label||'열기')+'</a></dd>':'')+(r.sug_due?'<dt>제안 마감</dt><dd>'+tdMD(r.sug_due)+(r.sug_why?' · '+tdEsc(r.sug_why):'')+'</dd>':'')+'</dl>'+
-      tdActs(tdNames(r),tdIsGate(r)?null:'add')+(TD.pick?tdForm(TD.pick,null,r,today):'')+'</div></article>';
+      tdActs(tdNames(r),tdIsGate(r)?null:tdIsGowid(r)?'claude_do':'add')+(TD.pick?tdForm(TD.pick,null,r,today):'')+'</div></article>';
   }
   var t=k[0]==='t'?_alFind(k.slice(1)):null; if(!t) return '<p class="td-empty">왼쪽에서 카드를 고르세요</p>';
   var a=tdAsk(t,today), path=tdPath(t), now=tdNow(t.description), hist=tdHist(t.description), links=Array.isArray(t.links)?t.links:[];
@@ -3857,6 +3861,7 @@ function tdPrevNew(r,a,v,d){
   if(a==='add') s=v('td-due')?'새 할 일이 '+(v('td-topic')?opt('td-topic'):'단발 운영')+' 밑에 생기고, '+d(v('td-due'))+' 아침에 오늘 마감으로 올라옵니다.':'마감을 고르면 여기에 나옵니다.';
   if(a==='merge') s=v('td-task')?opt('td-task')+' 설명에 이 내용이 덧붙고 카드는 닫힙니다. 새 할 일은 생기지 않습니다.':'붙일 할 일을 고르면 여기에 나옵니다.';
   if(a==='handoff') s=v('td-who')&&v('td-due')?'"'+v('td-who')+' 수락 대기" 할 일이 넘김 상태로 생기고 오늘 화면에서 빠집니다. '+d(v('td-due'))+' 아침까지 안 끝났으면 그때 다시 올라옵니다.'+(slack?(v('td-send')?' 보낼 글은 확정 뒤 오늘 정한 것에 [보낼 글 복사]와 함께 남고, 보내는 건 직접 합니다.':' 보낼 글을 비워서 원문에 보낼 글은 없습니다.'):' 봇이 '+v('td-who')+'에게 따로 알리지는 않습니다.'):'누구와 마감을 고르면 여기에 나옵니다.';
+  if(a==='claude_do') s='에어가 몇 분 안에 영수증을 찾아 고위드에 제출합니다. 카드는 오늘 정한 것으로 옮겨지고 고른 용도와 메모가 남습니다. 못 내면 이유를 달고 이 카드가 다시 올라옵니다.'+(v('td-memo')?' 적은 말('+v('td-memo')+')을 참고합니다.':'');
   if(a==='done_self') s='처리한 기록으로 할 일이 하나 생겨 바로 끝남이 됩니다.'+(slack?' 슬랙 원문에 ✅ 반응이 달립니다.':'');
   if(a==='done_none') s=v('td-reason')?'카드가 닫히고 이유('+v('td-reason')+')가 남습니다. 할 일은 생기지 않습니다.':'이유를 고르면 여기에 나옵니다.';
   if(!s) return '';
