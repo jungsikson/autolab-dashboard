@@ -805,7 +805,6 @@ body{background:var(--bg-canvas)}
 .td-fields label{display:grid;gap:4px;font-size:13px;color:var(--text-secondary);flex:1 1 180px;min-width:0}
 .td-fields input,.td-fields select{height:34px;border:1px solid #D5D8DD;border-radius:6px;background:var(--bg-surface);padding:0 10px;width:100%;font-family:var(--font-sans);font-size:14px;color:var(--text-primary)}
 .td-block{margin-top:24px}.td-block h3{font-size:13px;font-weight:600;color:var(--text-secondary);margin:0 0 8px}
-.td-plan{margin:10px 0 0;font-size:14px;line-height:1.5;color:var(--text-primary);word-break:keep-all}.td-plan-h{font-weight:600;margin-top:8px}.td-plan-h:first-child{margin-top:0}.td-plan-s{color:var(--text-secondary);font-size:13px;padding-left:16px}
 .td-kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 10px;margin:10px 0 0}.td-kv dt{color:var(--text-tertiary);font-size:13px;padding-top:1px}.td-kv dd{margin:0}
 .td-muted,.td-empty{color:var(--text-tertiary)}
 @media (max-width:860px){.td{grid-template-columns:1fr}.td-list{border-right:0;max-height:none}.td-detail{max-height:none;padding:16px}
@@ -3587,23 +3586,8 @@ function tdVacRow(r,today){
 function tdVacNames(r){
   var cancel=r.kind==='cancel', st=r.check_state||{}, n=[['approve',cancel?'취소 승인':'승인'],['reject','반려'],['comment','댓글']];
   if(!cancel&&!st.urgent) n.push(['urgent','긴급휴가로 처리']);
-  // [같은 존에 옮기기] (11/18) — 슬랙 DM 버튼과 같은 처리(ops-audit vacmove). 누르면 계획부터 보여 주고, 확정해야 옮긴다
-  if((st.trapped||[]).length) n.push(['move','같은 존에 옮기기'],['ask','팀장에게 보내기'],['mine','내가 처리']);
+  if((st.trapped||[]).length) n.push(['ask','팀장에게 보내기'],['mine','내가 처리']);
   return n;
-}
-// 옮기기 계획: {key, loading, lines, plan, err}. 카드를 바꾸거나 확정하면 비운다
-TD.vplan=null;
-function tdVacPlanLoad(key){
-  TD.vplan={key:key,loading:true};
-  mpCall({action:'flexv',key:key,kind:'move_plan'}).then(function(out){
-    TD.vplan={key:key,at:Date.now(),lines:(out&&out.lines)||[],plan:(out&&out.plan)||'',err:out&&out.ok?null:((out&&out.error)||'계획을 못 불러왔어요')};
-  }).catch(function(e){TD.vplan={key:key,lines:[],plan:'',err:String(e.message||e)};}).then(function(){if(TD.pick==='move')tdRender();});
-}
-function tdVacPlanHtml(P){
-  // ops-audit 글: 첫 줄·'못 옮김' 줄은 머리(굵게), 들여쓴 줄은 이유
-  return '<div class="td-plan">'+P.lines.filter(function(s){return s.trim();}).map(function(s){
-    var head=/^\*/.test(s), sub=/^\s{2,}/.test(s);
-    return '<div class="td-plan-'+(head?'h':sub?'s':'r')+'">'+tdEsc(tdVacStrip(s))+'</div>';}).join('')+'</div>';
 }
 function tdVacDetail(r,back){
   var L=tdVacLines(r), cancel=r.kind==='cancel', busy=tdVacBusy(r), acts=tdVacActs(r);
@@ -3630,14 +3614,6 @@ function tdVacForm(k,r){
   if(k==='urgent') hint='차단 memo에 긴급연차를 붙입니다. 휴가 다음 날 증빙 카드가 생겨요';
   if(k==='ask') hint='휴가 시간에 남은 예약을 팀장에게 옮겨 달라고 보냅니다(휴가 점검 카드와 같은 처리)';
   if(k==='mine') hint='남은 예약을 희준님이 옮기는 것으로 기록합니다';
-  if(k==='move'){
-    var P=TD.vplan;
-    if(!P||P.key!==r.task_key||(!P.loading&&Date.now()-(P.at||0)>60000)){tdVacPlanLoad(r.task_key);P=TD.vplan;}
-    if(P.loading) return '<div class="td-form"><div class="td-hint">같은 존에 옮기기 · 받을 사람을 찾는 중이에요</div></div>';
-    if(P.err) return '<div class="td-form"><div class="td-hint">같은 존에 옮기기 · '+tdEsc(P.err)+'</div></div>';
-    return '<div class="td-form"><div class="td-hint">같은 존에 옮기기 · 담당만 바꾸고 시각은 그대로라 고객 문자는 없어요. 확정하는 순간 다시 계산해서 계획이 같을 때만 옮겨요</div>'+
-      tdVacPlanHtml(P)+(P.plan?'<div class="td-end"><button class="td-btn primary" onclick="tdConfirm()"'+(TD.busy?' disabled':'')+'>'+(TD.busy?'옮기는 중…':'이대로 옮기기')+'</button></div>':'')+'</div>';
-  }
   return '<div class="td-form"><div class="td-hint">'+tdEsc(name)+' · '+tdEsc(hint)+'</div>'+(f?'<div class="td-fields">'+f+'</div>':'')+'<div class="td-end"><button class="td-btn primary" onclick="tdConfirm()"'+(TD.busy?' disabled':'')+'>'+(TD.busy?'처리 중…':tdEsc(name)+'(으)로 확정')+'</button></div></div>';
 }
 // 할 일 줄의 꼬리표 — ask=오늘 정해야 하는 이유(DM 스레드에 오르는 기준과 같음)
@@ -3900,19 +3876,6 @@ async function tdConfirm(){
   if(k[0]==='v'){
     if((TD.pick==='reject'||TD.pick==='comment')&&!v('td-body')){showToast(TD.pick==='reject'?'반려 이유를 적어 주세요':'댓글을 적어 주세요');return;}
     body={action:'flexv',key:k.slice(1),kind:TD.pick,body:v('td-body')};
-    if(TD.pick==='move'){
-      var P=TD.vplan; if(!P||!P.plan) return;
-      TD.busy=true; tdRender();
-      try{
-        var mo=await mpCall({action:'flexv',key:k.slice(1),kind:'move',body:P.plan});
-        if(!mo.ok) throw new Error(mo.error||'처리 실패');
-        // 그 사이 바뀌었으면 새 계획을 다시 보여 주고 칸을 열어 둔다
-        if(mo.plan){TD.vplan={key:k.slice(1),at:Date.now(),lines:mo.lines||[],plan:mo.plan};showToast('계획이 바뀌었어요. 새 계획을 보고 다시 눌러 주세요',6000);}
-        else{showToast(mo.label||'옮김');TD.vplan=null;TD.pick=null;TD.sel=null;TD.open=false;}
-      }catch(e){showToast('실패: '+(e.message||e),6000);}
-      finally{TD.busy=false; await tdLoad(true);}
-      return;
-    }
   } else if(k[0]==='t'){
     var to=TD.pick; body={action:'task_set',task_id:Number(k.slice(1)),to:to,by:MP.person,via:'dashboard',due:v('td-due'),next_step:v('td-next'),who:v('td-who'),recheck:v('td-recheck'),show_from:v('td-show'),proof:v('td-proof'),why:v('td-why')};
   } else {
